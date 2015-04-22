@@ -1,0 +1,34 @@
+#!/usr/bin/perl
+#
+# usage:  fasta2md5  <seqfile> [...]
+# 
+# converts each fasta-format sequence to an md5sum 
+# (after converting to uppercase) and prints it
+#  out (along with the fasta header)
+
+use strict;
+use Digest::MD5 qw(md5_hex);
+
+my $hdr;
+my $seq = "";
+
+while ( <> )
+   {
+    if ( /^>(.*)/ )
+       {
+        my $newhdr = $1;
+        print md5_hex( $seq ), "  $hdr\n" if ( $hdr );
+        $hdr = $newhdr;
+        $seq = "";
+       }
+    else
+       {
+        chomp;
+        s/[\s0-9]//g;
+        $seq .= uc( $_ );
+       }
+   }
+
+print md5_hex( $seq ), "  $hdr\n" if ( $hdr );
+
+
