@@ -1,0 +1,195 @@
+#!/usr/bin/perl
+# Program:      sel
+# Programmer:   Sean R. McCorkle
+#               Biology Department, Brookhaven National Laboratory
+# Language:     perl
+# Description:  Selects some subset of input sequences (fasta/BNL) and outputs
+#               them.  Does not alter the sequences which are passed.
+#
+# Usage:        sel [-Chv] [-B <n>] [-N <n>] [ <fasta file> ... ]
+#
+#               a single hyphen (-) can be used as a file name to specify
+#               stdin.  If no files are specified, stdin is scanned.
+#
+# Options:
+#               -a <n>   minimum sequence length to pass (default 0)
+#               -b <n>   maximum sequence length to pass (infinity)
+#               -B <n>   select sequences beginning with <n>'th input 
+#                        (defaults to 1)
+#               -C       capitalize matched sequence or header if -H
+#                        or -S options specified.
+#               -h       print help, then exit
+#               -H <pat> print sequences with headers containing 
+#                        reg. expr. <pat>
+#               -N <n>   cut off selection after <n> sequences have been output
+#                        (default is all sequences)
+#               -S <pat> print sequences which contain reg. exp. <pat>
+#               -v       print version, then exit
+#
+#               If more than one cut is used, they are "anded" together.
+#               The order of the cuts is:
+#                    first -B, 
+#                    then (-a, -b and -N), 
+#                    then -H
+#                    lastly -S
+#
+# $Id: sel,v 1.5 2009/11/05 14:29:39 seanmccorkle Exp seanmccorkle $
+#
+
+use  Getopt::Std;
+
+
+                             ################
+                             # Main Program #
+                             ################
+
+
+select( ( select(STDOUT), $| = 1 )[0] );
+select( ( select(STDERR), $| = 1 )[0] );
+
+getopts( "a:b:B:ChH:N:S:v" ) || die "Bad option.  type sel -h for help\n";
+if ( $opt_h ) { help();  exit; }
+if ( $opt_v ) { version();  exit; }
+$start = $opt_B ? $opt_B : 1;
+$count = $opt_N ? $opt_N : 1000000000;
+$min_length = $opt_a ? $opt_a : 0;
+$max_length = $opt_b ? $opt_b : 1000000000;
+
+$n_seq = 0;                        # counts number of sequences read
+$n_out = 0;                        # counts number of sequences output
+
+
+
+while ( <> )                       # finite state machine, reading FASTA format
+   {                               # format sequence lines.  Either its
+    if ( /^>/ )                    # a sequence header
+       {
+        $new_hdr = $_;
+        select_seq( $hdr, $seq ) if ( defined( $hdr ) );
+        $hdr = $new_hdr;
+        $seq = "";
+       }
+    else
+       {                           # or its a sequence data line, so we 
+        chomp;                     # trim the trailing newline,
+        s/\s//g;                   # extract whitespace and 
+        $seq .= $_;                # append it to the current buffer
+       }
+   }
+
+select_seq( $hdr, $seq ) if ( defined( $hdr ) );
+
+
+                             ###############
+                             # Subroutines #
+                             ###############
+# 
+# select_seq( $hdr, $seq ) decides if this sequence passes all the "cuts"
+# and if so, prints it out via print_fasta();
+#
+sub  select_seq
+   {
+    my ( $hdr, $seq ) = @_;
+
+    if ( ++$n_seq >= $start )
+       {
+        my $len = length( $seq );
+        if ( $len >= $min_length && $len <= $max_length && $n_out < $count )
+           {
+            if ( $opt_H )
+               {
+                if ( $hdr =~ /($opt_H)/i )
+                   {
+                    my $mat = $1;
+                    if ( $opt_C )
+                       {
+                        $hdr =~ tr/A-Z/a-z/;
+                        $mat = uc( $mat );
+                        $hdr =~ s/$opt_H/$mat/i;
+                       }
+                    print_fasta( $hdr, $seq );
+                    $n_out++;
+                   }
+               }
+            elsif ( $opt_S )
+               {
+                if ( $seq =~ /($opt_S)/i )
+                   {
+                    my $mat = $1;
+                    if ( $opt_C )
+                       {
+                        $seq =~ tr/A-Z/a-z/;
+                        $mat = uc( $mat );
+                        $seq =~ s/$opt_S/$mat/i;
+                       }
+                    print_fasta( $hdr, $seq );
+                    $n_out++;
+                   }
+               }
+            else
+               {
+                print_fasta( $hdr, $seq );
+                $n_out++;
+               }
+           }
+       }
+   }
+
+#
+# print_fasta( $hdr, $seq ) prints out a sequence in FASTA format
+#  ($hdr is assumed to include beginning > and ending \n already)
+#
+sub  print_fasta
+   {
+    my ( $hdr, $seq ) = @_;
+    my  $i;
+
+    print "$hdr";
+    my $n = length( $seq );                # calculate length once
+    for ( $i = 0; $i < $n; $i++ )          # for each character
+       {
+        print substr( $seq, $i, 1 );       # print it out
+        if ( ( ($i + 1) % 60 ) == 0 )      # every 50 characters
+            { print "\n"; }                # put a newline
+       }
+    print "\n" if ( ( $i % 60 ) != 0 );    # last newline ensures tidy output
+   }
+
+
+sub  help
+   {
+    version();
+    print <<EndOfHelp;
+
+Usage:   sel [options] [<seq file> ...]\n
+         where <seq file> contains one or more fasta format DNA or
+         amino acid sequences. A single hyphen (-) can be used as
+         a file name to specify stdin.  If no files are given,
+         stdin is scanned.\n
+Options:
+         -a <n>   minimum sequence length to pass (default 0)
+         -b <n>   maximum sequence length to pass (infinity)
+         -B <n>   select sequences beginning with <n>th input
+                  (defaults to 1)
+         -C       capitalize matched sequence or header if -H
+                  or -S options specified.
+         -h       print help, then exit
+         -H <pat> print sequences with headers containing reg. expr. <pat>
+         -N <n>   cut off selection after <n> sequences have been output
+                  (default is all sequences)
+         -S <pat> print sequences which contain reg. exp. <pat>
+         -v       print version, then exit
+EndOfHelp
+
+   }
+
+
+#
+# print version number
+#
+sub  version
+   {
+    '$Revision: 1.5 $ ' =~ / ([0-9\.]+) /;
+    print "sel $1 Sequence selector\n";
+   }
+

@@ -1,0 +1,93 @@
+#!/usr/bin/perl
+#
+use strict;
+
+
+my %codons = (
+               'A' => [ 'GCT', 'GCC', 'GCA', 'GCG' ],
+               'R' => [ 'CGT', 'CGC', 'CGA', 'CGG', 'AGA', 'AGG' ],
+               'N' => [ 'AAT', 'AAC' ],
+               'D' => [ 'GAT', 'GAC' ],
+               'C' => [ 'TGT', 'TGC' ],
+               'Q' => [ 'CAA', 'CAG' ],
+               'E' => [ 'GAA', 'GAG' ],
+               'G' => [ 'GGT', 'GGC', 'GGA', 'GGG' ],
+               'H' => [ 'CAT', 'CAC' ],
+               'I' => [ 'ATT', 'ATC', 'ATA' ],
+               'L' => [ 'TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG' ],
+               'K' => [ 'AAA', 'AAG' ],
+               'M' => [ 'ATG' ],
+               'F' => [ 'TTT', 'TTC' ],
+               'P' => [ 'CCT', 'CCC', 'CCA', 'CCG' ],
+               'S' => [ 'TCT', 'TCC', 'TCA', 'TCG', 'AGT', 'AGC' ],
+               'T' => [ 'ACT', 'ACC', 'ACA', 'ACG' ],
+               'W' => [ 'TGG' ],
+               'Y' => [ 'TAT', 'TAC' ],
+               'V' => [ 'GTT', 'GTC', 'GTA', 'GTG' ],
+               '*' => [ 'TAA', 'TGA', 'TAG' ],
+             );
+my %trans;
+my %freq;
+
+create_trans();
+
+
+my $seq;
+my $hdr;
+my $new_hdr;
+
+while ( $_ = <> )
+   {
+    if ( /^>(.*)$/ )
+       {
+        $new_hdr = $1;
+        process( $hdr, $seq ) if ( defined( $hdr ) );
+        $hdr = $new_hdr;
+        $seq = "";
+       }
+   }
+
+process( $hdr, $seq ) if ( defined( $hdr ) );
+
+print "$seq\n";
+
+
+
+
+
+                                      ###############
+                                      # Subroutines #
+                                      ###############
+
+#
+# creates %trans from %codons,  where $trans{$codon} = $aa  
+#
+sub  create_trans
+   {
+    my $n = 0;
+    foreach my $aa ( keys( %codons ) )
+       {
+        foreach my $cod ( @{$codons{$aa}} )
+           {
+            die "already have " . $trans{$cod} . " for codon $cod: $aa\n" if ( $trans{$cod} );
+            $trans{$cod} = $aa;  
+            $n++;
+           }
+       }
+    print "$n codons in translation table\n";
+   }
+
+
+sub  fscore
+   {
+    my $tot = 0.0;
+
+    foreach my $cod ( @_ )
+       {  $tot += $freq{$cod};  }
+    return( $tot );
+   }
+
+sub  print_codons
+   {
+    print "  ", join( " ", @_ ), "\n";
+   }

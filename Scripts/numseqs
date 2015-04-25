@@ -1,0 +1,12 @@
+#!/usr/bin/perl
+# Program:      numseqs
+# Programmer:   Sean R. McCorkle
+# Language:     perl
+# Description:  counts fasta headers from given files or stdin
+#
+# $Id: numseqs,v 1.1 2010/12/21 16:25:40 seanmccorkle Exp seanmccorkle $
+#
+while ( <> )
+   { $n++ if ( /^>/ ); }
+
+print "$n\n";
