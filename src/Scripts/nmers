@@ -1,0 +1,141 @@
+#!/usr/bin/perl
+# Program:      nmers
+# Programmer:   Sean R. McCorkle, Biology Dept, Brookhaven National Laboratory
+# Language:     perl 
+# 
+# Description:  Reads DNA sequence(s) and counts occurances of n-mers of a
+#               specified size n.
+#
+# Usage:        nmers [-T] n <sequences
+#
+#               FASTA format DNA sequences are read from stdin.  Output
+#               is a table with columns in this format
+#
+#                  n-mer/rc-n-mer  f-count  r-count  f-and-r-count
+#
+#               where n-mer/rc-m-mer is the n-mer sequence and its reverse
+#                                    complement
+#
+#                     f-count        is the number of forward (top strand)
+#                                    occurances
+#                     r-count        is the number of forward (bottom strand)
+#                                    occurances
+# 
+#                     f-and-r-count  is the sum of the previous two numbers
+#
+#                     f-percnt
+#                     r-percnt
+#                     f-rand-r-percnt - are the corresponding percentags
+#
+# Options:      -T   print a totals line at the end of the table.
+#
+#
+# Notes:        Only n-mers of entirely A,C,G,T are counted.  n-mers with
+#               any ambiguity codes and what-not are not counted.
+#
+#               All n-mers are totaled for all sequences in the input stream.
+#
+#               This uses getc() to read input from stdin.  The only memory
+#               requirement is the hash table of all n-mer permuations.
+#               Thus, this can be run on large chromosome sequences (i.e.
+#               mammalian) although you may need to wait a while.
+#
+# $Id: nmers,v 1.3 2004/10/12 13:23:07 mccorkle Exp mccorkle $
+#
+
+use strict;
+use vars qw( $opt_T );
+use Getopt::Std;
+
+die "bad option\n" unless( getopts( 'T' ) );
+
+my $n = shift;
+
+$n =~ /^\d+$/ || die "$0: nmers n, where n is a number\n";
+
+my %count;
+
+generate_perms( "", $n );  # populate %count with all allowed perms of len $n
+
+my $buff_init = "X"x$n;    # nmer buffer gets initialized to this for each 
+my $buff = $buff_init;     # new FASTA sequence.
+
+my $tot_count = 0;         # we total forward and reverse counts
+my $tot_rc_count = 0;
+
+my $last_c = "\n";         # helps identify >headers
+
+my $c;
+while ( defined( $c = getc() ) )                # read chars, accumlate counts
+   {
+    if ( $c eq ">" && $last_c eq "\n" )         # if > on a new line, its a
+       {                                        # fasta header, so skip whole
+        while ( defined($c = getc()) && $c ne "\n" )   # line
+           {  }
+        $buff = $buff_init;                     # and reset the queu
+       }
+    if ( $c ne "\n" && $c ne " " && $c ne "\t" )   # any non-whitespace chars
+       {                                           # get queued into the 
+        $buff .= uc($c);                           # buffer and the first is
+        $buff = substr( $buff, 1 );                # dequeued.  If its a legal
+        $count{$buff}++ if ( defined( $count{$buff} ) ); # permutation, then
+       }                                                 # count it
+    $last_c = $c;
+   }
+
+foreach my $nmer ( sort keys( %count ) )          # tally totals
+   { 
+    my $rc_nmer = rc( $nmer ); 
+    $tot_count += $count{$nmer};
+    $tot_rc_count += $count{$rc_nmer};
+   }
+
+
+foreach my $nmer ( sort keys( %count ) )          # now print out the counts
+   { 
+    my $rc_nmer = rc( $nmer ); 
+    printf "$nmer/$rc_nmer %10d %10d %10d  %10.6f %10.6f %10.6f\n", 
+        $count{$nmer}, $count{$rc_nmer}, $count{$nmer} + $count{$rc_nmer},
+        (100.0 * $count{$nmer}) / $tot_count,
+        (100.0 * $count{$rc_nmer}) / $tot_rc_count,
+        (100.0 * ($count{$nmer} + $count{$rc_nmer})) 
+            / ( $tot_count + $tot_rc_count );
+   }
+
+printf "%s %10d %10d %10d\n", " "x(2*$n+1),
+            $tot_count, $tot_rc_count, $tot_count + $tot_rc_count
+        if ( $opt_T );
+
+
+#
+#  fills hash table "%count" with keys of all posible permutations 
+#   AA..A, AA..C, .., TT..T  of length $n (all values initially zero).
+#
+sub  generate_perms
+   {
+    my ( $prefix, $n ) = @_;
+
+    if ( $n == 1 )
+       {
+        foreach my $c ( 'A', 'C', 'G', 'T' )
+           {  $count{"$prefix$c"} = 0;  }
+       }
+    elsif ( $n > 1 )
+       {
+        foreach my $c ( 'A', 'C', 'G', 'T' )
+           {  generate_perms( "$prefix$c", $n - 1 ); }
+       }
+    else 
+       { die "$0: bad n $n in generate_perms\n"; }
+   }
+
+#
+# rc( $seq ) returns the reverse complement of $seq
+# 
+sub  rc
+   {
+    my $r = reverse( split( '', shift ) );
+    $r =~ tr/acgtmrwsykvhdbnACGTMRWSYKVHDBN/tgcakywsrmbdhvnTGCAKYWSRMBDHVN/;
+    return( $r );
+   }
+

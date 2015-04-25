@@ -1,0 +1,539 @@
+# Module:      graf.icn
+# Programmer:  Sean R. McCorkle
+# Language:    Icon
+# Description: System for making sequence feature map plots, showing various
+#              features, in different frames, and different colors.
+#
+#              a sequence map has a horizontal scale in the middle 
+#              (representing position in the sequence) and a number of
+#              "tiers" above and below the scale.  Tier spacing and height
+#              are specifiable, and features are drawn within tiers, with
+#              x position given by scale, and y position given in pixels,
+#              relative to tier height.  Tier number is an argument - postive
+#              is above the scale, negative is below the scale.
+#
+# Routines:
+#              open_window( w, h )  # width and height (pixels) of X11 window
+#
+#              set_tiers( n_above, n_below, height, spacing ) 
+#
+#              set_scale( a, b ) # a - sequence positions of left & right end
+#
+#              draw_scale( color )
+#
+# $Id: graf.icn,v 0.16 2004/09/19 23:58:33 mccorkle Exp mccorkle $
+#
+link graphics                       # need icon graphics lib (of course)
+link math                           # for floor(x)
+
+
+global window_width, window_height
+global left_margin, right_margin, y_margin # for neatness;margins arnd the edge
+global x_min, x_max                 # min and max seq position
+global a_x, b_x                     # scales bp to x pixels
+global a_y, b_y                     # converts to positive y at 1/2 down
+global zero_y                       # pixel coord of y=0 (bottom of scale)
+global scale_height                 # scale height in pixels
+global scale_length                 # scale length in bp
+global ticlen, subticlen            # tic & subtic mark height in pixels
+global delta_tics, delta_subtics
+global num_tiers_above, num_tiers_below
+global tier_height, tier_spacing
+global symmetric                    # flag 1 or 0
+global fg_color
+global bg_color
+global window_title
+
+global font_height
+
+#
+# open_window( w, h ) 
+# open_window( w, h, opts ) -- start the session with one call to this.
+# w, h: actual X11 window width and height in pixels
+#
+#  opts - optional table of values to override parameters which MUST be
+#         specified at window creation:
+#            defaults
+#               opts["bg_color"] = "black"
+#               opts["fg_color"] = "white"
+#               opts["title"]    = "_"
+#
+procedure  open_window( w, h, opt_args[] )
+
+    local title, opts
+
+    window_width := w
+    window_height := h
+    title := ""
+    title := opt_args[1]
+    if  *opt_args > 0 
+      then {
+            opts := opt_args[1]
+            (type(opts) == "table") | 
+                 stop( "open_window options are not a table" )
+   	   }
+      else  opts := table()
+    
+    fg_color := ( \opts["fg_color"] | "white" )
+    bg_color := ( \opts["bg_color"] | "black" )
+    title := ( \opts["title"] | "_" )
+
+    left_margin := 20
+    right_margin := 20
+    y_margin := 20
+    scale_height := 3
+    ticlen := 8
+    subticlen := 4
+    symmetric := 1
+    Window( "size=" || window_width || "," || window_height, 
+            "bg=" || bg_color, "fg=" || fg_color, "label="||title )
+    font_height := WAttrib( "fheight" )
+
+end
+
+procedure set_horiz_margins( left, right )
+    right_margin := right
+    left_margin := left
+end
+
+#
+# set_scale( a, b ) - sets horizontal scale.
+#
+# a, b are min and max sequence positions (bp) to display
+#                     
+#
+procedure  set_scale( a, b )
+
+    local linfo, l
+
+    l := b - a
+    linfo := figure_label_info( l )
+    delta_tics := linfo[1]
+    delta_subtics := linfo[2]
+
+    x_min := floor( (1.0 * a) / (1.0 * delta_subtics) ) * delta_subtics
+    x_max := ceil( (1.0 * b) / (1.0 * delta_subtics) ) * delta_subtics
+    a_x := (1.0 * ( window_width - (left_margin + right_margin) ) )/
+            (1.0 *(x_max - x_min))
+    b_x := left_margin - a_x * x_min
+
+    scale_length := x_max - x_min
+
+end
+
+#
+# Should fine tune this and make it formulaic
+#
+procedure figure_label_info( len )
+
+    if      len <= 1000 
+        then  return( [100, 20] )
+    else if len <= 5000
+        then  return( [500, 100] )
+    else if len <= 10000
+        then  return( [1000, 200] )
+    else if len <= 50000
+        then  return( [5000, 1000] )
+    else if len <= 100000
+        then  return( [10000, 2000] )
+    else if len <= 500000
+        then  return( [50000, 10000] )
+    else 
+              return( [100000, 20000] )
+
+end
+
+#
+#  height is height of scale bar (pixels)
+#  scale_color is color of scale
+
+procedure  draw_scale( scale_color  )
+
+    #
+    # save fill color here first!
+    #
+    Fg( scale_color )
+    fill_rectangle( x_min, 0, x_max, scale_height )
+
+    FillRectangle( map_x( x_min ), zero_y, scale_length * a_x, -scale_height )
+    Fg( fg_color )
+
+    every draw_tic_mark( (x_min to x_max by delta_tics), ticlen )
+    every draw_tic_mark( (x_min to x_max by delta_subtics), subticlen )
+
+    every draw_tic_label( (x_min to x_max by delta_tics) )
+        
+end
+
+
+procedure draw_tic_mark( p, l )
+
+    DrawLine( map_x( p ), map_y( 0 ), map_x( p ), map_y( -l ) )
+
+end
+
+procedure draw_tic_label( p )
+
+    local n
+    n := string( p )
+    DrawString( map_x( p ) - TextWidth( n ) / 2, 
+                map_y( -ticlen ) + font_height, 
+                n )
+
+end
+
+#
+# Now this determines the absolute y mapping, so this MUST be invoked before
+# anything is drawn, but after open window!
+#
+procedure set_tiers( n_above, n_below, height, spacing )
+
+    tier_height := height
+    tier_spacing := spacing
+    num_tiers_above := n_above
+    num_tiers_below := n_below
+
+    a_y := (2.0 * y_margin - window_height ) / window_height
+    #b_y := y_margin - a_y * window_height / 2.0
+    b_y := (window_height - y_margin) -  num_tiers_below *
+                     (tier_height + tier_spacing)
+    zero_y := map_y( 0 )
+
+end
+
+procedure set_symmetric()
+    symmetric := 1
+end
+
+procedure set_asymmetric()
+    symmetric := 0
+end
+
+
+                         #########################
+                         # Tier drawing routines #
+                         #########################
+
+# 
+# Vertical positions within  a tier are given from the bottom edge up,
+# regardless of whether or not the tier number is negative
+#
+# tier: tier number
+# pos: sequence position
+# y1, y2 - coordinates in the tier. full scale is 0.0 (bottom) to 1.0 (top)
+# color
+# Make color an option, and save & restore color
+
+procedure tier_line_vert( tier, pos, y1, y2, color )
+
+    # Make color an option, and save & restore color
+    # handle negative tier heights
+
+    local xp
+    if ( pos > x_max | pos < x_min )
+        then return
+    xp := map_x( pos )
+    Fg( color )
+    DrawLine( xp, map_y_tier( tier, y1 ), xp, map_y_tier( tier, y2 ) )
+    
+end
+
+#
+# y is specified in tier height- 0.0 (bottom of bar) to 1.0 (top),
+# regardless of whether the tier is above or below the scale.
+#
+procedure tier_line_horiz( tier, a, b, y, color )
+
+    local xp1, xp2, yp
+
+    if a > b 
+       then a :=: b
+    # Now b is maximum of the two
+    if ( b < x_min | a > x_max )
+        then return
+    if ( a < x_min )
+        then a := x_min
+    if ( b > x_max )
+        then b := x_max
+    yp := map_y_tier( tier, y )
+    xp1 := map_x( a )
+    xp2 := map_x( b )
+    Fg( color )
+    DrawLine( xp1, yp, xp2, yp )   
+    
+end
+
+
+procedure tier_line( tier, x1, y1, x2, y2, color )
+
+    local dx, m
+
+    # Make color an option, and save & restore color
+    # handle negative tier heights
+
+    if x1 > x2
+       then { x1 :=: x2; y1 :=: y2 }
+    # Now (x1,y1) has the minimum x of the two points
+
+    if ( x2 < x_min | x1 > x_max )   # trivial case - don't plot at all
+       then return
+
+    dx := x2 - x1
+    if ( dx > 0 )           # dx is not negative
+      then {
+             m := ( y2 - y1 ) / dx
+             if ( x1 < x_min )
+               then {
+                     y1 +:= ( x_min - x1 ) * m
+                     x1 := x_min
+                    }
+             if ( x2 > x_max )
+               then {
+                     y2 -:= ( x2 - x_max ) * m
+                     x2 := x_max
+                    }
+           }
+
+    Fg( color )
+    DrawLine( map_x( x1 ), map_y_tier( tier, y1 ), 
+              map_x( x2 ), map_y_tier( tier, y2 ) )
+    
+end
+
+
+#
+# y1, y2 is specified in tier height- 0.0 (bottom of bar) to 1.0 (top),
+# regardless of whether the tier is above or below the scale.
+#
+procedure tier_rect( tier, a, b, y1, y2, color )
+
+    local xp1, xp2, yp1, yp2
+
+    if a > b 
+       then a :=: b
+    # Now b is maximum of the two
+    if ( b < x_min | a > x_max )
+        then return
+    if ( a < x_min )
+        then a := x_min
+    if ( b > x_max )
+        then b := x_max
+
+    yp1 := map_y_tier( tier, y1 )
+    yp2 := map_y_tier( tier, y2 )
+    if ( abs(yp2-yp1) < 1 )        # make sure at least 1 pixel shows up for
+        then yp2 := yp1 + 1;       # the small stuff
+
+    xp1 := map_x( a )
+    xp2 := map_x( b )
+    if ( abs(xp2-xp1) < 1 )
+        then xp2 := xp1 + 1;
+    Fg( color )
+    FillRectangle( xp1, yp1, xp2-xp1, yp2-yp1 )
+
+end
+
+#
+# y1, y2, y3 is specified in tier height- 0.0 (bottom of bar) to 1.0 (top),
+# regardless of whether the tier is above or below the scale.  y3 is the
+# height of the point
+#
+procedure tier_triang( tier, a, b, y1, y2, y3, color )
+
+    local xp1, xp2, yp1, yp2, yp3, rev
+
+    if a > b 
+       then { a :=: b
+              rev := 1 }
+       else 
+              rev := 0
+
+      
+    # Now b is maximum of the two
+    if ( b < x_min | a > x_max )
+        then return
+    if ( a < x_min )
+        then a := x_min
+    if ( b > x_max )
+        then b := x_max
+
+    if rev = 1
+       then a :=: b
+
+    yp1 := map_y_tier( tier, y1 )
+    yp2 := map_y_tier( tier, y2 )
+    yp3 := map_y_tier( tier, y3 )
+    if ( abs(yp2-yp1) < 1 )        # make sure at least 1 pixel shows up for
+        then yp2 := yp1 + 1;       # the small stuff
+
+    xp1 := map_x( a )
+    xp2 := map_x( b )
+    if ( abs(xp2-xp1) < 1 )
+        then xp2 := xp1 + 1;
+    Fg( color )
+    FillPolygon( xp1, yp1, xp1, yp2, xp2, yp3 )
+
+end
+
+
+procedure tier_varrow( tier, pos, y1, y2, color )
+
+    # Make color an option, and save & restore color
+    # handle negative tier heights
+
+    local xp, yp1, yp2, ypm, w
+
+    w := 4;
+    if ( pos > x_max | pos < x_min )
+        then return
+    xp := map_x( pos )
+    yp1 := map_y_tier( tier, y1 ) 
+    yp2 := map_y_tier( tier, y2 ) 
+    ypm := map_y_tier( tier, (y1 + y2) / 2.0 ) 
+    Fg( color )
+    DrawLine( xp, yp1, xp, yp2 )
+    FillPolygon( xp - w, ypm, xp, yp2, xp + w, ypm )
+
+end
+
+procedure tier_text( tier, x, y, str, color )
+
+    Fg( color )
+    DrawString( map_x( x ), map_y_tier_text( tier, y ), str )
+    
+end
+
+procedure tier_llabel( tier, y, str, color )
+
+    Fg( color )
+    DrawString( 10, map_y_tier_text( tier, y ), str )
+    
+end
+
+procedure tier_rlabel( tier, y, str, color )
+
+    Fg( color )
+    DrawString( window_width + 5 - right_margin, 
+                map_y_tier_text( tier, y ), str )
+    
+end
+
+#
+# This is not truncating diagonal lines properly!!!
+#
+procedure cross_tier_line( tier1, x1, y1, tier2, x2, y2, color )
+
+    local dxp, xp1, yp1, xp2, yp2, xminp, xmaxp, mp
+
+    if x1 > x2
+       then { x1 :=: x2; y1 :=: y2; tier1 :=: tier2 }
+    # Now (x1,y1) has the minimum x of the two points
+
+    if ( x2 < x_min | x1 > x_max )
+        then return                     # trivial case - don't plot at all
+
+    xp1 := map_x ( x1 )
+    yp1 := map_y_tier( tier1, y1 )
+    xp2 := map_x ( x2 )
+    yp2 := map_y_tier( tier2, y2 )
+    xminp := x_min                        # should be maintained as a global
+    xmaxp := x_max                        # should be maintained as a global
+
+    dxp := xp2 - xp1
+    if ( dxp > 0 )           # dx is not negative
+      then {
+             mp := ( yp2 - yp1 ) / dxp
+             if ( xp1 < xminp )
+               then {
+                     yp1 +:= ( xminp - xp1 ) * mp
+                     xp1 := xminp
+                    }
+             if ( xp2 > xmaxp )
+               then {
+                     yp2 -:= ( xp2 - xmaxp ) * mp
+                     xp2 := maxp
+                    }
+           }
+
+    Fg( color )
+    DrawLine( map_x( x1 ), map_y_tier( tier1, y1 ), 
+              map_x( x2 ), map_y_tier( tier2, y2 ) )
+    
+end
+
+
+procedure map_y_tier_text( tier, y )
+
+    if ( tier > 0 | symmetric = 0 )
+      then return( map_y_tier( tier, y ) )
+      else return( map_y_tier( tier, 1.0 - y ) )
+end
+
+#
+# takes tier number (integer) and y [0.0 - 1.0] and returns correct
+# pixel position for y
+#
+# Note: this assumes tier=0 is never invoked.
+#
+procedure map_y_tier( tier, y )
+
+    local yp
+
+    if ( tier > 0 )
+      then
+        return( b_y + y * a_y * tier_height -
+                ( ( tier - 1 ) * ( tier_spacing + tier_height ) + 
+                tier_spacing + scale_height ) )
+
+    # Here, we handle below the scale (tier is negative)
+
+    if ( symmetric = 1 ) 
+       then yp := -y * a_y * tier_height
+       else yp := -(1.0 - y) * a_y * tier_height
+
+    return(  b_y - (( tier + 1 ) * ( tier_spacing + tier_height ) -
+             ( tier_spacing + ticlen + yp ))
+          )
+
+end
+
+
+#
+# low level drawing routines - not for public use!
+#
+
+procedure fill_rectangle( x1, y1, x2, y2 )
+
+   FillRectangle( map_x( x1 ), map_y( y1 ),
+                  ( x2-x1 ) * a_x, ( y2 - y1 ) * a_y )
+
+end
+
+procedure  highlight_scale( x, l )
+
+    Fg( "green" )
+    FillRectangle( x, zero_y, l, -scale_height )
+
+end
+
+
+procedure  map_x( x )
+   return( a_x * x + b_x )
+end
+
+procedure  map_y( y )
+   return( a_y * y + b_y )
+end
+
+procedure  unmap_x( x )
+   return( ( x - b_x ) / a_x )
+end
+
+procedure  unmap_y( y )
+   return( ( y - b_y ) / a_y )
+end
+
+
+
+
+

@@ -1,0 +1,21 @@
+
+procedure main()
+    
+    output( "acgtancgtatt" )
+    output( "" )
+    output( "a" )
+
+end
+
+procedure output( s )
+    write( ">", s )
+    write( "<", reverse( rc( s ) ) )
+end
+
+
+procedure  rc( s )
+
+    return( map( reverse( s ), "acgtnACGTN", "tgcanTGCAN" ) );
+
+end
+

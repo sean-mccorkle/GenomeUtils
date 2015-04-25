@@ -1,0 +1,277 @@
+#!/usr/bin/perl
+# Program:     ditags
+# Programmer:  Sean R. McCorkle, Brookhaven National Laboratory
+# Language:    perl
+#
+# Description: Looks for SAGE ditags in input concatemer sequences (FASTA 
+#              format), breaks them up into tags, and prints out frequencies of
+#              tags (& shows ditags too)
+#
+# Usage:       ditags [-dt] [-l <n>] [-e <seq>] <sequences>
+#              (if no sequence files specified, stdin is scanned)
+#
+#
+#                 -a       - accept singles
+#                 -c       - case sensitive: lowercase is assumed low quality;
+#                            ditags and tags are not counted if any lower case
+#                            present
+#                 -d       - show ditags
+#                 -e <seq> - use <seq> for achoring enzyme sequence (not CATG)
+#                 -l <n>   - use <n> for tag length (not 10)
+#                 -n       - show dimer counts for each lane 
+#                 -r <file> - reject ditags in file
+#                             (will accept output from ditags -d)
+#                 -t       - show tags
+#                 -T       - tags in tablular format
+#
+# $Id: ditags,v 0.7 2005/08/10 18:40:51 mccorkle Exp mccorkle $
+#
+use  Getopt::Std;
+
+
+die "bad option\n" unless ( getopts( 'ace:dl:nr:tT' ) );
+
+$tag_len = ( $opt_l =~ /^\d+$/ ) ? $opt_l : 16;
+$re_seq =  $opt_e ? uc( $opt_e ) : 'CATG';
+$rc_re_seq = rc( $re_seq );
+$re_seq = "($re_seq|$rc_re_seq)" if ( $re_seq ne $rc_re_seq );
+
+
+$min_ditag_len = ($tag_len - 1 ) * 2;
+$max_ditag_len = ($tag_len + 3 ) * 2;
+
+$verbose = ! ( $opt_d || $opt_n || $opt_t || $opt_T );
+
+load_rejects() if ( $opt_r );    # make reject table if desired 
+
+                            #  Finite state loop:  read lines of FASTA format
+while ( <> )                # sequence from input, until exhausted
+   {
+    chomp;                  # remove newline
+    if ( s/^\>// )          # If its a FASTA header (>seqid)
+        {
+         $save_heading = $_;  
+         process() if ( defined( $heading ) );  # handle previously accumulated
+         $heading = $save_heading;              #sequence, then reset buffer
+         $seq = "";
+        }
+    elsif( /^\s*;/ )                            # ignore  if BNL ";" comment 
+        { next; }
+    else                                        # otherwise its a sequence 
+        {          
+         s/\s+//g;                              # line, so remove blanks
+         s/^\d*//;                              # or even preceeding digits   
+         $seq .= $_;                            # and append to buffer
+        }
+   }
+
+process() if ( defined( $heading ) );           # handle sequence in buffer,
+report();                                       # and lastly, spew out results
+
+
+                            ###############
+                            # Subroutines #
+                            ###############
+
+# process() - splits concatemers into ditags and then tags 
+
+sub process
+   {
+    $dimer_count = 0;
+    $lanes++;
+    $heading =~ /^(\S*)/;
+    $gl = $1;
+    print "\n\nLane: $heading\n" if $verbose; 
+    my $s = $opt_c ? $seq : uc( $seq );  # -c option suppresses uppercase conv.
+                                         # while we can split on an enzyme site
+    while ( $s =~ /$re_seq/i || ( $opt_a && good_length( $s ) ) )
+       {
+        if ( $s =~ /$re_seq/i )
+           {
+            $s = $';  #'                     # put right remained into $s and 
+            $r = $`;                         # put left into $r.  $r should be
+           }                                 # a ditag
+        elsif ( $opt_a )
+           { $r = $s;  $s = ""; }
+
+        printf "%3d: %s         ", $l, $r if $verbose;
+#        if ( $l >= 20 && $l <= 25 )
+        if ( good_length( $r ) ) # check ditag len.
+           {                                                # if good, get
+            $r =~ /(.{$tag_len})/ || die "Very bad\n";      # forward and
+            $ftag = $1;
+            $t = rc( $r );                                  # reverse tags
+            $t =~ /(.{$tag_len})/ || die "Very bad\n";
+            $rtag = $1;
+            #print "tags: $ftag $rtag";
+
+            $ditag = $ftag . "/" . $rtag;           # reform a neater ditag for
+            $rditag = $rtag . "/" . $ftag;          # lookups (and complement)
+                                                    # (lets us identify pairs)
+
+            if ( $ditag_reject{$ditag} || $ditag_reject{$rditag} )
+               {
+                print "\n" if $verbose;             # ignore this if in reject
+                next;                               # table
+               }
+
+            unless ( $opt_c && ($ditag =~ /[a-z]/) )  # if -c, don't count
+               {                                      # tags/ditags containing
+                $dimer_count++;                       # lowercase chars
+                if ( $ditag_count{$rditag} > 0 )      # if we counted this pair
+                   {                                # this pair as r/f already,
+                    $ditag_count{$rditag}++;        # then continue
+                    $ditag_occurs{$rditag} .= "$gl(r), ";
+                   }
+                else                                  # otherwise, count it
+                   {                                  # as f/r pair
+                    $ditag_count{$ditag}++;
+                    $ditag_occurs{$ditag} .= "$gl, ";
+                   }
+               }
+
+            # count single tags
+
+            $count{$ftag}++ unless ( $opt_c && ($ftag =~ /[a-z]/) );
+            $count{$rtag}++ unless ( $opt_c && ($rtag =~ /[a-z]/) );
+
+            if ( $ftag =~ /N/ )                  # count ambiguities, forward
+               {
+                $ncount++;
+                push( @ns, $ftag );
+                $nwhere{$ftag} .= "$gl(f), ";
+               }
+            if ( $rtag =~ /N/ )                  # and reverse tags
+               {
+                $ncount++;
+                push( @ns, $rtag );
+                $nwhere{$rtag} .= "$gl(r), ";
+               }
+
+           }
+        print "\n" if $verbose;
+       }
+    $seq_counter++;
+    $n_dimers{$seq_counter} = $dimer_count;
+    $headings{$seq_counter} = $heading;
+    print "$dimer_count dimers this lane\n" if $verbose;
+   }
+
+sub  good_length
+   {
+    my $l = length( (shift) );
+    return( $l >= $min_ditag_len && $l <= $max_ditag_len );
+   }
+
+
+#
+# report() prints out ditag, tag histograms, counts, depeding on the
+# option settings
+#
+sub report
+   {
+    my $tag, $ditag;
+    my $ntags, $noccurs, $nditags, $ndioccurs;
+
+    print "$lanes lanes\n\n\n" if $verbose;
+
+    if ( $verbose || $opt_t )
+       {
+        print "Single tags:\n\n";
+        foreach $tag ( sort by_count keys ( %count ) )
+           {
+            $ntags++;
+            $noccurs += $count{$tag};
+            printf "%10s: %4d\n", $tag, $count{$tag};
+           }
+       print "$ntags tags total, $noccurs occurances\n\n\n";
+      }
+    elsif ( $opt_T )
+       {
+        foreach $tag ( sort by_count keys ( %count ) )
+           {
+            $ntags++;
+            $noccurs += $count{$tag};
+            printf "%10s %d\n", $tag, $count{$tag};
+           }
+       }
+
+
+    if ( $verbose || $opt_d )
+       {
+        print "Ditags:\n\n";
+        foreach $ditag ( sort by_di_count keys ( %ditag_count ) )
+           {
+            $nditags++;
+            $ndioccurs += $ditag_count{$ditag};
+            printf "%10s: %4d   (%s)\n", $ditag, $ditag_count{$ditag}, 
+                        $ditag_occurs{$ditag};
+           }
+        print "$nditags ditags total, $ndioccurs occurances\n";
+       }
+
+    if ( $verbose || $opt_n )
+       {
+        print "\nDimer counts:\n\n";
+        for ( my $s = 1; $s <= $seq_counter; $s++ )
+           { printf "%6d %s\n", $n_dimers{$s}, $headings{$s}; }
+       }
+
+    if ( $verbose )
+       {
+        print "\n\n$ncount tags with ambiguity codes:\n\n";
+        foreach $x ( @ns )
+            {
+             printf "%10s:  (%s)\n", $x, $nwhere{$x};
+            }
+       }
+   }
+
+
+#
+# rejectable ditags (for now -add tags later)
+#
+sub  load_rejects
+   {
+    open( REJ, $opt_r ) || die "$0: can't open \"$opt_r\": $!\n";
+    while ( $_ = <REJ> )
+       {
+        if ( m=([A-Z]+)/([A-Z]+)=i )
+           {
+            ($a,$b) = (uc($1),uc($2));
+            $ditag_reject{"$a/$b"} = 1;
+            $ditag_reject{"$b/$a"} = 1;
+           }
+       }
+    close( REJ );
+   }
+
+#
+# These two for sorting
+#
+sub by_count
+   {
+    if ( $count{$b} == $count{$a} )
+       { return( $a cmp $b ); }
+    else     
+       { return $count{$b} <=> $count{$a}; }
+   }
+
+sub by_di_count
+   {  
+    if ( $ditag_count{$b} == $ditag_count{$a} )
+       { return( $a cmp $b ); }
+    else     
+       { return $ditag_count{$b} <=> $ditag_count{$a}; }
+   }
+
+#
+# rc( $seq ) returns the reverse complement of $seq
+# 
+sub  rc
+   {
+    my $r = reverse( split( '', shift ) );
+    $r =~ tr/acgtmrwsykvhdbnACGTMRWSYKVHDBN/tgcakywsrmbdhvnTGCAKYWSRMBDHVN/;
+    return( $r );
+   }
+

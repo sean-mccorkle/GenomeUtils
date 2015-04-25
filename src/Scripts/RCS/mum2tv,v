@@ -1,0 +1,197 @@
+head	0.3;
+access;
+symbols;
+locks
+	mccorkle:0.3; strict;
+comment	@# @;
+
+
+0.3
+date	2004.09.20.00.16.00;	author mccorkle;	state Exp;
+branches;
+next	0.2;
+
+0.2
+date	2004.09.19.23.05.43;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	2004.09.19.19.04.03;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@generates tview graphics commands from MUMmer3 .out files.
+(also accepts mumsort output too).
+@
+
+
+0.3
+log
+@fixed vertical y placement of text for lower tiers.
+@
+text
+@#!/usr/bin/perl
+# Program:      mum2tv
+# Programmer:   Sean R. McCorkle
+# Language:     perl
+#
+# Description:  Reads MUMmer3 .out file and generates tview graphics commands.
+#
+# Usage:        mum2tv [opts] [<mummer-output>]
+#
+#               stdin is scanned if no input file specified.
+#
+# Options:      -t <label>   print extra label on upper tier
+#               -s <label>   print extra label on lower tier
+#               -l <n>       exclude matches (and contigs) with len < n
+# 
+# Notes:        If input is output from mumsort, length bars indicating
+#               contig lengths are also shown.
+#
+# $Id: mum2tv,v 0.2 2004/09/19 23:05:43 mccorkle Exp mccorkle $
+#
+
+
+use Getopt::Std;
+
+getopts( 'l:t:s:' );
+
+$color = "white";
+$t1 = 2;
+$t2 = -1;
+
+$len_thresh = $opt_l ? $opt_l : 0;
+
+if ( $opt_t )
+   {
+    print( "t_llabel $t1 0 \"$opt_t\" $color\n" );
+    print( "t_rlabel $t1 0 \"$opt_t\" $color\n" );
+   }
+if ( $opt_s )
+   {
+    print( "t_llabel $t2 0 \"$opt_s\" $color\n" );
+    print( "t_rlabel $t2 0 \"$opt_s\" $color\n" );
+   }
+
+while ( $_ = <> )
+   {
+    if ( /^>\s*(\S+)(\s+(Reverse))?(\s+(\d+))?/ )
+       {
+        ($seq,$rev,$ctg_len) = ($1,$3,$5);
+        $seq = clean_seqname( $seq );
+        flush_last_seq() if ( defined( $last_seq ) && ($seq ne $last_seq)); 
+        ($last_seq,$last_ctg_len) = ($seq,$ctg_len);
+       }
+    else
+       {
+        s/^\s*//;
+        ($a, $b, $l) = split( /\s+/ );
+        push( @@sections, [ $a, $b, $l, $rev ] ) if ( $l >= $len_thresh );
+       }
+   }
+
+flush_last_seq() if ( defined( $last_seq ) );
+
+
+sub  flush_last_seq
+   {
+    if ( @@sections )
+       {
+        $t2 -= 1;
+        print "t_llabel $t2 0.0 \"$last_seq\" white\n";
+        print "t_rect $t2 0 $last_ctg_len 0.4 0.6 blue\n" if ( $last_ctg_len );
+
+        foreach my $s ( @@sections )
+           {
+            my ($a,$b,$l,$rev) = @@{$s};
+            my $color = ($rev eq "Reverse") ? "orange" : "white";
+            print "t_hline $t1 $a ", $a + $l, " 0.5 $color\n";
+            print "t_vline $t1 $a 0.2 0.8 $color\n";
+            print "t_vline $t1 ", $a + $l," 0.2 0.8 $color\n";
+
+            print "t_hline $t2 $b ", $b + $l, " 0.5 $color\n";
+            print "t_vline $t2 $b 0.2 0.8 $color\n";
+            print "t_vline $t2 ", $b + $l," 0.2 0.8 $color\n";
+
+            print "ct_line $t1 ", $a + 0.5 * $l, " 0.5 $t2 ",
+                    $b + 0.5 * $l, " 0.5  $color\n";
+           }
+       }
+    @@sections = ();
+   }
+
+
+sub  clean_seqname
+   {
+    my $seq = shift;
+    $seq =~ s/^(.*)\.Contig/Contig/;
+    $seq =~ s/^(.*)\.Ctg/Ctg/;
+    $seq =~ s/^(.*)\.ctg/ctg/;
+    return( $seq );
+   }
+@
+
+
+0.2
+log
+@nearly complete rewrite to entirely drop contigs with no
+matches below the -l threshold.
+@
+text
+@d19 1
+a19 1
+# $Id: mum2tv,v 0.1 2004/09/19 19:04:03 mccorkle Exp mccorkle $
+d69 1
+a69 1
+        print "t_llabel $t2 -0.5 \"$last_seq\" white\n";
+@
+
+
+0.1
+log
+@about to do a big rewrite so that contigs with no matches below
+the -l threshold are removed from the plot entirely.
+Checking this otherwise good 1st version in.
+@
+text
+@a4 2
+# Description:  Convert MUMmer output into graphic display for tview.
+# Usage:        mum2tv [-t <top label>] [-s <bottom label>] [-l <thresh>] <errorsgaps file>
+d6 14
+a19 1
+# $Id$
+a43 2
+$last_seq = "";
+
+d49 3
+a51 11
+        $seq =~ s/^(.*)\.Contig/Contig/;
+        if ( $seq ne $last_seq )
+           {
+            $t2 -= 1;
+            print "t_llabel $t2 -0.5 \"$seq\" white\n";
+           }
+        $last_seq = $seq;
+        $color = ($rev eq "Reverse") ? "orange" : "white";
+        print "t_rect $t2 0 $ctg_len 0.4 0.6 blue\n" 
+            if ( $ctg_len && ! $lbar{$seq} );
+        $lbar{$seq} = 1;         
+d57 6
+a62 8
+        next if ( $l < $len_thresh );
+        print "t_hline $t1 $a ", $a + $l, " 0.5 $color\n";
+        print "t_vline $t1 $a 0.2 0.8 $color\n";
+        print "t_vline $t1 ", $a + $l," 0.2 0.8 $color\n";
+
+        print "t_hline $t2 $b ", $b + $l, " 0.5 $color\n";
+        print "t_vline $t2 $b 0.2 0.8 $color\n";
+        print "t_vline $t2 ", $b + $l," 0.2 0.8 $color\n";
+d64 23
+a86 2
+        print "ct_line $t1 ", $a + 0.5 * $l, " 0.5 $t2 ",
+                $b + 0.5 * $l, " 0.5  $color\n";
+d88 11
+@

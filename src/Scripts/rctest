@@ -1,0 +1,61 @@
+#!/usr/bin/perl
+$line = 50;
+%compl = (
+           'A' => 'T', 'C' => 'G', 'G' => 'C', 'T' => 'A',
+           'M' => 'K', 'R' => 'Y', 'W' => 'W', 'S' => 'S',
+           'Y' => 'R', 'K' => 'M', 'V' => 'B', 'H' => 'D',
+           'D' => 'H', 'B' => 'V', 'N' => 'N',
+
+           'a' => 't', 'c' => 'g', 'g' => 'c', 't' => 'a',
+           'm' => 'k', 'r' => 'y', 'w' => 'w', 's' => 's',
+           'y' => 'r', 'k' => 'm', 'v' => 'b', 'h' => 'd',
+           'd' => 'h', 'b' => 'v', 'n' => 'n',
+          );
+
+while ( <> )
+   {
+    chomp;
+    if ( /^>(.*)/ )
+       {
+        $new_hdr = $1;
+        process() if ( $hdr );
+        $hdr = $new_hdr;
+        $seq = "";
+       }
+    else
+       {
+        s/\s//g;
+        s/^\d+//;
+        $seq .= $_;
+       }
+   }
+
+process() if ( $hdr );
+
+sub process
+   {
+    my $i;
+
+    $r = complement( $seq );
+    print ">$hdr\n";
+    my $l = length( $r );
+    my $n = int( $l / $line );
+    for ( $i = 0; $i < $n; $i++ )
+       { print substr( $r, $i * $line, $line ), "\n"; }
+    if ( $l % $line )
+       { print substr( $r, $i * $line ), "\n"; }
+   }
+
+sub complement
+   {
+    my $s = shift;
+    my $l = length( $s );
+    my $r = 'X'x$l;
+    my $i, $j;
+    for ( $i = $l - 1, $j = 0; $i >= 0; $i--, $j++ )
+       {
+         substr( $r, $j, 1 ) = $compl{ substr( $s, $i, 1 ) }; 
+       }
+    return( $r );
+   }
+

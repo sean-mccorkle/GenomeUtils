@@ -1,0 +1,120 @@
+head	0.2;
+access;
+symbols;
+locks
+	mccorkle:0.2; strict;
+comment	@# @;
+
+
+0.2
+date	2003.02.11.22.02.58;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	2002.08.12.18.23.16;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@read fasta-format sequences, print out lengths.
+@
+
+
+0.2
+log
+@changed output order - now its length, heading
+@
+text
+@#!/usr/bin/perl
+# Program:      seq_len
+# Programmer:   Sean R. McCorkle, 
+#               Biology Department, Brookhaven National Laboratory
+# Language:     perl
+# Description:  reads fasta-format DNA or protein sequences, prints out 
+#               their length (in nt or amino acids)
+# 
+# Usage:        seq_len [-tT] [<seq> ...] 
+#
+#               (stdin used if nothing specified)
+#
+# Options:       -t   terse output - print one sequence length number per line
+#                -T   total        - print total count only
+#
+# $Id: seq_len,v 0.1 2002/08/12 18:23:16 mccorkle Exp mccorkle $
+#
+
+use  Getopt::Std;
+
+select( ( select(STDOUT), $| = 1 )[0] );
+select( ( select(STDERR), $| = 1 )[0] );
+
+die "bad option\n" unless ( getopts( 'tT' ) );
+
+$count = 0;
+$total = 0;
+while( <> )
+   {
+    chomp;
+    if ( s/^\>// )
+        {
+         output_line() if ( defined( $heading ) && ! $opt_T );
+         $heading = $_ ? $_ : " ";
+         $total += $count;
+         $count = 0;
+        }
+    elsif( /^;/ )
+        { next; }
+    else
+        { 
+         s/\s+//g;
+         s/^\d*//;
+         $count += length( $_ );
+        }
+   }
+
+#if ( $count )
+if ( defined( $heading ) )
+   {
+    output_line() unless ( $opt_T );
+    $total += $count;
+   }
+
+print "$total\n" if ( $opt_T );
+
+sub output_line
+   {
+    printf "%10d ", $count;
+    print "$heading" unless ( $opt_t );
+    print "\n";
+   }
+@
+
+
+0.1
+log
+@going public, checking in.
+@
+text
+@d16 1
+a16 1
+# $Id$
+d33 1
+a33 2
+         printf "%s%d\n", ( $opt_t ? "" : "$heading: length " ), $count 
+            if ( $heading && ! $opt_T );
+d44 1
+a44 1
+         $count += length( $_ ) 
+a45 1
+
+d48 2
+a49 1
+if ( $count )
+d51 1
+a51 2
+    printf "%s%d\n", ( $opt_t ? "" : "$heading: length " ), $count 
+       unless ( $opt_T );
+d56 7
+@

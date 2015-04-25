@@ -1,0 +1,133 @@
+#!/usr/bin/perl
+#
+# Usage:  16sGSTscan [-e enz sequence]  [<seq file> ...]
+#
+#  currently, this needs atags, subseqs and lossc to be in /usr/local/seq/bin
+#
+$ENV{'PATH'} .= ":/usr/local/seq/bin";
+
+$primlen           = 20;
+
+$tmp_in_file       = "/tmp/16sGSTscan_in_$$";
+$tmp_atags_file    = "/tmp/16sGSTscan_atag_$$";
+$tmp_subseqs_file  = "/tmp/16sGSTscan_sub_$$";
+$tmp_lossc_infile  = "/tmp/16sGSTscan_losscin_$$";
+$tmp_primers_file  = "/tmp/16sGSTscan_primers_$$";
+
+use  Getopt::Std;
+
+select( ( select(STDOUT), $| = 1 )[0] );
+select( ( select(STDERR), $| = 1 )[0] );
+
+die "bad option\n" unless ( getopts( 'e:' ) );
+
+unless( @ARGV )
+   {
+    print "No args!\n";
+    open( TMPIN, ">$tmp_in_file" ) 
+          || die "$0: Can't write to $tmp_in_file: $!\n";
+    print TMPIN <STDIN>;
+    close( TMPIN );
+    unshift( @ARGV, $tmp_in_file );
+   }
+
+$args = join( ' ', @ARGV );
+
+$enzopt = $opt_e ? "-a $opt_e" : "";
+
+print " atags ...\n";
+system( "atags -S $enzopt $args >$tmp_atags_file" );
+print " subseqs ...\n";
+system( "subseqs -s $primlen $args >$tmp_subseqs_file" );
+
+%atag_seqs = seqs( $tmp_atags_file, 1 );
+# %subseq_seqs = seqs( $tmp_subseqs_file, 2 ); not needed -always have subseqs
+
+foreach $s ( keys( %subseq_seqs ) )
+   {
+    print "$s - subseq but no atag\n" unless( $atag_seqs{$s} );
+   }
+
+# Generate the primers file for lossc
+#
+open( PRIM, ">$tmp_primers_file" ) || 
+    die "$0: Can't write \"$tmp_primers_file\": $!\n";
+print PRIM <<EndOfPrim;
+AGAGTTTGATCCTGGCTCAG  16sf
+CTGAGCCAGGATCAAACTCT  16sr
+EndOfPrim
+close( PRIM );
+
+system( "cat $tmp_primers_file" );
+
+open( SUBS, $tmp_subseqs_file ) || 
+    die "$0: Can't read \"$tmp_subseqs_file\": $!\n";
+$_ = <SUBS>;
+
+while ( $_ )
+   {
+    $sid = subseq_seqid( $_ );
+
+    if ( $atag_seqs{$sid} )     # if we have atags for this seqid, then
+       {                        #   tap off extras for lossc 
+        print "   start proc $_";
+        open( LTI, ">$tmp_lossc_infile" ) ||
+             die "$0: Can't write to \"$tmp_lossc_infile\": $!\n";
+        $_ = <SUBS>;                    # so skip through all the subseqs until
+        while ( $_ && subseq_seqid( $_ ) eq $sid )
+           { 
+             print LTI;
+             $_ = <SUBS>; 
+           }
+        print "   stop proc at $_";
+        close( LTI );
+        system( "lossc 2 $tmp_primers_file $tmp_lossc_infile" );
+        #   open lossc output
+        #   read atags output to find apropriate fragments - output
+        unlink( $tmp_lossc_infile ) if ( -e $tmp_lossc_infile );
+       }
+    else
+       {                                # no atags for this seqid,   
+        print "***start skip $_";
+        $_ = <SUBS>;                    # so skip through all the subseqs until
+        while ( $_ && subseq_seqid( $_ ) eq $sid )
+           { $_ = <SUBS>; }
+        print "***stop skip at $_";
+       }
+   }
+
+close( SUBS );
+
+unlink( $tmp_in_file )      if ( -e $tmp_in_file );
+unlink( $tmp_atags_file )   if ( -e $tmp_atags_file );
+unlink( $tmp_subseqs_file ) if ( -e $tmp_subseqs_file );
+unlink( $tmp_primers_file ) if ( -e $tmp_primers_file );
+
+
+
+                                 ###############
+                                 # Subroutines #
+                                 ###############
+
+# accepts a line from the subseqs file, returns the seqid field
+
+sub  subseq_seqid
+   { return( (split( /\s+/, shift ))[2] ); }
+
+# Returns a hash table indicating the set of sequence names contained 
+# in an atags or subseqs output file.  $col is the column 
+
+sub seqs
+   {
+    my ( $filename, $col ) = @_;
+    my %seqh = ();
+
+    open( F, $filename ) || die "$0: Can't open file \"$filename\": $!\n";
+    while ( $_ = <F> )
+       {
+        my $seqid = (split( /\s+/ ))[$col];
+        $seqh{$seqid} = 1;
+       }
+    close( F );
+    return( %seqh );    
+   }

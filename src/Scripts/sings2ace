@@ -1,0 +1,157 @@
+#!/usr/local/bin/perl
+# Program:      sings2ace
+# Programmer:   Sean R. McCorkle
+# Language:     perl
+#
+# Description:  This takes as input phred output files (.phd format) and 
+#               generates a "faked" assembly file (ace format), for consed,
+#               such that each lane is placed in its own contig, so that
+#               consed can used to view individual lanes
+#
+# Usage:        sings2ace [-o <acefile>] <phd-file> [<phd-file> ...]
+#               
+#               Stdin is scanned if no files are specified.
+#
+#               The output ace file is sent to stdout, or <acefile> if the
+#               -o <acefile> option is used.
+#
+# $Id: sings2ace,v 0.2 2001/01/24 15:49:47 mccorkle Exp mccorkle $
+
+
+use Getopt::Std;
+
+getopts( '-o:' );
+
+if ( $opt_o )
+   {
+    $acefile = $opt_o;
+    ( $acefile =~ /.ace$/ ) || ( $acefile .= ".ace" );
+    open( ACE, ">$acefile" ) || die "Can't write to \"$acefile\"\n";
+   }
+else
+   {
+    open( ACE, ">&STDOUT" );
+   }
+
+# Check input filename syntax (*.phd.n)
+foreach $_ ( @ARGV )
+ { /^[\-\.\/\w]+\.phd\.\d+$/ || die "\"$_\" is not a good phred file name!\n"; }
+
+$nsings = $#ARGV + 1;
+
+
+print ACE "AS $nsings $nsings\n\n";
+
+foreach $pfile ( @ARGV )
+   {
+    ( $bases, $quals, $chromat, $time ) = read_phd( $pfile );
+    write_contig( $pfile, $bases, $quals, $chromat, $time );
+   }
+close( ACE ) if ( $opt_o );
+
+
+                             ###############
+                             # Subroutines #
+                             ###############
+
+sub  read_phd
+   {
+    my $file = shift;
+
+    my $chromat = "";
+    my $time = "";
+    open( PHD, $file ) || die "Can't read \"$file\"\n";
+
+    while ( ($_ = <PHD>) && ! /^BEGIN_DNA/ )
+       {
+        if ( /^CHROMAT_FILE:/ )
+           { chomp( $chromat = $_ ); }
+        elsif ( /^TIME:/ )
+           { chomp( $time = $_ ); }
+       }
+    /^BEGIN_DNA/ || "$file: did not find BEGIN_DNA line in phd file!\n";
+
+    my $bases = [];
+    my $quals = [];
+    while ( ($_ = <PHD>) && ! /^END_DNA/ )
+       {
+        chomp;
+        s/^\s*//;
+        ($b,$q) = split( /\s+/ );
+        push( @{$bases}, $b );
+        push( @{$quals}, $q );
+       }
+    /^END_DNA/ || "$file: did not find END_DNA line in phd file!\n";
+
+    close( PHD );
+
+    return( $bases, $quals, $chromat, $time );
+   }
+
+
+sub write_contig
+   {
+    my ( $phd, $bases, $quals, $chromat, $time ) = @_;
+
+    my $nbases = $#{$bases} + 1;
+    if ( $nbases == 0 )
+       {
+        $nbases++;
+        $bases = [ 'x' ];
+        $quals = [ 10 ];
+       }
+    $phd =~ s/^.*\///;
+    my $read = $phd;
+    $read =~ s/\.phd\.\d+$//;
+    my $ctg = $read;
+    #
+    # for mike
+    # 
+    if ( $ctg =~ /^\d+[ab]-\d+-(\d+)-T3/ )
+       { my $num = $1; 
+         $ctg = sprintf( "%05d", $num );
+         $read = $ctg;
+       }
+
+    print ACE "CO $ctg $nbases 1 1 U\n";
+    write_bases( $bases );
+ 
+    print ACE "BQ\n";
+    write_quals( $quals );
+
+    print ACE "AF $read U 1\n";
+    print ACE "BS 1 $nbases $read\n\n";
+
+    print ACE "RD $read $nbases 0 0\n";
+    write_bases( $bases ); 
+    
+    print ACE "QA 1 $nbases 1 $nbases\n";
+    print ACE "DS $chromat PHD_FILE: $phd $time\n";
+   }
+
+sub write_bases
+   {
+    my $i = 0;
+    my $b;
+    foreach $b ( @{$_[0]} )
+       {
+        print ACE $b;
+        print ACE "\n" unless ( ++$i % 50 );
+       }
+    print ACE "\n" if ( $i % 50 );
+    print ACE "\n";
+   }
+
+sub write_quals
+   {
+    my $i = 0;
+    my $q;
+    foreach $q ( @{$_[0]} )
+       {
+        print ACE " $q";
+        print ACE "\n" unless ( ++$i % 25 );
+       }
+    print ACE "\n" if ( $i % 25 );
+    print ACE "\n";
+   }
+

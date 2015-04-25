@@ -1,0 +1,124 @@
+#!/usr/bin/perl
+# Program:      ic
+# Programmer:   Sean R. McCorkle
+# Language:     perl
+# Description:  Evaluation of integrated charge prefixes for P. Freimuth,
+#               reads protein sequence(s), writes out integrated charges
+#
+# Usage:        ic  [-np] [<protein file>]
+#               where <protein file> is a fasta-format amino acid sequence.
+#
+#                  -n don't explicitly list neutrals
+#                  -p write position as fractional length
+#
+#               The output is a stream of pos-charge pairs, suitable for
+#               x-y plotting.  Output from a single protein can be fed 
+#               directly into gnuplot.  For multiple proteins, feed the
+#               output into "icplot".
+#
+#               For each protein sequence, the following is printed
+#
+#                    # header
+#                    pos1  charge1
+#                    pos2  charge2
+#                    pos3  charge3
+#                     .       .
+#                     .       .
+#                     .       .
+#                    pos-n  charge-n   where n is the protein sequence length
+#                    
+#
+# $Id: ic,v 1.5 2003/07/23 19:51:48 mccorkle Exp mccorkle $
+#
+
+use  Getopt::Std;
+
+getopts( 'np' ) || die "Bad option\n";
+
+
+                               ################
+                               # Main Program #
+                               ################
+
+
+print "# $opt_p\n";                        # printout heading
+
+#
+# This is a state-machine loop that reads lines of sequence (from FASTA format
+# input) and accumulates them in a character string variable $seq.  When
+# a FASTA header, ">seqname" is encountered, it first processes the previously
+# accumulated sequence (if any) and then clears the $seq string accumulator
+# and begins again.
+#
+while ( <> )                               # read lines of input into $_ 
+   {
+    chomp;                                 # remove trailing \n if its there
+    next if ( /^\s*$/ );                   # ignore blank lines 
+    if ( /^>(.*)/ )                        # is it a FASTA header line?
+       {
+        $new_h = ($1 ? $1 : "prot " . ++$p );  # make default name if blank hdr
+        if ( defined( $heading ) )             # did we already have a sequence
+           { process( $seq, $heading ); }      # ?  then process it
+        $heading = $new_h;                     # reset sequence header
+        $seq = "";                             # reset sequence accumulator
+       }
+    else                                   # not a FASTA header, so it must
+       {                                   # be sequence characters
+        s/\s//g;                           # strip out any blanks or tabs
+        s/\%[0-9A-F][0-9A-F]//ig;          # strip out hex %dd codes
+        s/[^A-Z]//ig;                      # remove non-letters
+        $seq .= uc( $_ );                  # accumulate new sequence(uppercase)
+       }
+   }
+
+process( $seq, $heading ) if ( defined( $heading ) ); 
+                                           # process any sequence left in 
+                                           # accumulator
+
+
+                               ###############
+                               # Subroutines #
+                               ###############
+
+
+sub  process
+   {
+    my ( $seq, $heading ) = @_;     # get the two arguments, $seq & $heading
+    my $delta_c;                    # delta charge (charge of one amino acid)
+    my $int_charge = 0;             # this accumulates total charge as we 
+                                    # move through the protein sequence
+    my $len = length( $seq );       # length of sequence      
+    my $i;                          # position counter
+
+    print "#$heading \n";           # print out "# name on output"
+
+    for (  $i = 0;  $i < $len;  $i++ )    # for each amino acid, in order
+       {
+        $delta_c = charge( substr( $seq, $i, 1 ), $i );  # +1, -1 or 0
+        $int_charge += $delta_c;                         # accumulate 
+        if ( $delta_c != 0 || ! $opt_n )                 # user may not want
+           {                                             # delta_c == 0 points
+            if ( $opt_p )                            
+                { printf "%8.4f ", ( ($i * 100.0) / $len ); }   # % len
+            else
+                { printf "%4d ", $i; }                          # residue num.
+            printf "%5d\n", $int_charge;                        # int charge
+           }
+       }
+   }
+
+#
+# charge( $c, $pos ) returns a charge for amino acid $c -1 for E and R,
+# and +1 for D, E or M if its the first ($pos == 0).  All other amino 
+# acids have 0 charge (neutral)
+#
+sub  charge 
+   {
+    my ($c,$pos) = @_;                          # charge( $c, $pos )
+    return( 1 )  if ( $c eq 'M' && $pos == 0 );
+    return( -1 ) if ( $c eq 'D' || $c eq 'E' );
+    return( +1 ) if ( $c eq 'K' || $c eq 'R' );
+    return( 0 );
+   }
+
+

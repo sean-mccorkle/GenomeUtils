@@ -1,0 +1,69 @@
+#!/usr/bin/perl
+# Program:      truncseq
+# Programmer:   Sean R. McCorkle
+#               Biology Department, Brookhaven National Laboratory
+# Language:     perl
+# Description:  Reads FASTA format sequences, outputs truncated sequences.
+#
+# Usage:        truncseq [-B <n>] [-L <n>] [-H<hdr>] [ <fasta file> ... ]
+#
+#               a single hyphen (-) can be used as a file name to specify
+#               stdin.  If no files are specified, stdin is scanned.
+#
+# Options:
+#               -B <n>   output sequencing beginning at <n> (defaults to 0)
+#               -L <n>   output a sequence of length <n> (defaults to entirety)
+#               -H <hdr> change header to <hdr>
+#
+# $Id: truncseq,v 0.2 2004/07/26 13:05:29 mccorkle Exp mccorkle $
+#
+
+use  Getopt::Std;
+
+select( ( select(STDOUT), $| = 1 )[0] );
+select( ( select(STDERR), $| = 1 )[0] );
+
+die "bad option\n" unless ( getopts( 'B:L:H:' ) );
+
+$start = $opt_B ? $opt_B : 0;
+$len = $opt_L ? $opt_L : 1000000000;
+$stop = $start + $len;
+$out_line_len = 50;     # option?
+
+while ( <> )
+   {
+    if ( /^>/ )
+       {
+        print "\n"  if ( ($outc % $out_line_len) != 0 );
+        if ( $opt_H )
+           { print ">$opt_H\n"; }
+        else
+           { print; }
+        $pos = 0;
+       }
+    elsif ( $pos < $stop )
+       {
+        chomp;
+        s/\s//g;
+        $s = $_;
+        $n = length($s);
+        if ( $pos + $n < $start ) 
+           { $pos += $n; }
+        else
+           {
+            for ( my $i = 0; $i < $n; $i++, $pos++ )
+               {
+                if ( $pos >= $start && $pos < $stop )
+                   { output( substr( $s, $i, 1 ) ); }
+               }
+           }
+       }
+   }
+
+print "\n"  if ( ($outc % $out_line_len) != 0 );
+
+sub  output
+   {
+    print shift;
+    print "\n"  if ( (++$outc % $out_line_len) == 0 );
+   }

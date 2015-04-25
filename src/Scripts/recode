@@ -1,0 +1,77 @@
+#!/usr/bin/perl
+# Program:      recode
+# Programmer:   Sean R. McCorkle, Biology Dept Brookhaven National Laboratory
+# Language:     perl
+#
+# Description:  reads protein sequences (FASTA format) and outputs reverse
+#               DNA translations (FASTA format) according to a specific
+#               coding scheme.  Default scheme is most favorable for E. coli
+#
+# Usage:        recode  [<protein sequence file> ... ]
+#
+#               if no files are specified, STDIN is scanned
+#
+# $Id: recode,v 0.2 2003/06/26 13:52:29 mccorkle Exp mccorkle $
+#
+
+#
+#  Default reverse translation table, E. coli K12
+# 
+%revtrans = (
+            'F' => 'TTT',   'S' => 'AGC',   'Y' => 'TAT',  'C' => 'TGC',
+            'L' => 'CTG',   'P' => 'CCG',   'H' => 'CAT',  'W' => 'TGG',
+            'I' => 'ATT',   'T' => 'ACC',   'Q' => 'CAG',  'R' => 'CGC',
+            'M' => 'ATG',   'A' => 'GCG',   'N' => 'AAC',  'G' => 'GGC',
+            'V' => 'GTG',                   'K' => 'AAA',
+                                            'D' => 'GAT',
+                                            'E' => 'GAA',
+           );
+
+
+
+                                ################
+                                # Main Program #
+                                ################
+
+while ( <> )
+   {
+    if ( /^>(.*)/ )
+       {
+        $new_hdr = $1;
+        recode( $hdr, $prot ) if ( defined( $hdr ) );
+        ($hdr,$prot) = ($new_hdr,"");
+       }
+    else
+       {
+        chomp;
+        s/\s//g;
+        $prot .= uc( $_ );
+       }
+   }
+
+recode( $hdr, $prot ) if ( defined( $hdr ) );
+
+
+                                 ###############
+                                 # Subroutines #
+                                 ###############
+
+sub  recode
+   {
+    ($hdr,$prot) = @_;
+
+    print ">DNA recode: $hdr\n";
+    for ( $i = 0; $i < length( $prot ); $i++ )
+       {
+        print( code( substr( $prot,$i,1) ) );
+        print "\n" if ( (($i+1) % 20 ) == 0 );
+       }
+    print "\n" unless( ( $i % 20 ) == 0 );
+   }
+
+
+sub  code
+   {
+    my $aa = shift;
+    return(  defined( $revtrans{$aa} ) ? $revtrans{$aa} : '???' );
+   }

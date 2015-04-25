@@ -1,0 +1,333 @@
+head	0.6;
+access;
+symbols;
+locks
+	mccorkle:0.6; strict;
+comment	@# @;
+
+
+0.6
+date	2000.03.21.20.38.57;	author mccorkle;	state Exp;
+branches;
+next	0.5;
+
+0.5
+date	2000.02.28.17.34.36;	author mccorkle;	state Exp;
+branches;
+next	0.4;
+
+0.4
+date	2000.01.24.20.55.30;	author mccorkle;	state Exp;
+branches;
+next	0.3;
+
+0.3
+date	99.12.30.01.36.09;	author mccorkle;	state Exp;
+branches;
+next	0.2;
+
+0.2
+date	99.12.30.01.14.33;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	99.10.23.22.43.33;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@Makefile for BNL Genome Icon programs
+@
+
+
+0.6
+log
+@added C programs, so separated scripts, C programs and Icon programs into
+separate subdirectories.  Now need to worry about configurations (i.e.
+C library differences) so added Config subdirectory and make config.
+@
+text
+@# Top level makefile for BNL Genome sequence utilities packages
+#
+# $Id: Makefile,v 0.5 2000/02/28 17:34:36 mccorkle Exp mccorkle $
+#
+
+DISTFILE    = gensrcdist.tar
+SUBDIRS     = Scripts Icon C
+OSLIST      = solaris|irix6|linux
+
+
+all install install-local showrcs:
+	for d in $(SUBDIRS)                                             ; \
+	    do ( cd $$d; make $@@ DISTFILE=$(DISTFILE) )                 ; \
+            done
+
+config:
+	( cd Config; make config OS=$(OS) )
+
+clean:
+	rm -f *~ #*#
+	for d in $(SUBDIRS)                                             ; \
+	    do ( cd $$d; make $@@ )                                      ; \
+            done
+
+dist:
+	tar cvf ../$(DISTFILE) Config Makefile *.mak   # documents too?
+	for d in $(SUBDIRS)                                             ; \
+	    do ( cd $$d; make dist DIR=$$d DISTFILE=$(DISTFILE) )       ; \
+            done
+
+install-remote: dist
+	cat Config/machines
+	for m in `cat Config/machines`                                  ; \
+	    do                                                            \
+            case $$m in                                                   \
+                $(OSLIST) ) os=$$m ;;                                     \
+	        *)  echo distributing to $$m, an $$os machine           ; \
+                    ssh $$m mkdir /tmp/gensrc                           ; \
+	            scp ../$(DISTFILE) $$m:/tmp/gensrc                  ; \
+	            ssh $$m "cd /tmp/gensrc;                              \
+                             tar xvf $(DISTFILE);                         \
+                             make config OS=$$os;                         \
+                             make install"                              ; \
+	            ssh $$m rm -r /tmp/gensrc  ;;                         \
+              esac                                                      ; \
+            done
+	echo remote distribution completed
+
+
+
+
+
+
+@
+
+
+0.5
+log
+@Completely reorganized install and install-remote.  Now install copies
+to /usr/local/seq/bin, and install remote does a remote build in /tmp
+and remotely installs from there.
+@
+text
+@d1 1
+a1 1
+# Makefile for BNL Genome Icon package
+d3 1
+a3 1
+# $Id: Makefile,v 0.4 2000/01/24 20:55:30 mccorkle Exp mccorkle $
+d6 3
+a8 4
+BINS      = orfs orfs2map pp ranseq rc sage sel signals splt trans tview
+PERLS     = seq_len gb2bnl qhplot qfix
+PUBBINDIR = /usr/local/seq/bin
+MACHINES  = genome5 genome4 genome1 ospa ospb 
+d11 4
+a14 1
+.SUFFIXES :  .icn .u1 .u2
+d16 2
+a17 1
+all:  $(BINS)
+d19 5
+a23 50
+
+orfs:  orfs.icn io.u1 io.u2
+	icont $@@
+
+orfs2map:  orfs2map.icn io.u1 io.u2
+	icont $@@
+
+pp:      pp.icn io.u1  io.u2
+	icont $@@
+
+ranseq:  ranseq.icn io.u1  io.u2
+	icont $@@
+
+rc:      rc.icn io.u1  io.u2
+	icont $@@
+
+sage:   sage.icn io.u1  io.u2
+	icont $@@
+
+sel:   sel.icn io.u1  io.u2
+	icont $@@
+
+signals:  signals.icn io.u1 io.u2
+	icont $@@
+
+splt:   splt.icn io.u1  io.u2
+	icont $@@
+
+trans:  trans.icn io.u1 io.u2
+	icont $@@
+
+tview:  tview.icn  graf.u1  graf.u2
+	icont $@@
+
+#iceu:   iceu.icn
+#	icont $@@
+
+
+.icn.u1:
+	icont -c $<
+.icn.u2:
+	icont -c $<
+
+install-local:
+	cp $(BINS) $(PERLS) ../bin
+
+install: all
+	chgrp developer $(BINS) $(PERLS)
+	chmod a+rx,ug+w $(BINS) $(BERLS)
+	cp $(BINS) $(PERLS) $(PUBBINDIR)
+d26 4
+a29 1
+	tar cvf ../gensrcdist.tar Makefile *.icn $(PERLS)
+d32 14
+a45 6
+	for m in $(MACHINES)               ; \
+            do echo installing on $$m '...' ; \
+            ssh $$m mkdir /tmp/gensrc ; \
+	    scp ../gensrcdist.tar $$m:/tmp/gensrc     ; \
+            ssh $$m 'cd /tmp/gensrc; tar xvf gensrcdist.tar; make install' ; \
+            ssh $$m rm -r /tmp/gensrc ; \
+d47 2
+a48 1
+	rcp ../gensrcdist.tar equalizer:
+a49 4
+showrcs:
+	for p in *.icn ; \
+	    do rcsdiff $$p ; \
+	    done
+@
+
+
+0.4
+log
+@added iceu.icn to list.  Changed name of view to tview, added some more
+handling for distribution.
+@
+text
+@d3 1
+a3 1
+# $Id: Makefile,v 0.3 1999/12/30 01:36:09 mccorkle Exp mccorkle $
+d6 2
+a7 2
+BINS      = orfs orfs2map pp ranseq rc sage sel signals splt trans view iceu
+PERLS     = seq_len gb2bnl
+d9 1
+a9 1
+MACHINES  = genome5 genome4 genome1 ospa ospb hgp6
+d50 2
+a51 3
+iceu:   iceu.icn
+	icont $@@
+
+a58 6
+install:
+	cp $(BINS) $(PERLS) $(PUBBINDIR); \
+               cd $(PUBBINDIR); \
+               chgrp developer $(BINS) $(PERLS); \
+               chmod a+rx,ug+w $(BINS) $(BERLS)
+
+d62 5
+d69 2
+d73 4
+a76 1
+	    scp ../gensrcdist.tar $$m:     ; \
+d78 7
+a84 1
+	rcp ../gensrcdist.tar equalizer
+@
+
+
+0.3
+log
+@going multi-system now!  Yeah!
+@
+text
+@d3 1
+a3 1
+# $Id: Makefile,v 0.2 1999/12/30 01:14:33 mccorkle Exp mccorkle $
+d6 2
+a7 2
+BINS      = signals orfs trans orfs2map view splt rc pp ranseq sage
+PERLS     = seq_len
+d9 2
+d16 11
+a26 1
+signals:  signals.icn io.u1 io.u2
+d29 1
+a29 1
+orfs:  orfs.icn io.u1 io.u2
+d32 1
+a32 1
+trans:  trans.icn io.u1 io.u2
+d35 1
+a35 1
+orfs2map:  orfs2map.icn io.u1 io.u2
+d38 1
+a38 1
+view:   view.icn  graf.u1  graf.u2
+d44 1
+a44 1
+rc:      rc.icn io.u1  io.u2
+d47 1
+a47 1
+pp:      pp.icn io.u1  io.u2
+d50 1
+a50 1
+ranseq:  ranseq.icn io.u1  io.u2
+d53 1
+a53 2
+sage:   sage.icn io.u1  io.u2
+	icont $@@
+d61 4
+a64 3
+	chgrp developer $(BINS) $(PERLS)
+	chmod a+rx,ug+w $(BINS) $(BERLS)
+	cp $(BINS) $(PERLS) $(PUBBINDIR)
+d71 5
+@
+
+
+0.2
+log
+@added a bunch of new programs.
+@
+text
+@d3 1
+a3 1
+# $Id: Makefile,v 0.1 1999/10/23 22:43:33 mccorkle Exp mccorkle $
+d6 3
+a8 2
+BINS = signals orfs trans orfs2map view splt rc pp ranseq sage
+PERLS = seq_len
+d26 1
+a26 1
+view:  view.icn  graf.u1  graf.u2
+d29 1
+a29 1
+splt:      splt.icn io.u1  io.u2
+d50 5
+d56 3
+@
+
+
+0.1
+log
+@here we go...
+@
+text
+@d3 1
+a3 1
+# $Id$
+d6 2
+a7 1
+BINS = signals orfs orfs2map view splt rc
+d19 3
+d34 8
+d47 3
+@

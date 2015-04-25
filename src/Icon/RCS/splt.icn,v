@@ -1,0 +1,257 @@
+head	0.4;
+access;
+symbols;
+locks
+	mccorkle:0.4; strict;
+comment	@# @;
+
+
+0.4
+date	2000.04.26.15.49.38;	author mccorkle;	state Exp;
+branches;
+next	0.3;
+
+0.3
+date	2000.03.08.16.19.48;	author mccorkle;	state Exp;
+branches;
+next	0.2;
+
+0.2
+date	99.11.06.04.36.05;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	99.11.01.15.15.28;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@splits multiple fasta format input into multiple files.
+@
+
+
+0.4
+log
+@added new & improved doc functions & options
+@
+text
+@# Program:      splt
+# Programmer:   Sean R. McCorkle
+# Language:     Icon
+# Description:  Reads in fasta format sequence files, splits them
+#               up into individual files, with .orf suffix (for now)
+#
+# Usage:        splt [-hv] [-e <ext>] [<file> ...]
+#
+#               a single hyphen (-) can be used as a file name to specify
+#               stdin.  If no files are specified, stdin is scanned.
+#
+# Options:
+#                  -e <ext>  append .<ext> to each file
+#                  -f <char> use <char> as field separator in > headers, and 
+#                            use the first field for the name, rather than the
+#                            entire line
+#                  -n <n>    use field <n> from header as name (default: 1 )
+#                  -h        print help
+#                  -v        print version
+#
+# $Id: splt.icn,v 0.3 2000/03/08 16:19:48 mccorkle Exp mccorkle $
+#
+
+link io
+link doc
+link options
+
+procedure  help( fmt )
+
+    version()
+    write_doc( fmt, "\
+__Name      splt - split fasta file(s) into individual sequence files        \
+                                                                             \
+__Usage     splt [-hv] [-e <ext>] [<file> ...]                               \
+                                                                             \
+            where <seq> is a file that contains one or more fasta format DNA \
+            or amino acid sequences. A single hyphen (-) can be used as      \
+            a file name to specify stdin.  If no files are given,            \
+            stdin is scanned.                                                \
+                                                                             \
+__Options                                                                    \
+_.             -e <ext>  append .<ext> to each file                          \
+_.             -f <char> use <char> as field separator in > headers, and     \
+                         use the first field for the name, rather than the   \
+                         entire line                                         \
+_.             -n <n>    use field <n> from header as name (default: 1 )     \
+                                                                             \
+_.             -h       print help then exit                                 \
+_.             -help    print help then exit                                 \
+_.             -html    print html man page then exit                        \
+_.             -man     print unix man page then exit                        \
+_.             -v       print version then exit                              \
+      " )
+    exit()
+
+end
+
+
+                             ################
+                             # Main Program #
+                             ################
+
+procedure main( args )
+
+    local f, w, seq, wname
+     
+    opts := options( args, "-e: -f: -n+ -h -help! -man! -html! -v" )
+    if member( opts, ("h" | "help") )   then help( "text" )
+    if member( opts, "man" )            then help( "man" )
+    if member( opts, "html" )           then help( "html" )
+    if member( opts, "v" )              then { version(); exit() }
+
+    if ( *args = 0 ) then push( args, "-" )   # use  stdin if no filenames
+
+    every f := open_file( !args ) do
+       {
+        while seq := read_fasta( f ) do
+           {
+            wname := make_name( seq.heading, opts )
+            w := open( wname, "w" ) | stop( "can't write to ", wname )
+            write_fasta( w, seq.seq, seq.heading )
+            close( w ) | stop( "can't write to ", wname )
+            write( wname )
+           }
+        close_file( f )
+       }
+
+end
+
+
+procedure  make_name( hdr_line, opts )
+
+    local  ext, m
+
+    ext := ""
+    if member( opts, "e" ) then ext := opts["e"]
+
+    m := 0
+    if member( opts, "f" ) 
+       then m := ( find( opts["f"], hdr_line ) | 0 )
+
+    return(  hdr_line[1:m] || ext )
+
+end
+
+
+
+#
+# print version number
+#
+procedure version()
+
+    "$Revision: 0.3 $" ? { tab( upto( ' ' ) )
+                           write( "splt", tab( many( &digits ++ ' .' ) ) )
+		         }
+end
+
+
+@
+
+
+0.3
+log
+@added -f option to allow for smaller file names if the headers are too
+complex.
+@
+text
+@d17 1
+d21 1
+a21 1
+# $Id: splt.icn,v 0.2 1999/11/06 04:36:05 mccorkle Exp mccorkle $
+d25 1
+d28 35
+d67 5
+a71 4
+    opts := options( args, "-e: -f: -h -v" )
+    if member( opts, "h" )  then { help(); exit() }
+    if member( opts, "v" )  then { version(); exit() }
+
+a106 19
+#
+# print version number & help
+#
+
+procedure help()
+
+    version()
+    write( "Usage:  splt [-hv] [-e <ext>] [<file> ...]\n" )
+    write( "        a single hyphen (-) can be used as a file name to specify")
+    write( "        stdin.  If no files are specified, stdin is scanned.\n" )
+    write( "Options:" )
+    write( "        -e <ext>  append .<ext> to each file" )
+    write( "        -f <char> use <char> as field separator in > headers, and")
+    write( "                  use the first field for the name, rather than" )
+    write( "                  the entire line" )
+    write( "        -h        print help" )
+    write( "        -v        print version" )
+
+end
+d113 1
+a113 1
+    "$Revision: 0.2 $" ? { tab( upto( ' ' ) )
+@
+
+
+0.2
+log
+@added handling for options, specifically -e, -h and -v
+@
+text
+@d13 6
+a18 3
+#                  -e <ext> append .<ext> to each file
+#                  -h       print help
+#                  -v       print version
+d20 1
+a20 1
+# $Id: splt.icn,v 0.1 1999/11/01 15:15:28 mccorkle Exp mccorkle $
+d28 1
+a28 1
+    local f, w, seq, ext, wname
+d30 1
+a30 1
+    opts := options( args, "-h -v -e:" )
+a33 2
+    ext := ""
+    if member( opts, "e" ) then ext := opts["e"]
+d41 1
+a41 1
+            wname := seq.heading || ext
+d53 15
+d80 6
+a85 3
+    write( "        -e <ext> append .<ext> to each file" )
+    write( "        -h       print help" )
+    write( "        -v       print version" )
+d94 1
+a94 1
+    "$Revision: 0.1 $" ? { tab( upto( ' ' ) )
+@
+
+
+0.1
+log
+@so far so go, so lets check it in.
+@
+text
+@d7 1
+d9 9
+a17 1
+# $Id$
+d21 1
+d27 6
+a32 1
+    ext := ".orf"
+d35 1
+d49 29
+@

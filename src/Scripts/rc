@@ -1,0 +1,80 @@
+#!/usr/bin/perl
+# Program:       rc
+# Programmer:    Sean R. McCorkle,
+#                Biology Department, Brookhaven National Laboratory
+#
+# Language:      perl5
+#
+# Description:   read DNA sequences, output reverse complement
+#
+# Usage:         rc [opts] [<seq-file> ...]
+#
+#                where <seq-file>'s are in FASTA format.  Stdin is scanned
+#                if no files are specified.
+#
+# Options:
+#                   -a <str>   append str to each fasta > header  
+#
+# $Id: rc,v 0.2 2003/12/29 13:10:27 mccorkle Exp mccorkle $
+#
+
+use  Getopt::Std;
+
+getopts( "a:" ) || die "Bad option\n";
+
+$line_len = 50;
+
+                             ################
+                             # Main Program #
+                             ################
+
+#
+# state machine loop to read fasta format sequences, make them into
+# perl character strings, and then process them
+#
+while ( <> )                                         # keep reading lines
+   {
+    if ( /^>(.*)/ )                                  # is it a FASTA >header?
+       {                                             # handle current sequence
+        $new_header = $1;         
+        print_fasta( $header, rc( $seq) ) if ( defined( $header ) );  
+        $header = $new_header;                       # reset sequence header
+        $seq = "";                                   # and buffer
+       }
+    else                                     # not a header? must be sequence
+       {
+        chomp;                               # off with the newline
+        s/\s//g;                             # hose out all whitespace (if any)
+        $seq .= $_;                          # uppercase it & append to buffer
+       }
+   }
+                                             # handle last sequence
+print_fasta( $header, rc( $seq ) ) if ( defined( $header ) ); 
+
+sub  print_fasta
+   {
+    my ( $hdr, $seq ) = @_;
+    my $i;
+
+    print ">$hdr$opt_a\n";
+    my $n = length( $seq );                       # calculate length once
+    for ( $i = 0; $i < $n; $i++ )                 # for each character
+       {
+        print substr( $seq, $i, 1 );              # print it out
+        if ( ( ($i + 1) % $line_len ) == 0 )      # every 50 characters
+            { print "\n"; }                       #   put a newline
+       }
+    print "\n" if ( ( $i % $line_len ) != 0 );    # last newline ensures tidy 
+                                                  #output
+   }
+
+#
+# rc( $seq ) returns the reverse complement of $seq
+# 
+sub  rc
+   {
+    my $r = reverse( split( '', shift ) );
+    $r =~ tr/acgtmrwsykvhdbnACGTMRWSYKVHDBN/tgcakywsrmbdhvnTGCAKYWSRMBDHVN/;
+    return( $r );
+   }
+

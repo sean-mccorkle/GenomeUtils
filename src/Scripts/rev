@@ -1,0 +1,16 @@
+#!/usr/bin/perl
+# rev - reverse a list of numbers (1 per line, such as qfix output )
+#
+
+while ( <> )
+   {
+    chomp;
+    s/^\s*//;
+    s/\s*$//;
+    unshift( @elems, $_ );
+   }
+
+foreach $x ( @elems )
+   {
+    print $x, "\n";
+   }

@@ -1,0 +1,10 @@
+scale 0 100
+wtitle "Fred is a fed"
+t_hline 1 100 20 0.5 yellow
+t_vline 1 55 0.1 0.5 blue  #fred
+t_text  1 55 0.6 "Yado is a totzy" green
+t_text -1 55 0.6 "Yado yado" orange
+t_llabel 1 "A" green
+t_rlabel 1 "bing" green
+t_llabel -1 "zod" yellow
+t_rlabel -1 "B" violet

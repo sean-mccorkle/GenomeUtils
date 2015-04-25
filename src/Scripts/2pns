@@ -1,0 +1,86 @@
+#!/usr/bin/perl
+# Program:     2pns
+# Programmer:  Sean R. McCorkle
+# Language:    perl
+# Description: For each input DNA sequence (fasta format), ouptut longest
+#              subsequence containing <2% Ns
+
+
+$thresh = 2.0 ; # percentage threshold
+
+                                 ########
+                                 # Main #
+                                 ########
+
+while ( <> )
+   {
+    chomp;
+    if ( /^>(.*)/ )
+       {  
+        $new_heading = $1;
+        process() if ( $heading ); 
+        $heading = $new_heading;
+       }
+    elsif ( ! /^\s*;/ )
+       {
+        s/\s//g;
+        $seq .= uc( $_ );
+       }
+   }
+process() if $heading;
+
+                               ###############
+                               # Subroutines #
+                               ###############
+
+sub  process
+   {
+    my $i, $j;
+    my $lmax = 0;
+    my @pos = n_positions( $seq );
+    my ($max_i, $max_j, $max_r) = ( -1, -1, -1 );   #  error catching values.
+    #print "pos: " . join( " ", @pos ), "\n";
+
+    for (  $j = $#pos;  $j > 0;  $j--  )
+       {
+        for (  $i = 0;  $i < $j;  $i++  )
+           {
+            my $l = $pos[$j] - ( $pos[$i] + 1 );
+            if ( $l > $lmax )
+               {
+                my $ncount = $j - ( $i + 1 );
+                my $r = 1.0e9;
+                $r = $ncount * 100.0 / $l if ( $l > 0 );
+                #printf "[%3d,%3d] %4d..%4d l = %4d, ncount %3d, %% = %5.2f\n",
+                #     $i, $j, $pos[$i], $pos[$j], $l, $ncount, $r;
+                if ( $r <= $thresh )
+                   {
+                    #print "*****biggest so far: $l\n";
+                    ($lmax,$max_i,$max_j,$max_r) = ($l,$i,$j,$r);
+                   }
+               }
+           }
+       }
+    #print "Max: $max_r $lmax ($max_i,$max_j)  $pos[$max_i] .. $pos[$max_j]\n";
+    print ">$heading\n";
+    print substr( $seq, ($pos[$max_i] + 1), $lmax ), "\n" if ( $lmax > 0 );
+        
+    
+    undef( $seq );
+   }
+
+sub  n_positions
+   {
+    my $seq = shift;
+    my @pos = ( -1 );   
+    my $p = $last_p = -1;
+    while ( ( $p = index( $seq, "N", $p ) ) > -1 )
+       {
+        #print( "$pos:", substr( $seq, $pos-4, 9), "\n" );
+        #printf( "%d (%d) \n", $p, $p + 1 - $last_p );
+        push( @pos, $p );
+        $last_p = ++$p;
+       }
+    push( @pos, length( $seq ) );
+    return( @pos );
+   }

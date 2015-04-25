@@ -1,0 +1,123 @@
+#!/usr/bin/perl
+#  Rancheck - generate loads of random sequences and have 
+#  pp print them out as unformated (-n -s0) or as formatted
+#  but and compare input and output
+#  with diff to make sure they're identical
+#
+
+$pp = "../../pp";
+$ranseq = "../../ranseq";
+
+$t1 = "/tmp/t1.$$";   # initial ranseq output goes here
+$t2 = "/tmp/t2.$$";   # resultant file should be identical
+
+
+$| = 1;
+
+
+print "\nUnformatted tests...\n\n";
+&unformatted( 5000,   1,  205 );
+&unformatted( 5000, 100,  505 );
+&unformatted( 5000, 400, 1005 );
+
+print "\nFormatted tests...\n\n";
+$svals = [10, 20, 5, 3, 2, 1];
+&formatted( 5000,   1,  205, $svals );
+&formatted( 5000, 100,  505, $svals );
+
+#print "\nLength checks\n";
+#$lvals = [ 60, 100, 10, 5, 3, 2, 1 ];
+#$svals = [10, 20, 5, 3, 2, 1];
+#&lchecks( 5000,   1,  205, $svals, $lvals );
+#&lchecks( 5000, 100,  505, $svals, $lvals );
+
+
+unlink( $t1, $t2 );
+
+print "Done.\n";
+
+
+#
+#  Run pp unformatted output on a file n random sequences with lengths
+#  in the range $a to $b
+# 
+sub unformatted
+   {
+    my ( $n, $a, $b ) = @_;
+
+    print "Running $n sequences, length range $a-$b\n";
+
+    system( "$ranseq -n$n -a$a -b$b >$t1" );
+    system( "$pp -n -s0 $t1 >$t2" );
+
+    print "Diff'ing ...\n";
+
+    system( "diff $t1 $t2" );
+
+   }
+
+#
+#  Run pp formatted output on a file n random sequences with lengths
+#  in the range $a to $b, with different subgroup size settings (svals)
+#  and filter the output back into a straight fasta, and then diff
+#
+sub formatted
+   {
+    my ( $n, $a, $b, $svals ) = @_;
+
+    print "Running $n sequences, length range $a-$b\n";
+    system( "$ranseq -n$n -a$a -b$b >$t1" );
+
+    my $s;
+    foreach $s ( @{$svals} )
+       {
+        print "Subgroup size $s...";
+        open( PP, "$pp -s$s $t1 |" ) || die "Can't run formatted pp\n";
+        open( OUT, ">$t2" );
+        while ( $_ = <PP> )
+           {
+            unless ( /^>/ )
+              {
+               s/[ \t]//g;
+               s/^\d*//;
+              }
+            print OUT;
+           }
+        close( PP );
+        close( OUT );    
+        print "Diff'ing ...\n";
+
+        system( "diff $t1 $t2" );
+       }
+
+   }
+
+#
+# vary subgroup and line length (but suppress line numbers)
+#
+sub lchecks
+   {
+    my ( $n, $a, $b, $svals, $lvals ) = @_;
+
+    print "Running $n sequences, length range $a-$b\n";
+    system( "$ranseq -n$n -a$a -b$b >$t1" );
+
+    my $s, $l;
+    foreach $l ( @{$lvals} )
+       {
+        print "Length $l:\n";
+        foreach $s ( @{$svals} )
+           {
+            print "   Subgroup size $s...";
+            system( "$pp -n -s$s -l$l $t1 |$pp -n -s0 >$t2" );
+            print "Diff'ing ...\n";
+    
+            system( "diff $t1 $t2" );
+           }
+       }
+   }
+
+
+
+
+

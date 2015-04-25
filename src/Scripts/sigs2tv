@@ -1,0 +1,24 @@
+#!/usr/bin/perl
+# Feed this output from signals
+#
+
+$tier = 1;
+%color = ( "TAA" => "purple", 
+           "TAG" => "grey",
+           "TGA" => "red",
+           "ATG" => "green",
+           "GTG" => "orange",
+           "TTG" => "magenta",
+         );
+
+while ( <> )
+   { 
+    ($sig,$dir,$pos,$frame,$seq) = split( /\s+/ );
+    if ( $sig eq 'start' )
+       { ($y1,$y2) = (0.5,1.0); }
+    else
+       { ($y1,$y2) = (0.0,0.5); }
+    $t = $tier + $frame;
+    $t = -$t if ( $dir eq 'r' || $dir eq 'R' );
+    print "t_vline $t $pos $y1 $y2 ", $color{$seq}, "# $seq\n";
+   }

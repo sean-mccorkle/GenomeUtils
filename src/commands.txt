@@ -1,0 +1,15 @@
+# Commands accepted by view program
+# 1 command per line, # is comment symbol
+
+window <width> <height> <title>          # create window width x height pixels
+tiers <no. above> <no. below> <height> <space> # establish number of tiers
+scale <xlow> <xhigh>
+ 
+t_vline 1 46 0.5 1.0 orange  # start  GTG
+
+t_hline
+
+t_rect t
+
+lpress t x1 x2 y1 y2 display "text"
+

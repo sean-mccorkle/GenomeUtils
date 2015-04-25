@@ -1,0 +1,75 @@
+
+
+                               General Notes
+                               -------------
+
+                   
+String positions - icon positions
+
+    Reading frames designations:  
+            F1,
+            F2,
+            F3, 
+            R1, 
+            R2, 
+            R3
+
+Input/Output
+------------
+
+    Most of these programs take combined input from files, and generate
+    ascii output on stdout:
+
+           program [options]  a b c
+
+    reads all input from file a, then file b, then c.  A hyphen can be
+    used to specify stdin in place of a file:
+
+           program  a - b
+
+    reads all of file a, then ALL stdin till EOF, then all of file b.
+    If no files are given, stdin is scanned.   These are designed to work 
+    as Unix filters.
+
+    Note that in the case of fasta input sequences, the sequence may 
+    NOT span the break of two files.  That is,
+
+           program  a b
+
+    assumes that the first line of b is the start of a new FASTA sequence.
+    If for some bizzare reason you really NEED to break a sequence over a 
+    file boundary, you can do:
+
+           cat a b | program
+
+
+File formats
+------------
+
+    BNL modified fasta format input (wide acceptance):
+
+            ; comment lines
+            123 aaabb cccde   optional numbers at beginning of line, optional
+                              spaces
+
+    Strict FASTA output.  Use pp to make this easier to read.
+
+
+Graphics Commands interpreted by view:
+-------------------------------------
+
+    t_hline  <t>  <x1> <x2> <y>  <color>
+    t_vline  <t>  <x>  <y1> <y2> <color>
+    t_rect   <t>  <x1> <x2> <y1> <y2>  <color>
+    lpress   <t>  <x1> <x2> <y1> <y2>
+    #  comments
+
+where
+
+    <t> is a tier number, 1, 2, 3, ... or -1, -2, -3, ...
+    <x>, <x1>,<x2> are horiztontal postitions in BASE PAIRS (bp)
+    <y>, <y1>,<y2> are vertical positions WITHIN the tier (0.0-1.0)
+
+
+
+

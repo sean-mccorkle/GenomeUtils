@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+# Description:  convert NCBI .ptt files to tview graphics
+# Usage:    ptt2tv [-t <n>] [-c <color>] [-l<n>] [-h<n>] [-1]   <.ptt file>
+#
+# Options:
+#              -c <col>  set color color (default magenta)
+#              -l <n>    low and high range to pass, <n> are coordinates    
+#              -h <n>
+#              -t <n>    start counting tiers starting at <n>  (default 3)
+#              -1        use only one tier, not +/- tiers
+#          
+
+use Getopt::Std;
+
+getopts( 'c:h:l:t:1' );
+
+$label_color = "white";
+$color = defined( $opt_c ) ? $opt_c : "magenta";
+$tier = defined( $opt_t ) ? $opt_t : 3;
+$low = defined( $opt_l ) ? $opt_l : 0;
+$high = defined( $opt_h ) ? $opt_h : 1e20;
+
+
+while ( ($_ = <>) && ! /^\s+Location\s+Strand/ )  # Skip header
+   { }
+
+die "File doesn't appear to be .ppt file\n" unless ( /^\s+Location/ );
+
+$_ = <>;  # skip next blank
+
+while ( <> )
+   {
+    chomp;
+    /^\s+(\d+)\.\.(\d+)\s+([\+\-])\s+(\d+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(.*)$/ ||
+       die "Bad line $_\n";
+    ($p1,$p2,$str,$len,$pid,$gene,$syn,$code,$cog,$desc) = ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10);
+    
+    #print join( ":", ($p1,$p2,$str,$len,$pid,$gene,$syn,$code,$cog,$desc) ), "\n";
+
+    next if ( $p1 > $high || $p2 < $low );
+
+    $desc =~ s/\s+$//;
+    $t = ( $str eq '+' || $opt_1 ) ? $tier : -$tier;
+    print "t_rect $t $p1 $p2 0 1.0 \"$color\"\n";
+    print "lpress $t $p1 $p2 0 1.0 display \"$gene $desc\"\n";
+   }

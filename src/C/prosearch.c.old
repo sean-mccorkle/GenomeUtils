@@ -1,0 +1,341 @@
+#include <ctype.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <search.h>
+#include <unistd.h>
+
+#define MAX_HDR_LEN 256
+#define MAX_PAT_LEN 256
+
+char  bases[] = "ACGT";
+char  templ[] ="ttcaGCacc.cGGacagc.cc";
+int   templ_len;
+
+
+int   verbose = 0;     /* set by -v */
+
+void  help( void )
+   {
+    printf( "help?  you want help?  hahahah\n" );
+   } 
+
+void  version( void )
+   {
+    printf( "version?\n" );
+   }
+
+void  parse_args( int argc, char **argv, int *nfiles, char ***filenames )
+   {
+    extern char *optarg;
+    extern int   optind;
+    int          c;
+    static char *def_files[] = { "-", "" };
+
+    while ( (c = getopt( argc, argv, "hvV" ) ) != -1 )
+        switch( c )
+           {
+            case  'h':   help();
+                         exit( 0 );
+            case  'v':   verbose = 1;
+                         break;
+            case  'V':   version();
+                         exit( 0 );
+            default:     help();
+                         exit( 1 );
+           }
+    argc -= optind;
+    argv += optind;
+    if ( argc > 0 )
+       {
+        *nfiles = argc;
+        *filenames = argv;
+       }
+    else
+       {
+        *nfiles = 1;
+        *filenames = def_files;
+       }
+   }
+
+/* comp_char[c] contains the complementary nucleotide character for c */
+
+char comp_char[] = {
+                  /*          0     1     2     3     4     5     6     7   */
+                  /* 000 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 010 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 020 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 030 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 040 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 050 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 060 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 070 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 100 */  'X',  'T',  'V',  'G',  'H',  'X',  'X',  'C',
+                  /* 110 */  'D',  'X',  'X',  'M',  'X',  'K',  'N',  'X',
+                  /* 120 */  'X',  'X',  'Y',  'S',  'A',  'X',  'B',  'W',
+                  /* 130 */  'X',  'R',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 140 */  'X',  't',  'v',  'g',  'h',  'X',  'X',  'c',
+                  /* 150 */  'd',  'X',  'X',  'm',  'X',  'k',  'n',  'X',
+                  /* 160 */  'X',  'X',  'y',  's',  'a',  'X',  'b',  'w',
+                  /* 170 */  'X',  'r',  'X',  'X',  'X',  'X',  'X',  'X',
+                 };
+
+void  rc( char *r, char *s )
+   {
+    char *p;
+
+    p = s + strlen( s );
+    while ( p > s )
+       *r++ = comp_char[*(--p)];
+    *r = '\0';
+   }
+
+/*************************/
+/* initialize hash table */
+/*************************/
+
+void  create_table( size_t size )
+   {
+    if ( ! hcreate( size ) )
+       {
+        fprintf( stderr, "Can't create hash table of size %d\n", size );
+        perror( "" );
+        exit( errno );
+       }
+    if ( verbose )
+       printf( "table created, size %d\n", size );
+   }
+
+typedef struct prec {
+                      char    *pat;
+                      char     dir;
+                      int      n_mis;
+                    } PREC;
+
+
+/***************************************************/
+/* allocate storage and return pointer to new PREC */
+/***************************************************/
+
+PREC *record_pat( char *pat, char dir, int n_mis )
+  {
+   PREC *r;
+   if ( !( r = (PREC *) malloc( sizeof(PREC) )))
+      {
+       perror( "Can't malloc a PREC" );
+       fprintf( stderr, "[%s] %c %d\n", pat, dir, n_mis );
+       exit( errno );
+      }
+   r->pat = strdup( pat );
+   r->dir = dir;
+   r->n_mis = n_mis;
+   return( r );
+  }
+
+/**************************************/
+/* make one entry into the hash table */
+/**************************************/
+
+void  enter_table( char *pat, char dir, int n_mis )
+   {
+    ENTRY   e;
+
+    e.data = (void *) record_pat( pat, dir, n_mis ); 
+    e.key = ((PREC *)e.data)->pat;
+    printf( "entering e.data->pat [%s] [%c]  %x\n", ((PREC *)e.data)->pat,
+                ((PREC *)e.data)->dir, e.data );
+    if ( ! hsearch( e, ENTER ) )
+       { 
+        fprintf( stderr, "Can't enter into hash table\n" );
+        perror( pat );
+        exit( errno );
+       }
+   }
+
+/***************************************************************************/
+/* put a new pattern entry and its reverse-complement into the hash table  */
+/***************************************************************************/
+
+void  enter_pat( char *pat, int n_mis )
+   {
+    char    rpat[MAX_PAT_LEN];
+
+    if ( verbose ) printf( "enter table [%s] %d\n", pat, n_mis );
+    enter_table( pat, 'f', n_mis );
+    rc( rpat, pat );
+    enter_table( rpat, 'r', n_mis );
+   }
+
+/********************************************************************/
+/* search hash table for string.  If found, return PREC pointer for */
+/* match, otherwise return null                                     */
+/********************************************************************/
+
+PREC *lookup( char *pat )
+   {
+    ENTRY   e;
+    ENTRY  *g;
+
+    printf( "lookup [%s]\n", pat ); fflush( stdout );
+    e.key = pat;
+    g = hsearch( e, FIND );
+    printf( "got g = %x\n", g );  fflush( stdout );
+    if ( g )
+      {
+       printf( "g->key is [%s]\n", g->key ); fflush( stdout );
+       printf( "g->data is %x\n", (PREC *)g->data ); fflush( stdout );
+       printf( "   [%s] [%c] [%d]\n", ((PREC *)(g->data))->pat,
+                                      ((PREC *)(g->data))->dir,
+                                      ((PREC *)(g->data))->n_mis );
+      }
+    return( g ? ((PREC *)(g->data)) : 0 );
+   }
+
+void  generate_permutations( void )
+   {
+    size_t       num_perms = 1000;
+    char        *s;
+    int          i, j;
+
+    templ_len = strlen( templ );
+    create_table( num_perms );
+
+    if ( verbose ) 
+        printf( "[%s]\n", templ );
+    for ( s = templ; *s != '\0'; s++ )
+        *s = toupper( *s );
+    if ( verbose ) 
+        printf( "[%s]\n", templ );
+
+    for ( i = 0; i < 4; i++ )
+        for ( j = 0; j < 4; j++ )
+            {
+             templ[9] = bases[i];
+             templ[18] = bases[j];
+             if ( verbose ) 
+                 printf( "[%s] %d %d\n", templ, i, j );
+             enter_pat( templ, 17 );
+            }
+
+   }
+
+/*********************************************************************/
+/* open_file() opens a file or returns stdin if name is "-", or does */
+/* error exit if file can't be opened                                */
+/*********************************************************************/
+
+FILE *open_file( char *name )
+   {
+    FILE *f;
+
+    if ( strcmp( name, "-" ) == 0 )
+        return( stdin );
+    else
+        if ( (f = fopen( name, "r" ) ) )
+            return( f );
+        else
+           {
+            perror( name );
+            exit( errno );
+           }
+   }
+
+/* close_file() closes the file unless its stdin */
+
+void  close_file( FILE *f )
+   {
+    if ( f != stdin )
+        fclose( f );
+   }
+
+                       /**********************/
+                       /* comparision buffer */
+                       /**********************/
+
+static char  buff[MAX_PAT_LEN+1];
+
+void  init_buff( void )
+   {
+    size_t i;
+    for ( i = 0; i < templ_len; i++ )
+        buff[i] = 'X';
+    buff[templ_len] = '\0';
+   }
+
+void  enter_base( int c )
+   {
+    size_t i;
+
+    for ( i = 1; i < templ_len; i++ )   /* memmove would be better */
+        buff[i-1] = buff[i];
+    buff[templ_len-1] = c;
+   }
+
+
+/*****************************************************/
+/* scan_file() - open file and process its sequences */
+/*****************************************************/
+
+void  scan_file( char *filename )
+   {
+    FILE        *f;
+    int          c, last;
+    static char  hdr[MAX_HDR_LEN+1];
+    PREC        *r;
+    int          pos;   /* position within string */
+
+    if ( verbose )
+        printf( "file %s\n", filename );
+    f = open_file( filename );
+    last = '\n';
+    printf( "templ_len is %d\n", templ_len );
+    while ( (c = fgetc( f ) ) != EOF )
+       {
+        if ( last == '\n' && c == '>' )
+           {
+            fgets( hdr, MAX_HDR_LEN, f );
+            if ( verbose )
+                printf( "seq: %s", hdr );
+            init_buff();
+            pos = -templ_len;
+            last = '\n';
+           }
+        else if ( isalpha( c ) )
+           {
+            enter_base( c );
+            ++pos;
+            if ( r = lookup( buff ) )
+              {
+               printf( "r is %x\n", r ); fflush( stdout );
+               printf( "r->n_miss is %d\n", r->n_mis );
+               printf( "We have it: %10d %c %s [%s] %d\n", 
+                        pos, r->dir, buff, r->pat, r->n_mis );
+              }
+            last = c;
+           }
+        else
+            last = c;
+       }
+    close_file( f );
+   }
+
+
+
+                              /****************/
+                              /* Main Program */
+                              /****************/
+
+
+main( int argc, char **argv )
+   {
+    int     nfiles;
+    char  **filenames;
+    int     i;
+
+    parse_args( argc, argv, &nfiles, &filenames );
+    generate_permutations();
+
+    for ( i = 0; i < nfiles; i++ )
+        scan_file( filenames[i] );
+   }

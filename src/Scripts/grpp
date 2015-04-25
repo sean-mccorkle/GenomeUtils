@@ -1,0 +1,112 @@
+#!/usr/bin/perl
+# Program:      grpp
+# Programmer:   Sean R. McCorkle
+# Language:     perl
+# Description:  Takes as input a GenBank draft sequence join(..) directive
+#               and outputs a perl program which evalutes it.  The user is
+#               responsible for obtaining the refered-to source sequences
+#               before evaluting the output.
+#
+# $Id$
+#
+
+print <<EndOfPreamble;
+#!/usr/bin/perl
+
+\$line_len = 50;
+\%compl = (
+           'A' => 'T', 'C' => 'G', 'G' => 'C', 'T' => 'A',
+           'M' => 'K', 'R' => 'Y', 'W' => 'W', 'S' => 'S',
+           'Y' => 'R', 'K' => 'M', 'V' => 'B', 'H' => 'D',
+           'D' => 'H', 'B' => 'V', 'N' => 'N',
+
+           'a' => 't', 'c' => 'g', 'g' => 'c', 't' => 'a',
+           'm' => 'k', 'r' => 'y', 'w' => 'w', 's' => 's',
+           'y' => 'r', 'k' => 'm', 'v' => 'b', 'h' => 'd',
+           'd' => 'h', 'b' => 'v', 'n' => 'n',
+          );
+
+EndOfPreamble
+
+while ( <> )
+   {
+    chomp;
+    s/\s//g;
+    $raw .= $_;
+   }
+
+
+while ( $raw =~ s/([A-Z]{1,3}\d+(\.\d+)?):(\d+)\.\.(\d+)// )
+   {
+    $exp .= $`;
+    ($seqname,$start,$stop) = ( $1, $3, $4 );
+    unless ( $seqs{$seqname} )
+       {
+        printf( "obtain( '$seqname' );\n" );
+        $seqs{$seqname} = 1;
+       }
+    $a = $start - 1;
+    $l = $stop - $start + 1;
+    #print "Access $seqname, $start to $stop, $a, $l\n";
+    $exp .= "substr( \$seqs{'$seqname'}, $a, $l )";
+    $raw = $';
+   }
+
+$exp .= $raw;
+
+$exp =~ s/join\(/join\(\'\',/;
+
+print "output( $exp );\n";
+
+print <<EndOfSubs;
+
+# complement( \$seq ) - returns reverse complement of dna sequence
+# (properly handles ambiguity codes and cases)
+
+sub complement
+   {
+    my \$s = shift;
+    my \$l = length( \$s );
+    my \$r = 'X'x\$l;
+    my \$i, \$j;
+    for ( \$i = \$l - 1, \$j = 0; \$i >= 0; \$i--, \$j++ )
+       { substr( \$r, \$j, 1 ) = \$compl{ substr( \$s, \$i, 1 ) }; }
+    return( \$r );
+   }
+
+
+sub gap
+   {
+    my \$n = shift;
+    return( 'x'x\$n );
+   }
+
+sub obtain
+   {
+    my \$f = shift;
+    my \$file = \$f  . ".fasta";
+
+    open( IN, "\$file" ) || die "Can't open \$file\\n";
+    while ( \$_ = <IN> )
+       {
+        next if ( /^>/ );
+        chomp;
+        s/\\s//g;
+        s/^\\d+//;
+        \$seqs{\$f} .= \$_;
+       }
+    close( IN );
+   }
+
+sub output
+   {
+    my \$s = shift;
+    my \$n = length( \$s );
+    \$s .= ' 'x\$line_len;
+    my \$i;
+    for ( \$i = 0; \$i < \$n; \$i+= \$line_len )
+       { print substr( \$s, \$i, \$line_len ), "\\n"; }
+   }
+
+EndOfSubs
+

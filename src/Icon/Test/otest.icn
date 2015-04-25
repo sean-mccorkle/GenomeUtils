@@ -1,0 +1,21 @@
+
+link options
+
+procedure main( args )
+
+   write_args( args )
+   t := options( args, "-a -b+ -c" )
+
+   write( "Table:" )
+   every k := key( t ) do
+       write( k, " ", t[ k ] ) 
+   write( "Now:" )
+   write_args( args )
+end
+
+procedure write_args( args )
+
+   write( "args are:" )
+   every write( !args )
+
+end

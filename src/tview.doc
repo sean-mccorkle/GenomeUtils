@@ -1,0 +1,52 @@
+
+                                  tview
+
+
+  I. Concept
+
+      Tiers
+         Reading frames
+         Constant height
+
+
+ II. tview commands
+
+      0. data:  numeric
+                range
+                tier_spec
+                string     xyz or "this is a string"
+
+      A. Parameter definining commands (many of these can be overriden by 
+         command line options below)
+
+         These are preprocessed, and if they occur multiple times, only
+         the last one counts.  Many of these can be overridden by command
+         line options.
+
+          symmetric on|off
+          scale a b                          - initial scale, overridden by 
+          tiers nabove nbelow height spacing - 
+          wtitle                            - window title
+
+      B. Drawing commands
+
+          tier coordinate is
+              (t x-spec y-spec)
+
+          t_hline (t x-spec y-spec)
+          t_vline (t x-spec y-spec)
+          t_rect (t x-spec y-spec)
+
+      C. Mouse event handling commands
+
+          Very crude and primitive right now
+
+      D. Key-commands
+
+          r - refresh
+          o - zoom out to full scale
+          q - quit
+
+III. Running tview
+
+      

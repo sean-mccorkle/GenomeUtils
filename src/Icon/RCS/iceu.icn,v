@@ -1,0 +1,90 @@
+head	0.1;
+access;
+symbols;
+locks
+	mccorkle:0.1; strict;
+comment	@# @;
+
+
+0.1
+date	2000.01.19.02.57.34;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@search for I-ceuI restriction sites in sequences.
+@
+
+
+0.1
+log
+@a non-working version.
+@
+text
+@
+link findre
+link io
+
+global  total_cuts
+global  total_mult
+global  total_cuts_rev
+global  n_sites
+global  n_sites_rev
+
+procedure main( args )
+
+    re_seq := "taactataacggtcctaaggtagcga"
+    #re_seq := "tcctaagg"
+
+    sequences := 0
+    total_cuts := 0 #table( 0 )
+    total_mult := 0 #table( 0 )
+    total_cuts_rev := 0 #table( 0 )
+
+    every f := open_file ( !args ) do
+       {
+        while seq := read_fasta( f ) do
+           {
+            sequences +:= 1
+            n_sites := n_sites_rev := 0
+            seq.heading ? id := tab( upto( ' |;' ) )
+            s := map( map( seq.seq, &ucase, &lcase ), "u", "t" )
+            r := rc( s )
+            ns := count_ns( s )
+            count_sites( id, re_seq, s, r )
+            if ( n_sites > 0 | n_sites_rev > 0 ) then
+            write( right(id, 14), right( n_sites, 6 ), right( n_sites_rev, 6),
+                   right( ns, 6 ), right( *s, 6 ), "  ", s[1:40] )
+	   }
+        close_file( f )
+       }
+    write( "Total seqs: ", sequences )
+
+    write( "Total cut:  ", total_cuts )
+    write( "Total mult: ", total_mult )
+    write( "Total rev:  ", total_cuts_rev )
+end
+
+
+procedure  count_sites( id, re_seq, s, r )
+
+    s ? every findre( re_seq ) do n_sites +:= 1
+    r ? every findre( re_seq ) do n_sites_rev +:= 1
+
+    if ( n_sites > 0 ) 
+        then total_cuts +:= 1
+    if ( n_sites > 1 ) 
+        then total_mult +:= 1
+    if ( n_sites_rev > 0 ) 
+        then total_cuts_rev +:= 1
+
+end
+
+procedure  count_ns( s )
+    local n
+    n := 0
+    s ? every find( 'n', s ) do n +:= 1
+    return( n )
+end
+@

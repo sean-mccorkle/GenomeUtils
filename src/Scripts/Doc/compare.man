@@ -1,0 +1,152 @@
+.if n .ds Q \&"
+.if t .ds Q ``
+.if n .ds U \&"
+.if t .ds U ''
+.tr \&
+.nr bi 0
+.nr ll 0
+.nr el 0
+.de DS
+..
+.de DE
+..
+.de Pp
+.ie \\n(ll>0 \{\
+.ie \\n(bi=1 \{\
+.nr bi 0
+.if \\n(t\\n(ll=0 \{.IP \\(bu\}
+.if \\n(t\\n(ll=1 \{.IP \\n+(e\\n(el.\}
+.\}
+.el .sp 
+.\}
+.el \{\
+.ie \\nh=1 \{\
+.LP
+.nr h 0
+.\}
+.el .PP 
+.\}
+..
+.TH compare
+
+.SH NAME
+
+.Pp
+\f(CRcompare\fP
+.SH SYNOPSIS
+
+.Pp
+\f(CR/usr/local/seq/bin/compare\fP \fIold getlocs file\fP \fInew getlocs file\fP
+.Pp
+.Pp
+.SH DESCRIPTION
+
+.Pp
+This program compares \fBgetlocs\fP outputs from two 
+\fBsplice\fP assemblies of a project that have been made at different times.
+Typically, \fBmat\fP numbers assigned by \fBsplice\fP are 
+highly sensitive to the details of the input sequences, making
+comparison difficult because many otherwise unchanged mats will 
+receive different numbers in the assembly.
+\fBcompare\fP reassigns mat numbers in the new getcmnts file to reflect
+similarities and differences between the new and old assemblies.
+.Pp
+While the \fBgetlocs\fP files contain much assembly information,
+\fBcompare\fP simply considers mats sets of sequences and analyzes
+old and new assemblies by examining set memberships.
+Sequences are considered the same if and only if their \fBgel-lane\fP
+designations are the same --- All other name information is disregarded.
+If a sequence has been determined to be a chimera and has been
+split into two new sequences with \fIa\fP and \fIb\fP extensions,
+the sequences are considered \fIdifferent\fP from the original.
+.Pp
+\fBcompare\fP detects the following relationships between old and new mats:
+.Pp
+.nr ll +1
+.nr t\n(ll 0
+.if \n(ll>1 .RS
+.nr bi 1
+.Pp
+\fBequivalences\fP
+.Pp
+A mat in the old assembly and a mat in the new assembly are considered
+\fIequivalent\fP if they both have exactly the same set of sequences
+(barring sequences which have been removed from or added to the project
+in the time between the two assemblies).
+.nr bi 1
+.Pp
+\fBfusions\fP
+.Pp
+A mat in the new assembly is a \fIfusion\fP of two or more mats 
+in the old assembly if and only if the sequence set of the new mat is
+exactly the sum of the sequence sets in the old mats (again, disregarding
+sequences which have been removed from or added to the project after
+the time of the old assembly).
+.nr bi 1
+.Pp
+\fBfissions\fP
+.Pp
+A mat from the old assembly \fIfissions\fP into two or more mats
+in the new assembly if and only if the sequence set of the old mat is
+exactly the sum of the sequence sets in the mats (once again, 
+disregarding sequences that have been removed from or added to 
+the project after the old assembly).
+.nr bi 1
+.Pp
+\fBappearances\fP
+.Pp
+A mat in the new assembly \fIappears\fP if none of its member
+sequences are present \fIanywhere\fP in the old assembly 
+(i.e. if all of its sequences have been added after the old assembly 
+was made).
+.nr bi 1
+.Pp
+\fBdisappearances\fP
+.Pp
+A mat in the old assembly \fIdisappears\fP if none of its member
+sequences are present \fIanywhere\fP in the new assembly (i.e.
+if all its sequences have been removed after the old assembly was made).
+.nr bi 1
+.Pp
+\fBcomplexes\fP
+.Pp
+These are combinations of partial fusions and fissions.
+Basically, these are mats which do not fall into any of the above
+categories.
+A mat from the old assembly is either completely \fIcontained\fP by
+a single mat in the new assembly, or \fIsplits\fP into two or more
+mats in the new assembly.
+.if \n(ll>1 .RE
+.nr ll -1
+.Pp
+.Pp
+.Pp
+.SH AVAILABILITY
+
+.Pp
+Currently, on
+\fBgenome5 (http://genome5.bio.bnl.gov/Software/Local/)\fP
+,
+genome4, genome1, ospa, ospb
+.Pp
+.SH CAVEATS
+
+.Pp
+Mat-renaming capabilities have not been added to the new version.
+.Pp
+The current version does not recognize mat names like block11a or new1.
+It therefore will not accept one of it's own output files as input.
+This can be fixed if necessary.
+.Pp
+.DS
+.sp 
+.ft CR
+.nf
+$Revision$
+$Date$
+.DE
+.fi 
+.ec
+.ft P
+.sp
+.Pp

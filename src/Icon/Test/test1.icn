@@ -1,0 +1,9 @@
+
+procedure main()
+
+    #f := open( "test1.icn" )
+    f := &input
+    write( type( f ) )
+    write( image( f ) )
+
+end

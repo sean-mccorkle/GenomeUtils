@@ -1,0 +1,44 @@
+#!/usr/bin/perl
+# Program:     pqual
+# Programmer:  Sean R. McCorkle
+# Language:    perl
+# Description: extract qualities from phred .phd file, with optional
+#              offsets from beginning and end
+#
+# Usage:       pqual  -b<n> -e<n> [<phd file>]
+#              
+#              reads from STDIN if no file specified
+#
+#                   -b<n>   start printing qualities <n> from the beginning
+#                   -e<n>   stop printing qualities <n> from the end
+#
+# $Id: pqual,v 1.2 2000/03/22 21:46:14 mccorkle Exp mccorkle $
+#
+
+use Getopt::Std;
+getopts( 'b:e:' );
+
+$start_offset = $opt_b ? $opt_b : 0;
+$end_offset = $opt_e ? $opt_e : 0;
+
+
+while ( ( $_ = <> ) && ! /^BEGIN_DNA/ )   { }
+
+die "$0: didn't find \"BEGIN_DNA\" \n" unless ( $_ );
+
+while ( ( $_ = <> ) && ! /^END_DNA/ )
+   {
+    chomp;
+    ($b, $q, $pos) = split( /\s+/ );
+    push( @b, $b );
+    push( @q, $q );
+   }
+
+die "$0: didn't find \"END_DNA\" \n" unless ( $_ );
+
+for ( $i = $start_offset;  $i <= $#b - $end_offset; $i++ )
+   {
+    print  $q[$i], "\n";
+   }
+
+

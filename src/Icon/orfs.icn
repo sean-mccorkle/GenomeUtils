@@ -1,0 +1,197 @@
+# Program:      orfs
+# Programmer:   Sean R. McCorkle
+# Language:     Icon
+# Description:  Reads a sequence file (fasta format), finds all Open Reading
+#               Frames (ORFs) in all, and writes them out.
+#
+#               The DNA sequences of the ORFs are written out in FASTA
+#               format, and each orf header is in the format:
+#
+#               >R-P-L-B-E
+#
+#               where:
+#
+#                   R is one of the 6 reading frames:
+#
+#                      F1, F2, F3 - forward direction (top strand), starting
+#                                   at the 1st, 2nd or third position from
+#                                   left end
+#                      R1, R2, R3 - reverse direction (bottom strand), starting
+#                                   at the 1st, 2nd or third position from 
+#                                   right end
+#
+#                   P is the position of the leftmost end of the ORF,
+#                     regardless of reading direction.  Leftmost position in
+#                     the sequence is 1).
+#
+#                   L is the length of the ORF, in nucleotides
+#
+#                   B is the start (beginning) codon (ATG, GTG)
+#
+#                   E is the stop (ending) signal (non-coding), ie. TAG, TAG, 
+#                     etc.
+#
+#               The DNA sequence of each ORF follows its header.  The sequence
+#               includes the start codon, but excludes the stop codon.
+#
+#               ORFs are output in order of postion, by each reading frame.
+#
+# Usage:        orfs [-hv] [-m <n>] <seq file>
+#
+#               where <seq file> contains a single DNA sequence (fasta).
+#               If not specified, stdin is used.
+#
+# Options:
+#
+#              -a       append sequence title to orf headings ( |title)
+#              -h       print help, then exit
+#              -m <n>   set minimum length threshold to <n> bases (default 300)
+#              -s       don't print the ORF sequences, just the header
+#              -v       print version, then exit
+#
+# $Id: orfs.icn,v 0.7 2000/03/24 15:39:29 mccorkle Exp mccorkle $
+#
+
+link    io
+link    options
+
+global  bases
+global  starts
+global  stops
+global  triplets
+global  codons
+global  nonstarts
+global  freq_table
+
+global  orf_length_thresh
+
+
+            
+procedure main( args )
+
+    local infile, s, signal, opts
+
+    opts := options( args, "-a -h -m+ -s -v", opt_err )
+    if member( opts, "h" )  then { help(); exit() }
+    if member( opts, "v" )  then { version(); exit() }
+
+    infile := open_file( (*args > 0 & args[1]) | "-" )
+ 
+    init_globals( opts )
+
+    fseq := read_fasta( infile )
+    s := table()
+    s["F"] := map( fseq.seq, &lcase, &ucase )
+    s["R"] := rc( s["F"] )
+    write( "; ORFs, sequence: ", fseq.heading, " length: ", *s["F"] );
+
+    find_orfs( s, opts, fseq.heading )
+
+end
+
+#
+#  process options which set globals and built the various triplet sets
+#
+procedure  init_globals( opts )
+
+    orf_length_thresh := ( \opts["m"] | 300 )
+
+    bases  := set( ["A", "C", "G", "T", "N", "M", "R", "W", "S", "Y", "K",
+                    "V", "H", "D", "B" ] )
+    starts := set( [ "ATG", "GTG", "TTG" ] )
+    stops  := set( [ "TAA", "TGA", "TAG" ] ) 
+    triplets := set()
+    every insert( triplets, !bases || !bases || !bases )
+    codons := triplets -- stops    
+    nonstarts := triplets -- starts
+
+
+end
+
+
+procedure find_orfs( s, opts, seqname )
+
+    local dir, f, a, orf
+
+    every dir := ( "F" | "R" ) do
+        every f := 1 to 3 do
+           {
+            s[dir] ? {
+                       move( f - 1 )   # shift to this frame
+                       orf := "z"
+                       while ( orf ~== "" ) do
+               	          {
+                           while member( nonstarts, move( 3 ) ) # to next start
+                           a := &pos
+                           while  member( codons, move( 3 ) )   # to next stop
+                           orf := &subject[a:&pos]
+                           ending := move( 3 ) | ""
+                           if ( orf ~== "" & ending ~== "" & 
+                                *orf >= orf_length_thresh )
+                             then
+                               { 
+                                if ( dir == "R" )               # convert to
+                                   then a := *s[dir] + 5 - &pos # leftmost end
+                                write_fasta( &output, 
+                                             if member( opts, "s" ) 
+                                                 then "" else orf, 
+                                             dir || f || "-" || a || "-" ||
+                                             *orf || "-" ||  orf[1+:3] ||
+                                             "-" || ending ||
+                                             if member( opts, "a" )
+                                                 then ( "|" || seqname )
+                                                 else ""
+                                             )
+                                                 
+			       }
+        		  }
+           	     }
+           }
+
+end
+
+
+
+
+#
+# print version number & help
+#
+
+procedure help()
+
+    version()
+    write( "\nUsage:  orfs [-hv] [-m <n>] <seq file>\n" )
+    write( "        a single hyphen (-) can be used as a file name to specify")
+    write( "        stdin.  If no files are specified, stdin is scanned.\n" )
+    write( "Options:" )
+    write( "        -a       append sequence title to orf headings ( |title)" )
+    write( "        -h       print help" )
+    write( "        -m <n>   set minimum length threshold to <n> bases ",
+                             "(default 300)" )
+    write( "        -s       don't print the ORF sequences, just the header" )
+    write( "        -v       print version" )
+
+end
+
+#
+# print version number
+#
+procedure version()
+
+    "$Revision: 0.7 $" ? { tab( upto( ' ' ) )
+                           write( "orfs", tab( many( &digits ++ ' .' ) ),
+                                  " Find Open Reading Frames"
+                                )
+		         }
+end
+
+#
+# slightly more informative option error message
+#
+procedure opt_err( msg )
+
+   write( &errout, "orfs: ", msg, "  (type orfs -h for help)" )
+   exit( 1 )
+end
+
+

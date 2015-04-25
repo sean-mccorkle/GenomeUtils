@@ -1,0 +1,191 @@
+head	0.2;
+access;
+symbols;
+locks
+	mccorkle:0.2; strict;
+comment	@# @;
+
+
+0.2
+date	2004.01.29.13.45.18;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	2004.01.25.22.27.30;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@script for printing out proximal enzyme positions to other landmarks.
+@
+
+
+0.2
+log
+@initialized $last_e and $last_p to -1 to handle positions of 0
+@
+text
+@#!/usr/bin/perl
+# Program:      prox
+# Programmer:   Sean McCorkle
+# Language:     perl
+# Description:  read two pre-sorted columns of numbers representing enzyme  
+#               sites and other landmark sites, and report landmarks are
+#               proximal (within a threshold distance) of enzyme sites
+#               (reports only the closest enzyme site, if more than one are
+#               within thresh).
+#
+# Usage:        prox <thresh> <enzyme sites> <landmarks>
+#
+#
+# Caveats:      will accept and properly handle duplicate landmark positions,
+#               but will error exit on duplicate enzyme positions. (this is
+#               a deliberate choice by the author)
+#
+# $Id: prox,v 0.1 2004/01/25 22:27:30 mccorkle Exp mccorkle $
+#
+
+( $thresh, $enz_file, $pos_file ) = @@ARGV;
+
+$last_e = -1;
+$last_p = -1;
+
+$enz_f = open_input_stream( $enz_file );
+$pos_f = open_input_stream( $pos_file );
+
+#
+#  For any given landmark position, we need only consider the enzyme
+#  interval that contains it, and then need only need compare the
+#  landmark position to that intervals two endpoints.  If both lists 
+#  are properly sorted, this can be done in linear (O(n+m)) time.
+#  
+$a = - ( $thresh + 10 );  # artificial interval start, guaranteed not proximal
+$b = next_e();            # ($a,$b) represents the current enzyme interval
+
+$p = next_p();            # $p contains current landmark position
+
+while ( $b >= 0 && $p >= 0 )
+   {
+    while ( $b >= 0 && $p > $b )      # advance enzyme interval until it
+       {                              # contains this value of $p, or until
+        $a = $b;                      # we exhaust all the enzyme sites
+        $b = next_e();
+       }
+    if ( $b >= 0 )                    # if we didn't run out of enz positions..
+       {                              # then we have the enz interval ($a, $b)
+        # assert                      # that contains $p
+        ( $a < $p && $p <= $b ) ||
+            die "Failed assertion one: $a < $p && $p <= $b\n";
+        $diff_a = $p - $a;
+        $diff_b = $b - $p;
+        if ( $diff_a < $diff_b )
+           { report( 'above', $p, $a ) if ( $diff_a  <= $thresh ); }
+        else
+           { report( 'below', $p, $b ) if ( $diff_b  <= $thresh ); }
+
+        $p = next_p();                # we're finished with this pos, get next
+       }
+   }
+#
+# We've either exhausted enzyme positions or landmark positions
+# assert
+( $b < 0 || $p < 0 ) || die "Failed assertion two: $a < 0 || $p < 0\n";
+
+#
+# if we've exhausted enzyme sites, run out remaining landmarks and stop
+# when last exceeds last possible thresh
+#
+if ( $b < 0 )
+   {
+    while ( $p >= 0 && ( $p - $a ) <= $thresh )
+       { 
+        report( 'above', $p, $a ); 
+        $p = next_p();
+       }
+   }
+
+
+                               ###############
+                               # Subroutines #
+                               ###############
+
+sub  report
+   {
+    my ( $what, $pos, $enz ) = @@_;
+ 
+    printf "%10d %10d %10d %s\n", abs( $pos - $enz ), $enz, $pos, $what;
+   }
+
+sub  next_e
+   {
+    my $e;
+    $e = get_number( $enz_f );
+    return( -1 ) if ( $e < 0 );
+    ($e <= $last_e) && die "$0: enzyme input unsorted: has $last_e, then $e\n";
+    $last_e = $e;
+    return( $e );
+   }
+
+
+sub  next_p
+   {
+    my $p;
+    $p = get_number( $pos_f );
+    return( -1 ) if ( $p < 0 );
+    ($p < $last_p) && die "$0: landmark pos input unsorted: has $last_p, then $p\n";
+    $last_p = $p;
+    return( $p );
+   }
+
+#
+# get_number( $fh ) reads the next number from the next line of the
+#  input stream $fh.  Blank lines are ignored.  If a non-number is
+#  encountered, this error exit.  -1 is returned at end of file.
+#
+sub  get_number
+   {
+    my $fh = shift;
+
+    while ( ($_ = <$fh>) && /^\s*$/ )  {}
+    return( -1 ) unless( $_ );
+    chomp;
+    s/\s//g;
+    /^\d+$/ || die "\"$_\" is not a number\n";
+    return( $_ );
+   }
+
+#
+# $fh = open_input_stream( $filename ) 
+#  if $filename is a pathname, it is opened and a file handle reference is
+#  returned.  If it is "-", then the standard input filehandle reference
+#  is returned.
+#
+sub  open_input_stream
+   {
+    my $filename = shift;
+    my $f;
+
+    if ( $filename eq '-' )
+       { return \*STDIN; }
+    else
+       {
+        open( $f, $filename ) || die "Can't open \"$filename\": $!\n";
+        return( $f );
+       }
+   }
+
+@
+
+
+0.1
+log
+@going public.
+@
+text
+@d18 1
+a18 1
+# $Id$
+d22 3
+@

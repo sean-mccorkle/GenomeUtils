@@ -1,0 +1,76 @@
+#!/usr/bin/perl
+# Program:      splt
+# Programmer:   Sean R. McCorkle
+# Language:     perl
+# Description:  Reads in fasta format sequence files, splits them
+#               up into individual files, with .orf suffix (for now)
+#
+# Usage:        splt [-hv] [-e <ext>] [<file> ...]
+#
+#               a single hyphen (-) can be used as a file name to specify
+#               stdin.  If no files are specified, stdin is scanned.
+#
+# Options:
+#                  -e <ext>  append .<ext> to each file
+#                  -f <char> use <char> as field separator in > headers, and 
+#                            use the first field for the name, rather than the
+#                            entire line
+#                  -n <n>    use field <n> from header as name (default: 1 )
+#                  -h        print help
+#                  -v        print version
+#
+# $Id: splt.icn,v 0.4 2000/04/26 15:49:38 mccorkle Exp mccorkle $
+#
+
+use  Getopt::Std;
+
+die "bad option\n" unless ( getopts( 'e:f:n:hv' ) );
+
+help() if ( $opt_h );
+if ( $opt_v ) { version(); exit;}
+
+$sc = $opt_f ? $opt_f : "\\|";
+$fn = $opt_n ? ($opt_n - 1) : 3;
+$ext = $opt_e ? ".$opt_e" : "";
+
+while ( <> )
+   {
+    if ( /^>(.*)/ )
+       {
+        $new_header = $1;
+        close( OUT ) if defined( $header );
+        $header = $new_header;
+        $filename = make_filename( $header );
+        open( OUT, ">$filename" ) || die "$0: Can't write to \"$filename\" $!\n";
+        print OUT ">$header\n";
+        print "$filename\n";
+       }
+    else
+       {
+        print OUT;
+       }
+   }
+
+close( OUT ) if defined( $header );
+
+                                ###############
+                                # Subroutines #
+                                ###############
+
+sub  make_filename
+   {
+    my $hdr = shift;
+    my $col = (split( /$sc/, $hdr ))[$fn];
+    return( $col . $ext );
+   }
+
+sub  version 
+   {
+    print "no version\n";
+   }
+
+sub  help
+   {
+    print "no help yet.\n:";
+    exit;
+   }

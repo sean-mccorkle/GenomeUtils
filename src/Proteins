@@ -1,0 +1,29 @@
+
+A  Ala  Alanine        neutral, hydrophobic   GCU, GCC, GCA, GCG
+V  Val  Valine         neutral, hydrophobic   GUU, GUC, GUA, GUG
+L  Leu  Leucine        neutral, hydrophobic   UUA, UUG, CUU, CUC, CUA, CUG
+I  Ile  Isoleucine     neutral, hydrophobic   AUU, AUC, AUA
+W  Trp  Tryptophan     neutral, hydrophobic   UGG
+F  Phe  Phenylalanine  neutral, hydrophobic   UUU, UUC
+M  Met  Methionine     neutral, hydrophobic   AUG
+P  Pro  Proline        neutral, hydrophobic   CCU, CCC, CCA, CCG
+
+
+G  Gly  Glycine        neutral, polar         GGU, GGC, GGA, GGG
+S  Ser  Serine         neutral, polar         UCU, UCC, UCA, UCG, AGU, AGC
+T  Thr  Threonine      neutral, polar         ACU, ACC, ACA, ACG
+Y  Tyr  Tyrosine       neutral, polar         UAU, UAC
+C  Cys  Cysteine       neutral, polar         UGU, UGC
+N  Asn  Asparagine     neutral, polar         AAU, AAC
+Q  Gln  Glutamine      neutral, polar         CAA, CAG
+
+K  Lys  Lysine         basic                  AAA, AAG
+R  Arg  Argenine       basic                  CGU, CGC, CGA, CGG, AGA, AGG
+H  His  Histidine      basic                  CAU, CAC
+
+D  Asp  Aspartic Acid  acidic                 GAU, GAC
+E  Glu  Glutamic Acid  acidic                 GAA, GAG
+
+
+
+

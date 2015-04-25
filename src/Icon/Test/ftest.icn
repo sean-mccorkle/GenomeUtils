@@ -1,0 +1,7 @@
+
+procedure main( args )
+
+   while( line := read_line( args ) )
+       write( line )
+end
+

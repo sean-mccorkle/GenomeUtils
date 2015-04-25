@@ -1,0 +1,8 @@
+procedure main()
+
+   [a, b] := [ "abc", "def" ]
+   write( a )
+   write( b )
+
+end
+

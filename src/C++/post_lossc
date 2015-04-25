@@ -1,0 +1,82 @@
+#!/usr/bin/perl
+# Postprocessor for lossc output
+#
+select( ( select(STDOUT), $| = 1 )[0] );
+select( ( select(STDERR), $| = 1 )[0] );
+
+$afile = "/tmp/a.plosc$$";
+$bfile = "/tmp/b.plosc$$";
+while ( <> )
+   {
+    chomp;
+    /^([A-Z]+) ([A-Z\-]+) (\d+|X) (.*)$/ || die "Bad line \"$_\"\n";
+    ($data_tag, $db_tag, $ed, $descrips) = ($1, $2, $3, $4);
+    ($data_desc, $db_desc) = split( /\|/, $descrips );
+    #print "\n$data_tag: $data_desc\n";
+    #print "$db_tag: $db_desc\n" if ( $ed ne 'X' );
+
+    print "$ed $data_tag ";
+    if ( $ed ne 'X' )
+       {    
+        mkfastafile( "a", $data_tag, $afile );
+        mkfastafile( "b", $db_tag, $bfile );
+        ($top,$mid,$bot) = process( $afile, $bfile );
+        print "$top   $data_desc\n";
+        print ' 'x(length($data_tag)+3), $mid, "\n";
+        print ' 'x(length($data_tag)+3), $bot, "   $db_desc\n";
+       }
+    else
+       {
+        print ' 'x(length($data_tag)+3), "$data_desc\n";
+       }
+    print "\n";
+   }
+
+unlink ( $afile ) if ( -e $afile );
+unlink ( $bfile ) if ( -e $bfile );
+
+
+sub mkfastafile
+   {
+    my ( $hdr, $seq, $file ) = @_;
+    open( FASTA, ">$file" ) || die "Can't write to file $file\n";
+    print FASTA ">$hdr\n$seq\n";
+    close( FASTA );
+   }
+
+
+sub process
+   {
+    my ($afile,$bfile) = @_;
+
+    open( ALIGN, "/usr/local/seq/bin/seqdiff -a - $afile $bfile|" ) || 
+        die "Can't do alignment $afile $bfile\n";
+    while ( ( $_ = <ALIGN> ) && ! /^a\.plosc/ ) 
+       { }
+    chomp;
+    $_ || die "bad alignment $afile $bfile\n";
+    s/\s*$//;
+    /^.{19}(.+)$/ || die "bad alignment line 1 [$_] $afile $bfile\n";
+    my $top = $1;
+
+    $_ = <ALIGN>;
+    chomp;
+    s/\s*$//;
+    my $mid;
+    if ( /^\s{19}(.+)$/ ) 
+       {  $mid = $1; }
+    elsif ( /^\s*$/ )
+       {  $mid = ' 'x(length($top)); }
+    else
+       { die "bad alignment line 2 [$_] $afile $bfile\n"; }
+
+    $_ = <ALIGN>;
+    chomp;
+    s/\s*$//;
+    /^.{19}(.+)$/ || die "bad alignment line 3 [$_] $afile $bfile\n";
+    my $bot = $1;
+
+    close( ALIGN );
+
+    return( ($top, $mid, $bot) );
+   }

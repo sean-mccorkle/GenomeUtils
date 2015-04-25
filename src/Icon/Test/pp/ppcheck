@@ -1,0 +1,50 @@
+#!/usr/bin/perl
+#
+# ppcheck SEQ seq.orfs 
+#
+# Monster check that makes sure that sequences extracted by pp using the
+# position and length of orfs matches the orfs.
+#
+# Assumes orfs file has >F frames first, followed by >R frames
+# when doing the diff.
+#
+
+$seq_file = shift;
+$orf_file = shift;
+$tmp_file = $orf_file . ".tmp";
+$pp = "../../pp";
+$rc = "../../rc";
+
+unlink( $tmp_file ) || die "Can't unlink $tmp_file\n" if ( -e $tmp_file );
+
+open( ORFS, "grep '^>F' $orf_file|" ) || die "Can't open forward orfs\n";
+while( $_ = <ORFS> )
+   {
+    chomp;
+    #print "Forward ORF $_\n";
+    s/^>//;
+    ($frame,$left,$n,$start,$stop) = split( /-/ );
+    print "Frame $frame, \@ $left, $n bases, $start/$stop\n";
+    system( "$pp -B$left -L$n -t'$_' -n -s0 $seq_file >>$tmp_file" );
+   }
+close( ORFS );
+
+
+open( ORFS, "grep '^>R' $orf_file|" ) || die "Can't open forward orfs\n";
+while( $_ = <ORFS> )
+   {
+    chomp;
+    #print "Forward ORF $_\n";
+    s/^>//;
+    ($frame,$left,$n,$start,$stop) = split( /-/ );
+    print "Frame $frame, \@ $left, $n bases, $start/$stop\n";
+    system( "$pp -B$left -L$n -t'$_' -n -s0 $seq_file | $rc >>$tmp_file" );
+   }
+close( ORFS );
+
+print "Results in $tmp_file.\n\nDoing diff...\n\n";
+
+system( "diff $orf_file $tmp_file" );
+
+print "\nDone\n";
+

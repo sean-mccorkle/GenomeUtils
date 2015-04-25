@@ -1,0 +1,20 @@
+#!/usr/bin/perl
+# Program:      rna2dna
+# Programmer:   Sean McCorkle
+# Language:     perl
+#
+# Description:  Converts RNA sequences into DNA (u -> t, U -> T)
+#
+# Usage:        rna2dna  [<file> ... ]
+#                  where  <file>s are in FASTA format.  Stdin is scanned if
+#                  no files
+#
+# $Id$
+
+while ( <> )
+   {
+    tr/uU/tT/ unless ( /^>/ );
+    print;
+   }
+
+

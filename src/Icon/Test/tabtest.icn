@@ -1,0 +1,10 @@
+procedure main()
+    write( "hello" )
+    t := table()
+    t["x"] := "abc"
+    val := "nada"
+    val := ( \t["x"] | "znog" )
+    write( "val is: ", val, ";" )
+    val := ( \t["y"] | "znog" )
+    write( "val is: ", val, ";" )
+end

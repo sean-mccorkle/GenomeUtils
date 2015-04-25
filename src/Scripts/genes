@@ -1,0 +1,103 @@
+#!/usr/bin/perl
+# Program:      genes
+# Description:  Extract genes from Genbank (and other) files
+# Programmer:   Sean R. McCorkle, Brookhaven National Laboratory
+# Language:     perl, with bioperl
+#
+# Description:  Uses bioperl SeqIO object to convert between any of the
+#               common DNA/Protein sequence formats (fasta, genbank, embl,...)
+#
+# Usage:        seqconv [-f] <seqfile>
+# 
+#               ext1 determines format of input sequence file, ext2 determines
+#               format.
+# 
+#                  Format   Extensions
+#
+#                  fasta    fasta|fast|seq|fa|fsa|nt|aa
+#                  genbank  gb|gbank|genbank
+#                  scf      scf
+#                  pir      pir
+#                  embl     embl|ebl|emb|dat
+#                  raw      txt
+#                  gcg      gcg
+#                  ace      ace
+#                  bsml     bsm|bsml
+#                  swiss    swiss|sp
+#                  phd      phd|phred
+#
+#                if -f option used, translation sequences are output in
+#                FASTA format
+#
+use  Getopt::Std;
+use  Bio::SeqIO;
+
+%strand = ( -1 => "r", 0 => "b", 1 => "f" );  # rev, both or forward
+$linelen = 50;                                # width for FASTA output
+
+select( ( select(STDOUT), $| = 1 )[0] );
+select( ( select(STDERR), $| = 1 )[0] );
+
+die "bad option\n" unless ( getopts( 'f' ) );
+
+$file = shift;
+$fopen_args{'-file'} = "$file";
+$fopen_args{'-format'} = 'GenBank' if  ( $file =~ /\.gbk$/ );
+
+$in  = Bio::SeqIO->new( %fopen_args );
+
+while ( my $seq = $in->next_seq() ) 
+   {
+    $acc = $seq->accession_number;
+    #print "accession_number: $acc\n";
+
+    clear();
+    foreach $feat ( $seq->get_SeqFeatures() ) 
+       {
+        if ( $feat->primary_tag eq 'CDS' )
+           {
+            $gene_id = get_tags( $feat, 'gene' );
+            $fdir = $strand{$feat->strand};
+            $prod = get_tags( $feat, 'product' );
+            $note = get_tags( $feat, 'note' );
+           }
+        elsif ( $feat->primary_tag eq 'mRNA' )
+           {
+            $transcript_id = get_tags( $feat, 'transcript_id' );
+            $fstart = $feat->start;
+            $fend =  $feat->end;
+           }
+        
+        if ( $gene_id && $transcript_id )
+           {
+            printf "%10s %16s %16s %10d %10d %s %s\n",
+                   $acc, $gene_id, $transcript_id, $fstart, $fend, $fdir,
+                   $prod, $note;
+            clear();
+           } 
+
+       }
+   }
+
+
+sub get_tags
+   {
+    my ( $feat, $tag ) = @_;
+
+    if ( $feat->has_tag( $tag ) )
+       { return(  join( ';', $feat->each_tag_value( $tag ) ) ); }
+    else
+       { return( '' ); }
+    
+   }
+
+sub  clear
+   {
+    $gene_id = "";
+    $transcript_id = "";
+    $fstart = "";
+    $fend = "";
+    $fdir = "";
+    $prod = "";
+    $note = "";
+   }

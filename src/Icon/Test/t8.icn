@@ -1,0 +1,13 @@
+
+procedure main( args )
+
+    if filename := args[1]
+      then
+        ( infile := open( filename )  | stop( "can't open ", filename ) )
+      else
+        infile := &input
+
+    while write( read( infile ) )
+ 
+    write( "end of program" )
+end

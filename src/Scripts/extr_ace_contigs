@@ -1,0 +1,20 @@
+#!/usr/local/bin/perl
+#  Extract contigs from .ace file to FASTA format (stdout)
+#  Usage:  extr_ace_contigs <.ace file>
+#
+while ( <> )
+    {
+     if ( /^CO (Contig\d+)/ )
+        {
+         print ">$1\n";
+         $passthru = 1;
+        }
+     elsif ( /^\s*$/ )
+        {
+         $passthru = 0;
+        }
+     else
+        {
+         print if ( $passthru );
+        }
+    }

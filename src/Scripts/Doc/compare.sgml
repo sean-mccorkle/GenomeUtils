@@ -1,0 +1,102 @@
+<!-- This is a linuxdoc-sgml file which generates compare.man,
+     compare.html, compare.tex, compare.txt, compares.ps.
+-->
+
+<!doctype linuxdoc system>
+
+<manpage>
+<sect>compare
+<sect1>NAME
+<p>
+<tt/compare/
+<sect1>SYNOPSIS
+<p>
+<tt>/usr/local/seq/bin/compare</tt> <em/old getlocs file/ <em/new getlocs file/
+<p>
+
+<sect1>DESCRIPTION
+<p>
+This program compares <bf>getlocs</bf> outputs from two 
+<bf/splice/ assemblies of a project that have been made at different times.
+Typically, <bf/mat/ numbers assigned by <bf/splice/ are 
+highly sensitive to the details of the input sequences, making
+comparison difficult because many otherwise unchanged mats will 
+receive different numbers in the assembly.
+<bf/compare/ reassigns mat numbers in the new getcmnts file to reflect
+similarities and differences between the new and old assemblies.
+
+While the <bf/getlocs/ files contain much assembly information,
+<bf/compare/ simply considers mats sets of sequences and analyzes
+old and new assemblies by examining set memberships.
+Sequences are considered the same if and only if their <bf/gel-lane/
+designations are the same --- All other name information is disregarded.
+If a sequence has been determined to be a chimera and has been
+split into two new sequences with <em/a/ and <em/b/ extensions,
+the sequences are considered <em/different/ from the original.
+
+<bf/compare/ detects the following relationships between old and new mats:
+
+<itemize>
+<item><bf/equivalences/
+      <p>
+      A mat in the old assembly and a mat in the new assembly are considered
+      <em/equivalent/ if they both have exactly the same set of sequences
+      (barring sequences which have been removed from or added to the project
+      in the time between the two assemblies).
+<item><bf/fusions/
+      <p>
+      A mat in the new assembly is a <em/fusion/ of two or more mats 
+      in the old assembly if and only if the sequence set of the new mat is
+      exactly the sum of the sequence sets in the old mats (again, disregarding
+      sequences which have been removed from or added to the project after
+      the time of the old assembly).
+<item><bf/fissions/
+      <p>
+      A mat from the old assembly <em/fissions/ into two or more mats
+      in the new assembly if and only if the sequence set of the old mat is
+      exactly the sum of the sequence sets in the mats (once again, 
+      disregarding sequences that have been removed from or added to 
+      the project after the old assembly).
+<item><bf/appearances/
+      <p>
+      A mat in the new assembly <em>appears</em> if none of its member
+      sequences are present <em>anywhere</em> in the old assembly 
+      (i.e. if all of its sequences have been added after the old assembly 
+      was made).
+<item><bf/disappearances/
+      <p>
+      A mat in the old assembly <em>disappears</em> if none of its member
+      sequences are present <em>anywhere</em> in the new assembly (i.e.
+      if all its sequences have been removed after the old assembly was made).
+<item><bf/complexes/
+      <p>
+      These are combinations of partial fusions and fissions.
+      Basically, these are mats which do not fall into any of the above
+      categories.
+      A mat from the old assembly is either completely <em/contained/ by
+      a single mat in the new assembly, or <em/splits/ into two or more
+      mats in the new assembly.
+</itemize>
+
+
+
+<sect1>AVAILABILITY
+<p>
+Currently, on
+<url url="http://genome5.bio.bnl.gov/Software/Local/" name="genome5">,
+genome4, genome1, ospa, ospb
+
+<sect1>CAVEATS
+<p>
+Mat-renaming capabilities have not been added to the new version.
+<p>
+The current version does not recognize mat names like block11a or new1.
+It therefore will not accept one of it's own output files as input.
+This can be fixed if necessary.
+
+<verb>
+$Revision$
+$Date$
+</verb>
+
+</manpage>

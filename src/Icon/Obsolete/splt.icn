@@ -1,0 +1,118 @@
+# Program:      splt
+# Programmer:   Sean R. McCorkle
+# Language:     Icon
+# Description:  Reads in fasta format sequence files, splits them
+#               up into individual files, with .orf suffix (for now)
+#
+# Usage:        splt [-hv] [-e <ext>] [<file> ...]
+#
+#               a single hyphen (-) can be used as a file name to specify
+#               stdin.  If no files are specified, stdin is scanned.
+#
+# Options:
+#                  -e <ext>  append .<ext> to each file
+#                  -f <char> use <char> as field separator in > headers, and 
+#                            use the first field for the name, rather than the
+#                            entire line
+#                  -n <n>    use field <n> from header as name (default: 1 )
+#                  -h        print help
+#                  -v        print version
+#
+# $Id: splt.icn,v 0.4 2000/04/26 15:49:38 mccorkle Exp mccorkle $
+#
+
+link io
+link doc
+link options
+
+procedure  help( fmt )
+
+    version()
+    write_doc( fmt, "\
+__Name      splt - split fasta file(s) into individual sequence files        \
+                                                                             \
+__Usage     splt [-hv] [-e <ext>] [<file> ...]                               \
+                                                                             \
+            where <seq> is a file that contains one or more fasta format DNA \
+            or amino acid sequences. A single hyphen (-) can be used as      \
+            a file name to specify stdin.  If no files are given,            \
+            stdin is scanned.                                                \
+                                                                             \
+__Options                                                                    \
+_.             -e <ext>  append .<ext> to each file                          \
+_.             -f <char> use <char> as field separator in > headers, and     \
+                         use the first field for the name, rather than the   \
+                         entire line                                         \
+_.             -n <n>    use field <n> from header as name (default: 1 )     \
+                                                                             \
+_.             -h       print help then exit                                 \
+_.             -help    print help then exit                                 \
+_.             -html    print html man page then exit                        \
+_.             -man     print unix man page then exit                        \
+_.             -v       print version then exit                              \
+      " )
+    exit()
+
+end
+
+
+                             ################
+                             # Main Program #
+                             ################
+
+procedure main( args )
+
+    local f, w, seq, wname
+     
+    opts := options( args, "-e: -f: -n+ -h -help! -man! -html! -v" )
+    if member( opts, ("h" | "help") )   then help( "text" )
+    if member( opts, "man" )            then help( "man" )
+    if member( opts, "html" )           then help( "html" )
+    if member( opts, "v" )              then { version(); exit() }
+
+    if ( *args = 0 ) then push( args, "-" )   # use  stdin if no filenames
+
+    every f := open_file( !args ) do
+       {
+        while seq := read_fasta( f ) do
+           {
+            wname := make_name( seq.heading, opts )
+            w := open( wname, "w" ) | stop( "can't write to '", wname, "'" )
+            write_fasta( w, seq.seq, seq.heading )
+            close( w ) | stop( "can't close to '", wname, "'" )
+            write( wname )
+           }
+        close_file( f )
+       }
+
+end
+
+
+procedure  make_name( hdr_line, opts )
+
+    local  ext, m
+
+    ext := ""
+    if member( opts, "e" ) then ext := opts["e"]
+
+    m := 0
+    if member( opts, "f" ) 
+       then m := ( find( opts["f"], hdr_line ) | 0 )
+
+    return(  hdr_line[1:m] || ext )
+
+end
+
+
+
+#
+# print version number
+#
+procedure version()
+
+    "$Revision: 0.4 $" ? { tab( upto( ' ' ) )
+                           write( "splt", tab( many( &digits ++ ' .' ) ) )
+		         }
+end
+
+

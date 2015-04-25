@@ -1,0 +1,31 @@
+
+link graphics
+
+procedure main()
+
+    local radius, x, y, px, py
+    px := py := -10
+
+    WOpen( "size=400,300", "drawop=reverse" ) | stop( "Can't open window" )
+    repeat 
+       {
+        case Event() of
+	   {
+            "q" | "Q": break;
+            &lpress:   DrawCircle( x := &x, y := &y, radius := 0 )
+            &ldrag:    {
+                        DrawCircle( x, y, radius )
+                        DrawCircle( x, y, radius := 
+                               sqrt( (&x - x)^2+(&y-y)^2 ))
+                       }
+            &lrelease: {
+                        DrawSegment( px-5, py, px+5, py, px, py-5, px, py+5 )
+                        DrawSegment( x-5, y, x+5, y, x, y-5, x, y+5 )
+                        px := x;  py := y 
+                       }
+                      
+	   }
+       }
+    DrawSegment(  px-5, py, px+5, py, px, py-5, px, py+5 )
+    WriteImage( "circles.bmp" )
+end

@@ -1,0 +1,6 @@
+
+ 1) function which recursivly converts all symbols to chars in a structure
+
+ 2) rework gen-penalties section so that is-amb? can work on upper or lower
+    case characters.
+

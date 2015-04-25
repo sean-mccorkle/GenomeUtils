@@ -1,0 +1,12 @@
+procedure main()
+
+    p := [ "a", "b", "c", "d"]
+    q := [ "one", "two", "three", "four" ]
+
+    every i := 1 to *p do
+       {
+        write( p[i], " ", q[i] )
+       }
+
+    
+end

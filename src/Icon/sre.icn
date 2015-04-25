@@ -1,0 +1,80 @@
+# Program:      sre
+# Programmer:   Sean R. McCorkle
+# Language:     Icon
+# Description:  Reads in fasta format sequence files, splits them
+#               up into individual files, with .orf suffix (for now)
+#
+# Usage:        sre [-hv] <exp> [<file> ...]
+#
+#               a single hyphen (-) can be used as a file name to specify
+#               stdin.  If no files are specified, stdin is scanned.
+#
+# Options:
+#                  -h       print help
+#                  -v       print version
+#
+# $Id$
+#
+
+link io
+link options
+
+procedure main ( args )
+
+    local re, f, seq, s, r, fhits, hitstr
+
+    (re := map( get( args ), &lcase, &ucase )) | stop( "no re" )
+
+    if ( *args = 0 ) then push( args, "-" )   # use stdin if no filenames
+
+    # Now, read in each sequence in the data stream and search against it
+
+    every f := open_file( !args ) do
+       {
+        while seq := read_fasta( f ) do
+           {
+            s := map( seq.seq, &lcase, &ucase )
+            if ( fhits := find_hits( re, s ) )
+              then write( seq.heading, " ", join_list( fhits ) )
+            r := rc( s )
+            if ( rhits := find_hits( re, r ) )
+              then write( seq.heading || " (R)", " ", 
+                           join_list( adjust( rhits, *r + 1 ) ) )
+           }
+        close_file( f )
+       }
+
+end
+
+procedure find_hits( re, s )
+
+    local hits 
+
+    hits := []
+    every put( hits, find( re, s ) )
+    if ( *hits > 0 )
+        then return( hits )
+        else fail
+
+end
+
+
+procedure join_list( lst )
+    
+    local s
+
+    s  := ""
+    every s ||:= !lst || " "
+    return( s )
+
+end
+
+procedure adjust( lst, n )
+
+    local newlst
+
+    newlst := []
+    every put( newlst, n - !lst )
+    return( newlst )
+
+end

@@ -1,0 +1,36 @@
+#!/usr/bin/perl
+# Program:      General sequence format converter
+# Programmer:   Sean R. McCorkle, Brookhaven National Laboratory
+# Language:     perl, with bioperl
+#
+# Description:  Uses bioperl SeqIO object to convert between any of the
+#               common DNA/Protein sequence formats (fasta, genbank, embl,...)
+#
+# Usage:        seqconv <infile>.<ext1> <outfile>.<ext2>
+# 
+#               ext1 determines format of input sequence file, ext2 determines
+#               format.
+# 
+#                  Format   Extensions
+#
+#                  fasta    fasta|fast|seq|fa|fsa|nt|aa
+#                  genbank  gb|gbank|genbank
+#                  scf      scf
+#                  pir      pir
+#                  embl     embl|ebl|emb|dat
+#                  raw      txt
+#                  gcg      gcg
+#                  ace      ace
+#                  bsml     bsm|bsml
+#                  swiss    swiss|sp
+#                  phd      phd|phred
+
+use Bio::SeqIO;
+
+($infile,$outfile) = @ARGV;
+
+$in  = Bio::SeqIO->new( '-file' => "$infile" );
+$out = Bio::SeqIO->new('-file' => ">$outfile" );
+
+while ( my $seq = $in->next_seq() ) 
+   { $out->write_seq($seq); }

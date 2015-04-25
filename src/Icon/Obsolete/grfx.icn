@@ -1,0 +1,155 @@
+link graphics                       # need icon graphics lib (of course)
+
+
+global window_width, window_height
+global x_margin, y_margin           # for neatness - margins around the edge
+global a_x, b_x                     # scales bp to x pixels
+global a_y, b_y                     # converts to positive y at 1/2 down
+global scale_height                 # scale height in pixels
+global ticlen, subticlen
+
+global tier_height, tier_spacing
+
+
+#
+# w, h: actual window width and height in pixels
+#
+procedure  open_window( w, h )
+
+   local eff_h
+
+   window_width := w
+   window_height := h
+   x_margin := 10
+   y_margin := 10
+   scale_height := 8
+   ticlen := 8
+   subticlen := 4
+   a_y := (2.0 * y_margin - h ) / h
+   b_y := y_margin - a_y * h / 2.0
+   write( "ay ", a_y, "  b_y  ", b_y )
+   Window( "size=" || window_width || "," || window_height, 
+           "bg=black", "fg=white" )
+
+end
+
+#
+#  sequence_length is length of sequence (bp)
+#  height is height of scale bar (pixels)
+#  scale_color is color of scale
+
+procedure  draw_scale( sequence_length, scale_color  )
+   
+   local linfo, delta_tics, delta_subtics
+
+   a_x := ( window_width - 2.0 * x_margin ) / sequence_length
+   b_x := x_margin
+   #
+   # save fill color here first!
+   #
+   Fg( scale_color )
+   fill_rectangle( 0, 0, sequence_length, scale_height )
+   Fg( "white" )
+   linfo := figure_label_info( sequence_length )
+   delta_tics := linfo[1]
+   delta_subtics := linfo[2]
+   write( "delta_tics", delta_tics )
+   write( "delta_subtics", delta_subtics )
+
+   every draw_tic_mark( (0 to sequence_length by delta_tics), ticlen )
+   every draw_tic_mark( (0 to sequence_length by delta_subtics), subticlen )
+
+   every draw_tic_label( (0 to sequence_length by delta_tics) )
+        
+end
+
+procedure figure_label_info( sequence_length )
+
+    if sequence_length <= 1000 
+    then 
+        return( [100, 20] )
+    else
+        if sequence_length <= 5000
+        then 
+            return( [500, 100] )
+        else
+            return( [5000, 1000] )
+end
+
+procedure draw_tic_mark( p, l )
+
+    DrawLine( map_x( p ), map_y( 0 ), map_x( p ), map_y( -l ) )
+
+end
+
+procedure draw_tic_label( p )
+
+    local n, fheight
+    n := string( p )
+    fheight := WAttrib( "fheight" )
+    DrawString( map_x( p ) - TextWidth( n ) / 2, 
+                map_y( -ticlen ) + fheight, 
+                n )
+
+end
+
+procedure set_tiers( height, spacing )
+
+    tier_height := height
+    tier_spacing := spacing
+
+end
+
+# tier: tier number
+# pos: sequence position
+# y1, y2 - coordinates in the tier. full scale is 0.0 (bottom) to 1.0 (top)
+# color
+# Make color an option, and save & restore color
+
+procedure vert_mark( tier, pos, y1, y2, color )
+
+    # Make color an option, and save & restore color
+    # handle negative tier heights
+
+    local x, yoff
+    Fg( color )
+    x := map_x( pos )
+    yoff := scale_height + tier_spacing + ( tier - 1 ) * 
+             ( tier_spacing + tier_height )
+    DrawLine( x, map_y( yoff + tier_height * y1 ), 
+              x, map_y( yoff + tier_height * y2 )   )
+    
+end
+
+procedure draw_line( tier, a, b, color )
+
+    local x1, x2, y
+    Fg( color )
+    y := map_y( tier * ( tier_spacing + tier_height ) + scale_height ) 
+    y -:= 0.5 * a_y * tier_height
+    x1 := map_x( a )
+    x2 := map_x( b )
+    DrawLine( x1, y, x2, y )   
+    
+end
+
+#
+# user coordinates
+#
+procedure fill_rectangle( x1, y1, x2, y2 )
+
+   FillRectangle( map_x( x1 ), map_y( y1 ),
+                  ( x2-x1 ) * a_x, ( y2 - y1 ) * a_y )
+
+
+end
+
+
+procedure  map_x( x )
+   return( a_x * x + b_x )
+end
+
+procedure  map_y( y )
+   return( a_y * y + b_y )
+end
+

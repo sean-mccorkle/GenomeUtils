@@ -1,0 +1,362 @@
+head	1.3;
+access;
+symbols;
+locks
+	mccorkle:1.3; strict;
+comment	@# @;
+
+
+1.3
+date	2004.10.12.13.23.07;	author mccorkle;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2004.09.12.03.02.27;	author mccorkle;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2004.09.12.02.42.30;	author mccorkle;	state Exp;
+branches;
+next	1.0;
+
+1.0
+date	2004.09.12.02.18.28;	author mccorkle;	state Exp;
+branches;
+next	0.2;
+
+0.2
+date	2004.09.12.02.17.49;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	2001.08.29.00.00.57;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@n-mers counting program.  FASTA sequences in, n-mer frequency tabluation out.
+@
+
+
+1.3
+log
+@fixed a bug - termination occuring when "0" was read by getc().
+made -T option to control totals line printing.
+@
+text
+@#!/usr/bin/perl
+# Program:      nmers
+# Programmer:   Sean R. McCorkle, Biology Dept, Brookhaven National Laboratory
+# Language:     perl 
+# 
+# Description:  Reads DNA sequence(s) and counts occurances of n-mers of a
+#               specified size n.
+#
+# Usage:        nmers [-T] n <sequences
+#
+#               FASTA format DNA sequences are read from stdin.  Output
+#               is a table with columns in this format
+#
+#                  n-mer/rc-n-mer  f-count  r-count  f-and-r-count
+#
+#               where n-mer/rc-m-mer is the n-mer sequence and its reverse
+#                                    complement
+#
+#                     f-count        is the number of forward (top strand)
+#                                    occurances
+#                     r-count        is the number of forward (bottom strand)
+#                                    occurances
+# 
+#                     f-and-r-count  is the sum of the previous two numbers
+#
+#                     f-percnt
+#                     r-percnt
+#                     f-rand-r-percnt - are the corresponding percentags
+#
+# Options:      -T   print a totals line at the end of the table.
+#
+#
+# Notes:        Only n-mers of entirely A,C,G,T are counted.  n-mers with
+#               any ambiguity codes and what-not are not counted.
+#
+#               All n-mers are totaled for all sequences in the input stream.
+#
+#               This uses getc() to read input from stdin.  The only memory
+#               requirement is the hash table of all n-mer permuations.
+#               Thus, this can be run on large chromosome sequences (i.e.
+#               mammalian) although you may need to wait a while.
+#
+# $Id: nmers,v 1.2 2004/09/12 03:02:27 mccorkle Exp mccorkle $
+#
+
+use strict;
+use vars qw( $opt_T );
+use Getopt::Std;
+
+die "bad option\n" unless( getopts( 'T' ) );
+
+my $n = shift;
+
+$n =~ /^\d+$/ || die "$0: nmers n, where n is a number\n";
+
+my %count;
+
+generate_perms( "", $n );  # populate %count with all allowed perms of len $n
+
+my $buff_init = "X"x$n;    # nmer buffer gets initialized to this for each 
+my $buff = $buff_init;     # new FASTA sequence.
+
+my $tot_count = 0;         # we total forward and reverse counts
+my $tot_rc_count = 0;
+
+my $last_c = "\n";         # helps identify >headers
+
+my $c;
+while ( defined( $c = getc() ) )                # read chars, accumlate counts
+   {
+    if ( $c eq ">" && $last_c eq "\n" )         # if > on a new line, its a
+       {                                        # fasta header, so skip whole
+        while ( defined($c = getc()) && $c ne "\n" )   # line
+           {  }
+        $buff = $buff_init;                     # and reset the queu
+       }
+    if ( $c ne "\n" && $c ne " " && $c ne "\t" )   # any non-whitespace chars
+       {                                           # get queued into the 
+        $buff .= uc($c);                           # buffer and the first is
+        $buff = substr( $buff, 1 );                # dequeued.  If its a legal
+        $count{$buff}++ if ( defined( $count{$buff} ) ); # permutation, then
+       }                                                 # count it
+    $last_c = $c;
+   }
+
+foreach my $nmer ( sort keys( %count ) )          # tally totals
+   { 
+    my $rc_nmer = rc( $nmer ); 
+    $tot_count += $count{$nmer};
+    $tot_rc_count += $count{$rc_nmer};
+   }
+
+foreach my $nmer ( sort keys( %count ) )          # now print out the counts
+   { 
+    my $rc_nmer = rc( $nmer ); 
+    printf "$nmer/$rc_nmer %10d %10d %10d  %10.6f %10.6f %10.6f\n", 
+        $count{$nmer}, $count{$rc_nmer}, $count{$nmer} + $count{$rc_nmer},
+        (100.0 * $count{$nmer}) / $tot_count,
+        (100.0 * $count{$rc_nmer}) / $tot_rc_count,
+        (100.0 * ($count{$nmer} + $count{$rc_nmer})) 
+            / ( $tot_count + $tot_rc_count );
+   }
+
+printf "%s %10d %10d %10d\n", " "x(2*$n+1),
+            $tot_count, $tot_rc_count, $tot_count + $tot_rc_count
+        if ( $opt_T );
+
+
+#
+#  fills hash table "%count" with keys of all posible permutations 
+#   AA..A, AA..C, .., TT..T  of length $n (all values initially zero).
+#
+sub  generate_perms
+   {
+    my ( $prefix, $n ) = @@_;
+
+    if ( $n == 1 )
+       {
+        foreach my $c ( 'A', 'C', 'G', 'T' )
+           {  $count{"$prefix$c"} = 0;  }
+       }
+    elsif ( $n > 1 )
+       {
+        foreach my $c ( 'A', 'C', 'G', 'T' )
+           {  generate_perms( "$prefix$c", $n - 1 ); }
+       }
+    else 
+       { die "$0: bad n $n in generate_perms\n"; }
+   }
+
+#
+# rc( $seq ) returns the reverse complement of $seq
+# 
+sub  rc
+   {
+    my $r = reverse( split( '', shift ) );
+    $r =~ tr/acgtmrwsykvhdbnACGTMRWSYKVHDBN/tgcakywsrmbdhvnTGCAKYWSRMBDHVN/;
+    return( $r );
+   }
+
+@
+
+
+1.2
+log
+@changed percentage format to %10.6f
+@
+text
+@d9 1
+a9 1
+# Usage:        nmers n <sequences
+d30 2
+a31 1
+#               A totals line is given at the end of the table.
+d43 1
+a43 1
+# $Id: nmers,v 1.1 2004/09/12 02:42:30 mccorkle Exp mccorkle $
+d47 4
+d68 2
+a69 1
+while ( my $c = getc() )                        # read chars, accumlate counts
+d73 2
+a74 2
+        while ( ($c = getc()) && $c ne "\n" )   # line
+           { }
+d105 2
+a106 1
+            $tot_count, $tot_rc_count, $tot_count + $tot_rc_count; 
+@
+
+
+1.1
+log
+@added percentage fraction columns
+@
+text
+@d42 1
+a42 1
+# $Id: nmers,v 1.0 2004/09/12 02:18:28 mccorkle Exp mccorkle $
+d90 1
+a90 1
+    printf "$nmer/$rc_nmer %10d %10d %10d  %10.4g %10.4g %10.4g\n", 
+@
+
+
+1.0
+log
+@A complete rewrite.  Now this uses getc() to read in single chars
+and only keeps a small buffer.  The only big memory usage is
+a hash table of all permuations of length n, so this can be
+run on mammalian genomes.  Forward and reverse counts are
+determined at the end of input, and are presented seperately
+and totaled (with grand totals at the end). n-mers with
+ambigiuity codes or non-nucleotides are not counted.
+@
+text
+@d26 4
+d42 1
+a42 1
+# $Id$
+d80 1
+a80 1
+foreach my $nmer ( sort keys( %count ) )          # now print out the counts
+a82 2
+    printf "$nmer/$rc_nmer %10d %10d %10d\n", 
+        $count{$nmer}, $count{$rc_nmer}, $count{$nmer} + $count{$rc_nmer};
+d85 11
+@
+
+
+0.2
+log
+@about to completely rewrite this, so i'm saving this guy.
+@
+text
+@d2 6
+a7 2
+# First shot at an n-mer counting program - fasta sequences in, tabluated
+# counts of n-mers out.
+d9 1
+a9 1
+# $Id: nmers,v 0.1 2001/08/29 00:00:57 mccorkle Exp mccorkle $
+d11 42
+d54 2
+a55 1
+use  Getopt::Std;
+d57 1
+a57 2
+die "bad option\n" unless ( getopts( 'n:f' ) );
+$opt_n = 1 unless ( defined ( $opt_n ) );  # -n <n> count <n>mers (default 1 )
+d59 1
+a59 1
+while ( <> )
+d61 5
+a65 13
+    chomp;
+    if ( s/^>// )
+       {
+        $new_hdr = $_ ? $_ : " ";
+        process() if ( $hdr );
+        $hdr = $new_hdr;
+        $seq = "";
+       }
+    else
+       {
+        s/\s//g;            # squeeze blanks
+        s/^\d+//;           # remove optional leadning numbers
+        $seq .= lc( $_ );   # append to sequence
+d67 16
+d85 2
+a86 1
+process() if ( $hdr );
+d89 5
+a93 1
+sub  process
+d95 1
+a95 1
+    print ">$hdr\n";
+d97 1
+a97 12
+    my $n = length( $seq ) - $opt_n + 1;
+    my $i;
+    my %mers = ();
+    for ( $i = 0; $i < $n; $i++ )
+       {  $mers{substr( $seq, $i, $opt_n )}++; }
+
+    if ( $opt_n == 1 )
+        { @@keys = ( 'a', 'c', 'g', 't', 'n' ); }
+    else
+        { @@keys = sort keys( %mers ); }
+
+    if ( $opt_f )
+d99 2
+a100 3
+        my $l = length( $seq );
+        foreach $k ( @@keys )
+           { printf "%s %8.2f  ", $k, 100.0 * $mers{$k} / $l; }
+d102 1
+a102 1
+    else
+d104 2
+a105 2
+        foreach $k ( @@keys )
+           { printf "%s %8d  ", $k, $mers{$k}; }
+d107 2
+a108 1
+    print "\n";
+d111 9
+a119 3
+
+
+
+@
+
+
+0.1
+log
+@First shot.  installing
+@
+text
+@d5 1
+a5 1
+# $Id$
+d10 1
+a10 1
+die "bad option\n" unless ( getopts( 'n:' ) );
+d44 16
+a59 2
+    foreach $k ( keys( %mers ) )
+       { printf "%s %d  ", $k, $mers{$k}; }
+d62 5
+@

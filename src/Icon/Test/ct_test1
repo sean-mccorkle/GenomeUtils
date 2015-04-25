@@ -1,0 +1,15 @@
+# test ct_line
+
+t_hline 3  0 100  0.5 red
+t_hline 2  100 200  0.5 white
+t_hline 1  200 300  0.5 blue
+
+t_hline  -1 0 100  0.5  green
+
+ct_line  -1 50 0.5  3 100 0.5  red
+ct_line  -1 50 0.5  2 200 0.5  white
+ct_line  -1 50 0.5  1 300 0.5  blue
+
+ct_line   3 50 0.5  -1 0 0.5 green
+ct_line   2 150 0.5  -1 0 0.5 green
+ct_line   1 250 0.5  -1 0 0.5 green

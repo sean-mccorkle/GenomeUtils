@@ -1,0 +1,300 @@
+head	0.3;
+access;
+symbols;
+locks
+	mccorkle:0.3; strict;
+comment	@# @;
+
+
+0.3
+date	2000.04.17.15.01.35;	author mccorkle;	state Exp;
+branches;
+next	0.2;
+
+0.2
+date	2000.02.28.17.39.09;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	99.12.30.01.11.42;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@Sage tag frequency analysis program
+@
+
+
+0.3
+log
+@added doc.icn documentation.
+@
+text
+@# Program:      sage
+# Programmer:   Sean R. McCorkle
+# Language:     Icon
+# Description:  Reads in cDNA sequences, provides an analysis of expected
+#               "anchor" restriction enzyme (RE) tags frequencies
+#
+# $Id: sage.icn,v 0.2 2000/02/28 17:39:09 mccorkle Exp mccorkle $
+#
+
+link doc
+link io
+link options
+
+                         ############################
+                         # Globals (set by options) #
+                         ############################
+
+
+global re_seq        # "anchor" restriction enzyme recognition sequence
+global tag_extent    # extent past re_seq at which 2nd ensyme cuts
+global tag_length    # total tag lengt (ie. tag_extent + length of re_seq)
+
+
+procedure  help( fmt )
+
+    version()
+    write_doc( fmt, "\
+__Name      sage - analysis of expected SAGE tags on cDNA input set          \
+                                                                             \
+__Usage     sage [-hv] [-s <enzyme seq>] [-e <n>] [ <cDNA file> ... ]        \
+                                                                             \
+            where <cDNA file>s are FASTA input sequences to be searched.     \
+            A single hyphen (-) can be used as a file name to specify        \
+            stdin.  If no files are specified, stdin is scanned.             \
+                                                                             \
+__Options                                                                    \
+_.             -e <n>   consider tags which extend <n> bases past            \
+                        (default is 10)                                      \
+                        the end of the (anchor) restriction enzyme seq       \
+_.             -s <seq> look for THIS restriction enzyme sequence            \
+                        instead of the default, \"catg\"                     \
+                                                                             \
+_.             -h       print help then exit                                 \
+_.             -help    print help then exit                                 \
+_.             -html    print html man page then exit                        \
+_.             -man     print unix man page then exit                        \
+_.             -v       print version then exit                              \
+                                                                             \
+__Output    All cDNA fasta sequences are read and treated as a set.          \
+                                                                             \
+            A line for each cDNA is printed, showing:                        \
+                                                                             \
+_.              1. an identifier (the first FASTA header word found)         \
+_.              2. the cDNA length                                           \
+_.              3. the number of (anchor) restriction sites within that      \
+                   cDNA                                                      \
+_.              4. the position (from the 5' end) of the last site           \
+                   (ie. the site closest to the 3' end)                      \
+_.              5. the entire tag sequence inferred from the last site,      \
+                   plus the tag extent (extended by poly-A tail if short     \
+_.              6. the number of occurances of this tag sequence within      \
+                   the cDNA                                                  \
+_.              7. the number of occurances of this tag sequence in the      \
+                   global set of cDNAs                                       \
+      " )
+    exit()
+
+end
+
+
+                               ################
+                               # Main Program #
+                               ################
+
+procedure main( args )
+
+    opts := options( args, "-e+ -s: -h -help! -man! -html! -v" )
+    if member( opts, ("h" | "help") )  then help( "text" )
+    if member( opts, "man" )  then help( "man" )
+    if member( opts, "html" )  then help( "html" )
+    if member( opts, "v" )  then { version(); exit() }
+
+    re_seq := map( ( \opts["s"] | "catg" ), &ucase, &lcase );
+    tag_extent := ( \opts["e"] | 10 )
+    tag_length := *re_seq + tag_extent
+    #
+    #  Initalize tables & lists
+    #
+    id_list := []            # sequential list of cDNA ids (from fasta headers)
+    len := table( 0 )        # for each id: length of cDNA
+    n_sites := table( 0 )    #              number of res. enz. sites found
+    last := table( 0 )       #              last site position 
+    self_occ := table( 0 )   #              number of self-occurrences of tag
+    glob_occ := table( 0 )   #              number of global-occurrences of tag
+    eseq := table( "" )      #              cDNA seq with polyA tail extention 
+    tag := table( "" )       #              tag sequence (including res. enz.)
+    #
+    # Pass through every cDNA sequence, and collect as much as possible at
+    # this point
+    #
+    every f := open_file ( !args ) do
+       {
+        while seq := read_fasta( f ) do
+           {
+            seq.heading ? id := tab( upto( ' |;' ) )
+            id_list |||:= [ id ]
+            s := map( seq.seq, &ucase, &lcase )
+            len[id] := *s
+            s ? every last[id] := find( re_seq ) do n_sites[id] +:= 1
+            eseq[id] := s || repl( "a", tag_extent )
+            tag[id] := (eseq[id])[last[id]+:tag_length]
+            eseq[id] ? every find( tag[id] ) do self_occ[id] +:= 1
+	   }
+        close_file( f )
+       }
+    #
+    # Now we've saved all the cDNA sequences, so we can count the global
+    # occurrences of each tag
+    #
+    every id := !id_list do
+        every s := eseq[ !id_list ] do 
+            s ? every find( tag[id] ) do glob_occ[id] +:= 1
+    #
+    # Finally print out the results
+    #
+    write( " " )
+    write_line( "",     "",       "# of",  "last", "tag",  "self", "glob" )
+    write_line( "cDNA", "length", "sites", "pos",  "seq.", "occ.", "occ." )
+    write( " " )
+    every id := !id_list do
+        write_line( id, len[id], n_sites[id], last[id], tag[id], 
+                       self_occ[id], glob_occ[id] )
+end
+
+#
+#  write_line just writes a nicely formated line
+#
+
+procedure write_line( cdna, length, sites, last, tag, self, glob )
+
+    write( left( cdna, 10 ), right( length, 8 ), right( sites, 8 ), 
+           right( last, 8 ), "  ", left( tag, tag_length ), right( self, 6 ),
+           right( glob, 8 )
+         )
+           
+end
+
+
+#
+# print version number
+#
+procedure version()
+
+    "$Revision: 0.2 $" ? { tab( upto( ' ' ) )
+                           write( "sage", tab( many( &digits ++ ' .' ) ),
+                                  "  SAGE tag frequency analysis" )
+		         }
+end
+
+@
+
+
+0.2
+log
+@whoops- forgot to close each file once we're finished with it.
+@
+text
+@d7 1
+a7 30
+# Usage:        sage [-hv] [-s <enzyme seq>] [-e <n>] [ <cDNA fasta file> ... ]
+#
+#               a single hyphen (-) can be used as a file name to specify
+#               stdin.  If no files are specified, stdin is scanned.
+#
+# Options:
+#               -e <n>           consider tags which extend <n> bases past
+#                                the end of the (anchor) restriction enzyme seq
+#               -h               print help, then exit
+#               -s <enzyme seq>  look for THIS restriction enzyme sequence
+#                                instead of the default, "catg"
+#               -v               print version, then exit
+#
+#  Output:      All cDNA fasta sequences are read and treated as a set.
+#
+#               A line for each cDNA is printed, showing:
+#                 1. an identifier (the first FASTA header word found)
+#                 2. the cDNA length
+#                 3. the number of (anchor) restriction sites within that
+#                    cDNA
+#                 4. the position (from the 5' end) of the last site
+#                    (ie. the site closest to the 3' end)
+#                 5. the entire tag sequence inferred from the last site,
+#                    plus the tag extent (extended by poly-A tail if short
+#                 6. the number of occurances of this tag sequence within
+#                    the cDNA
+#                 7. the number of occurances of this tag sequence in the
+#                    global set of cDNAs
+#
+# $Id: sage.icn,v 0.1 1999/12/30 01:11:42 mccorkle Exp mccorkle $
+d10 1
+d24 47
+d77 4
+a80 2
+    opts := options( args, "-e+ -h -v -s:" )
+    if member( opts, "h" )  then { help(); exit() }
+d83 2
+a84 2
+    re_seq := map( (member( opts, "s" ) & opts["s"] ) |"catg",  &ucase, &lcase)
+    tag_extent := (member( opts, "e" ) & opts["e"] ) | 10
+a147 36
+#
+# print version number & help
+#
+
+procedure help()
+
+    version()
+    write( "Usage:  sage [-hv] [-s <enzyme seq>] [-e <n>] ",
+                                "[ <cDNA fasta file> ... ]\n" )
+    write( "        a single hyphen (-) can be used as a file name to specify")
+    write( "        stdin.  If no files are specified, stdin is scanned.\n" )
+    write( "Options:" )
+    write( "        -e <n>   consider tags which extend <n> bases past")
+    write( "                 (default is 10)" )
+    write( "                 the end of the (anchor) restriction enzyme seq")
+    write( "        -h       print help" )
+    write( "        -s <seq> look for THIS restriction enzyme sequence" )
+    write( "                 instead of the default, \"catg\"" )
+    write( "        -v       print version\n" )
+    write( "Output: All cDNA fasta sequences are read and treated as a set.\n")
+    write( "        A line for each cDNA is printed, showing:")
+    write( "          1. an identifier (the first FASTA header word found)" )
+    write( "          2. the cDNA length" )
+    write( "          3. the number of (anchor) restriction sites within that")
+    write( "             cDNA" )
+    write( "          4. the position (from the 5' end) of the last site" )
+    write( "             (ie. the site closest to the 3' end)" )
+    write( "          5. the entire tag sequence inferred from the last site,")
+    write( "             plus the tag extent (extended by poly-A tail if short")
+    write( "          6. the number of occurances of this tag sequence within")
+    write( "             the cDNA" )
+    write( "          7. the number of occurances of this tag sequence in the")
+    write( "             global set of cDNAs" )
+#               
+
+end
+d154 1
+a154 1
+    "$Revision: 0.1 $" ? { tab( upto( ' ' ) )
+@
+
+
+0.1
+log
+@Okay, ready for the public!
+@
+text
+@d36 1
+a36 1
+# $Id$
+d81 1
+d93 2
+d169 1
+a169 1
+    "$Revision: 0.0 $" ? { tab( upto( ' ' ) )
+@

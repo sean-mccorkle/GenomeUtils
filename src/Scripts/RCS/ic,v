@@ -1,0 +1,279 @@
+head	1.5;
+access;
+symbols;
+locks
+	mccorkle:1.5; strict;
+comment	@# @;
+
+
+1.5
+date	2003.07.23.19.51.48;	author mccorkle;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2002.06.14.21.09.13;	author mccorkle;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2002.03.22.15.06.41;	author mccorkle;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2002.03.21.04.10.29;	author mccorkle;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2002.03.21.03.12.56;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@Integrated charge profile for proteins, for Paul Freimuth
+@
+
+
+1.5
+log
+@took care of a missing defined( $heading );
+@
+text
+@#!/usr/bin/perl
+# Program:      ic
+# Programmer:   Sean R. McCorkle
+# Language:     perl
+# Description:  Evaluation of integrated charge prefixes for P. Freimuth,
+#               reads protein sequence(s), writes out integrated charges
+#
+# Usage:        ic  [-np] [<protein file>]
+#               where <protein file> is a fasta-format amino acid sequence.
+#
+#                  -n don't explicitly list neutrals
+#                  -p write position as fractional length
+#
+#               The output is a stream of pos-charge pairs, suitable for
+#               x-y plotting.  Output from a single protein can be fed 
+#               directly into gnuplot.  For multiple proteins, feed the
+#               output into "icplot".
+#
+#               For each protein sequence, the following is printed
+#
+#                    # header
+#                    pos1  charge1
+#                    pos2  charge2
+#                    pos3  charge3
+#                     .       .
+#                     .       .
+#                     .       .
+#                    pos-n  charge-n   where n is the protein sequence length
+#                    
+#
+# $Id: ic,v 1.4 2002/06/14 21:09:13 mccorkle Exp mccorkle $
+#
+
+use  Getopt::Std;
+
+getopts( 'np' ) || die "Bad option\n";
+
+
+                               ################
+                               # Main Program #
+                               ################
+
+
+print "# $opt_p\n";                        # printout heading
+
+#
+# This is a state-machine loop that reads lines of sequence (from FASTA format
+# input) and accumulates them in a character string variable $seq.  When
+# a FASTA header, ">seqname" is encountered, it first processes the previously
+# accumulated sequence (if any) and then clears the $seq string accumulator
+# and begins again.
+#
+while ( <> )                               # read lines of input into $_ 
+   {
+    chomp;                                 # remove trailing \n if its there
+    next if ( /^\s*$/ );                   # ignore blank lines 
+    if ( /^>(.*)/ )                        # is it a FASTA header line?
+       {
+        $new_h = ($1 ? $1 : "prot " . ++$p );  # make default name if blank hdr
+        if ( defined( $heading ) )             # did we already have a sequence
+           { process( $seq, $heading ); }      # ?  then process it
+        $heading = $new_h;                     # reset sequence header
+        $seq = "";                             # reset sequence accumulator
+       }
+    else                                   # not a FASTA header, so it must
+       {                                   # be sequence characters
+        s/\s//g;                           # strip out any blanks or tabs
+        s/\%[0-9A-F][0-9A-F]//ig;          # strip out hex %dd codes
+        s/[^A-Z]//ig;                      # remove non-letters
+        $seq .= uc( $_ );                  # accumulate new sequence(uppercase)
+       }
+   }
+
+process( $seq, $heading ) if ( defined( $heading ) ); 
+                                           # process any sequence left in 
+                                           # accumulator
+
+
+                               ###############
+                               # Subroutines #
+                               ###############
+
+
+sub  process
+   {
+    my ( $seq, $heading ) = @@_;     # get the two arguments, $seq & $heading
+    my $delta_c;                    # delta charge (charge of one amino acid)
+    my $int_charge = 0;             # this accumulates total charge as we 
+                                    # move through the protein sequence
+    my $len = length( $seq );       # length of sequence      
+    my $i;                          # position counter
+
+    print "#$heading \n";           # print out "# name on output"
+
+    for (  $i = 0;  $i < $len;  $i++ )    # for each amino acid, in order
+       {
+        $delta_c = charge( substr( $seq, $i, 1 ), $i );  # +1, -1 or 0
+        $int_charge += $delta_c;                         # accumulate 
+        if ( $delta_c != 0 || ! $opt_n )                 # user may not want
+           {                                             # delta_c == 0 points
+            if ( $opt_p )                            
+                { printf "%8.4f ", ( ($i * 100.0) / $len ); }   # % len
+            else
+                { printf "%4d ", $i; }                          # residue num.
+            printf "%5d\n", $int_charge;                        # int charge
+           }
+       }
+   }
+
+#
+# charge( $c, $pos ) returns a charge for amino acid $c -1 for E and R,
+# and +1 for D, E or M if its the first ($pos == 0).  All other amino 
+# acids have 0 charge (neutral)
+#
+sub  charge 
+   {
+    my ($c,$pos) = @@_;                          # charge( $c, $pos )
+    return( 1 )  if ( $c eq 'M' && $pos == 0 );
+    return( -1 ) if ( $c eq 'D' || $c eq 'E' );
+    return( +1 ) if ( $c eq 'K' || $c eq 'R' );
+    return( 0 );
+   }
+
+
+@
+
+
+1.4
+log
+@tidying up the table output for Paul's SigmaPlot
+@
+text
+@d31 1
+a31 1
+# $Id: ic,v 1.3 2002/03/22 15:06:41 mccorkle Exp mccorkle $
+d74 2
+a75 1
+process( $seq, $heading ) if ( $heading ); # process any sequence left in 
+@
+
+
+1.3
+log
+@added comments, fixed a bug with M charge handling.
+@
+text
+@d31 1
+a31 1
+# $Id: ic,v 1.2 2002/03/21 04:10:29 mccorkle Exp mccorkle $
+d68 2
+a89 2
+    my $x;                          # x coordinate is either position or % len
+                                    # depending on -p specified or not by user
+d100 5
+a104 2
+            $x = $opt_p ? ( ($i * 100.0) / $len ) : $i;  # user may want %len
+            print "$x\t$int_charge\n";                   # print it out
+@
+
+
+1.2
+log
+@fixed null seqname bug
+@
+text
+@d14 4
+d19 13
+a31 1
+# $Id: ic,v 1.1 2002/03/21 03:12:56 mccorkle Exp mccorkle $
+d43 11
+a53 2
+print "# $opt_p\n";
+while ( <> )
+d55 3
+a57 3
+    chomp;
+    next if ( /^\s*$/ );
+    if ( /^>(.*)/ )
+d59 5
+a63 4
+        $new_h = ($1 ? $1 : "prot " . ++$p );
+        process() if ( defined( $heading ) );
+        $heading = $new_h;
+        $seq = "";
+d65 4
+a68 4
+    else
+       {
+        s/\s//g;
+        $seq .= uc( $_ );
+d72 2
+a73 1
+process() if ( $heading );
+d83 10
+a92 6
+    my $delta_c;
+    my $int_charge = 0;
+    my $len = length( $seq );
+    my $x;
+    my $i;
+    print "#$heading \n";
+d94 1
+a94 1
+    for (  $i = 0;  $i < $len;  $i++ )
+d96 6
+a101 6
+        $delta_c = charge( substr( $seq, $i, 1 ), $i );
+        $int_charge += $delta_c;
+        if ( $delta_c != 0 || ! $opt_n )
+           {
+            $x = $opt_p ? ( ($i * 100.0) / $len ) : $i;
+            print "$x\t$int_charge\n";
+d106 5
+a110 1
+
+d113 1
+a113 2
+    my $c = shift;
+    my $pos = 0;
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@d15 1
+a15 1
+# $Id$
+d34 2
+a35 2
+        $new_h = $1;
+        process() if ( $heading );
+@

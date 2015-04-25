@@ -1,0 +1,67 @@
+
+  Hi Safiyeh!
+
+  Well, I must thank you for making me fix these long-standing problems
+  in the seqdiff program, otherwise I never would have!
+  
+  I've added seperate "gap start" and "gap continue" penalties to the
+  alignment scoring system.  Now it penalizes 5 points to start a gap,
+  but only 1 point to continue a gap once it has been started. (substitutions
+  cost 4 points).  This seems (?) to have fixed the alignment problems at the
+  ends, which you showed me.
+  
+  However, I noticed a few cases in your data which now have large (30-40bp)
+  gaps WITHIN the alignments.  Take a look at the example below- does this
+  look right to you?
+
+=sean
+
+
+>184d - 04-pVDZ-Pm1-N-His-R
+TGAGATAGATCTTCAAAGCTTCTGCAGGAGCTCGAATTCGGATCCGCTAGCGGAGGAGTGGTGGTGGTGGTGGTGA
+CTAGCCATATTTATATCTCCTTCATTATTATTGTTTCTGTTGCATAAAGCCTAAGGGGTAGGCCTTTCTAGAGATA
+GCCATTTTTTGCACTCCTGTATCCGCTTCTTGCAAGGCTGGACGGATCTAGCGTGGACTCAAGGCTCTCGCGAATG
+GCTCGCGTTGGAAACT
+
+>184d - 06-pVDZ-Pm1-C-myc-R
+ATAGATCTTCACAAGTCTTCCTCGCTGATCAATTTCTGCTCCATAAGCTTCTGCAGGAGCTCGAATTCGGATCCGC
+TAGCCATATTTATATCTCCTTCATTATTATTGTTTCTGTTGCATAAAGCCTAAGGGGTAGGCCTTTCTAGAGATAG
+CCATTTTTTGCACTCCTGTATCCGCTTCTTGCAAGGCTGGACGGATCTAGCGTGGACTCAAGGCTCTCGCGAATGG
+CTCGCG
+
+
+                           10                                         20
+nltestb.fasta      TGAGATAGATCTTCA                                 AAGCTTCTGCAG
+                   ----           ---------------------------------            
+nltestc                ATAGATCTTCACAAGTCTTCCTCGCTGATCAATTTCTGCTCCATAAGCTTCTGCAG
+                               10        20        30        40        50
+
+
+                    30        40        50        60        70        80
+nltestb.fasta      GAGCTCGAATTCGGATCCGCTAGCGGAGGAGTGGTGGTGGTGGTGGTGACTAGCCATATT
+                                           ------------------------------      
+nltestc            GAGCTCGAATTCGGATCCGCTAGC                              CATATT
+                     60        70        80                              
+
+
+                    90       100       110       120       130       140
+nltestb.fasta      TATATCTCCTTCATTATTATTGTTTCTGTTGCATAAAGCCTAAGGGGTAGGCCTTTCTAG
+                                                                               
+nltestc            TATATCTCCTTCATTATTATTGTTTCTGTTGCATAAAGCCTAAGGGGTAGGCCTTTCTAG
+                     90       100       110       120       130       140
+
+
+                   150       160       170       180       190       200
+nltestb.fasta      AGATAGCCATTTTTTGCACTCCTGTATCCGCTTCTTGCAAGGCTGGACGGATCTAGCGTG
+                                                                               
+nltestc            AGATAGCCATTTTTTGCACTCCTGTATCCGCTTCTTGCAAGGCTGGACGGATCTAGCGTG
+                    150       160       170       180       190       200
+
+
+                   210       220       230       240
+nltestb.fasta      GACTCAAGGCTCTCGCGAATGGCTCGCGTTGGAAACT
+                                               ---------
+nltestc            GACTCAAGGCTCTCGCGAATGGCTCGCG         
+                    210       220       230         
+
+

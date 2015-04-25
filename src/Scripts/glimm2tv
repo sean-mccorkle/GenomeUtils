@@ -1,0 +1,33 @@
+#!/usr/bin/perl
+# converts Glimmer2 output g2.coords to tview 
+#
+# Usage:    glimm2tv [-t <n>] [-c <color>] <coord file>
+#
+# Options:
+#              -c <col>  set color color (default magenta)
+#              -t <n>    start counting tiers starting at <n>  (default 2)
+#          
+
+use Getopt::Std;
+
+getopts( 'c:t:' );
+
+$tier_base = ( $opt_t ? ($opt_t - 1) : 1 );
+$color = $opt_c ? $opt_c : "yellow";
+$y1 = 0.0;
+$y2 = 0.4;
+
+
+while ( <> )
+   {
+    /^\s+(\d+)\s+(\d+)\s+(\d+)\s+\[([\+\-]\d) / || die "Bad line $_\n";
+    ($n,$a,$b,$fr) = ($1,$2,$3,$4);
+    ($a,$b) = ($b,$a) if ( $a > $b );
+    if ( $fr > 0 )
+       { $tier = $fr + $tier_base; }
+    else
+       { $tier = $fr - $tier_base; }
+    #print " $n $a $b $fr $tier\n";
+    print "t_rect $tier $a $b $y1 $y2 \"$color\"\n";
+    print "lpress $tier $a $b $y1 $y2 display \"$n\"\n";
+   }

@@ -1,0 +1,15 @@
+;
+>1-test
+a
+>2-test
+ab
+>3-test
+abc
+;
+>49-test
+abcdabcdefabcdabcdefabcdabcdefabcdabcdefabcdabcde
+>50-test
+abcdabcdefabcdabcdefabcdabcdefabcdabcdefabcdabcdef
+>51-test
+abcdabcdefabcdabcdefabcdabcdefabcdabcdefabcdabcdefa
+

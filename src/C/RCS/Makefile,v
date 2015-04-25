@@ -1,0 +1,180 @@
+head	0.4;
+access;
+symbols;
+locks
+	mccorkle:0.4; strict;
+comment	@# @;
+
+
+0.4
+date	2003.11.10.21.01.30;	author mccorkle;	state Exp;
+branches;
+next	0.3;
+
+0.3
+date	2003.01.15.11.13.55;	author mccorkle;	state Exp;
+branches;
+next	0.2;
+
+0.2
+date	2003.01.15.11.07.46;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	2000.04.20.20.03.40;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@Genome C program makefile
+@
+
+
+0.4
+log
+@added n-mers, fcomp, prosearch
+@
+text
+@# C-level makefile for BNL Genome sequence utilities
+#
+# $Id: Makefile,v 0.3 2003/01/15 11:13:55 mccorkle Exp mccorkle $
+#
+
+include ../Config/config.mak
+include ../header.mak
+
+CSRCS      = io.c lpa_align.c nqcut.c repeats.c restr.c seqdiff.c sequtils.c \
+             trie.c ptag.c atags.c gsts2.c lossc.c fcomp.c sageh.c prosearch.c
+INCLUDES   = seqlib.h trie.h
+SRCS       = $(CSRCS) $(INCLUDES)  Makefile
+BINS       = repeats restr seqdiff nqcut ptag atags gsts2 lossc fcomp sageh \
+             prosearch
+
+COPT = $(MAXCOPT)
+
+all:  $(BINS)
+
+prosearch: prosearch.o
+	$(CC) $(COPTS) $(CCFLAGS) -o $@@ prosearch.o
+
+atags:  atags.o   
+	$(CC) $(COPT) $(CCFLAGS) -o $@@ atags.o
+
+n-mers:  n-mers.o libseq.a
+	$(CC) $(COPT) $(CCFLAGS) -o $@@ n-mers.o -L. -lseq -lm $(CLIBS)
+
+fcomp:  fcomp.o libseq.a
+	$(CC) $(COPT) $(CCFLAGS) -o $@@ fcomp.o -L. -lseq -lm $(CLIBS)
+
+gsts2:  gsts2.o   
+	$(CC) $(COPT) $(CCFLAGS) -o $@@ gsts2.o
+
+lossc:  lossc.o
+	$(CC) $(COPT) $(CCFLAGS) -o $@@ lossc.o $(CLIBS)
+
+cmap:   cmap.o  libseq.a
+	$(CC) $(COPT) $(CCFLAGS) -o $@@ cmap.o -L. -lseq  $(CLIBS)
+
+ptag:   ptag.o  libseq.a
+	$(CC) $(COPT) $(CCFLAGS) -o $@@ ptag.o -L. -lseq  $(CLIBS)
+
+nqcut:   nqcut.o  libseq.a
+	$(CC) $(COPT) $(CCFLAGS) -o $@@ nqcut.o  -L. -lseq  $(CLIBS)
+
+repeats:   repeats.o  trie.o libseq.a
+	$(CC) $(COPT) $(CCFLAGS) -o $@@ repeats.o trie.o -L. -lseq  $(CLIBS)
+
+restr:   restr.o  trie.o libseq.a
+	$(CC) $(COPT) $(CCFLAGS) -o $@@ restr.o trie.o -L. -lseq  $(CLIBS)
+
+seqdiff:   seqdiff.o  libseq.a
+	$(CC) $(COPT) $(CCFLAGS) -o $@@ seqdiff.o -L. -lseq  $(CLIBS)
+
+sageh:   sageh.o libseq.a
+	$(CC) $(COPT) $(CCFLAGS) -o $@@ sageh.o -L. -lseq $(CLIBS)
+
+sagetr:   sagetr.o  trie.o libseq.a
+	$(CC) $(COPT) $(CCFLAGS) -o $@@ sagetr.o trie.o -L. -lseq  $(CLIBS)
+
+libseq.a:  io.o sequtils.o lpa_align.o
+	ar r $@@ io.o sequtils.o lpa_align.o
+	$(RANLIB) $@@
+
+.c.o:
+	$(CC) -c $(COPT) $(CCFLAGS) $*.c
+
+seqdiff.o:    seqdiff.c   seqlib.h  
+io.o:         io.c        seqlib.h  
+sequtils.o:   sequtils.c  seqlib.h
+lpa_align.o:  lpa_align.c seqlib.h
+repeats.o:    repeats.c   seqlib.h  trie.h
+restr.o:      restr.c     seqlib.h  trie.h
+trie.o:       trie.c      seqlib.h  trie.h
+
+
+@
+
+
+0.3
+log
+@whoops - forgot to include gsts2.c
+@
+text
+@d3 1
+a3 1
+# $Id: Makefile,v 0.2 2003/01/15 11:07:46 mccorkle Exp mccorkle $
+d10 1
+a10 1
+             trie.c sageh.c ptag.c atags.c gsts2.c lossc.c
+d13 2
+a14 1
+BINS       = repeats restr seqdiff nqcut sageh ptag atags gsts2 lossc
+d20 3
+d26 6
+d64 1
+@
+
+
+0.2
+log
+@moving to SGI Origin 300, and new programs too.
+@
+text
+@d3 1
+a3 1
+# $Id: Makefile,v 0.1 2000/04/20 20:03:40 mccorkle Exp $
+d10 1
+a10 1
+             trie.c sageh.c ptag.c atags.c lossc.c
+@
+
+
+0.1
+log
+@pretty skimpy now, but checking in anyway.
+@
+text
+@d3 1
+a3 1
+# $Id$
+d9 3
+a11 2
+CSRCS      = seqdiff.c io.c lpa_align.c sequtils.c
+INCLUDES   = seqlib.h
+d13 3
+a15 1
+BINS       = seqdiff
+d19 23
+d44 7
+a50 1
+	cc $(CCFLAGS) -o $@@ seqdiff.o -L. -lseq  $(CLIBS)
+d56 1
+a56 1
+	cc -c $(CCFLAGS) $*.c
+d62 3
+a64 2
+
+
+@

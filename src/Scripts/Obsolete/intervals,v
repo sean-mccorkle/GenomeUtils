@@ -1,0 +1,236 @@
+head	0.1;
+access;
+symbols;
+locks
+	mccorkle:0.1; strict;
+comment	@# @;
+
+
+0.1
+date	2004.09.08.18.59.21;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@This is a generalziation of truncseq, which extracts multiple subsequences
+from a fasta sequence, according to intervals specified.  The
+intervals can overlap.
+@
+
+
+0.1
+log
+@looks pretty good. -i and -f running, and early termination.
+@
+text
+@#!/usr/bin/perl
+# Program:     intervals
+# Programmer:  Sean R. McCorkle, Biology Dept., Brookhaven National Laboratory
+# Language:    perl  
+#
+# Description: This is a generalized version of truncseq
+#
+# Usage:       intervals -i n-m,[n-m,...]  < sequence-file
+#              intervals -q file < sequence-file
+#
+#              One of the two options -i or -q must be used to specify
+#              the desired intervals.
+#
+#              The input sequence is read from stdin.  It should contain
+#              only one sequence FASTA format.
+#
+#              The first sequence position is 0.  Intervals n-mstart and 
+#              include n and stop at m, but do not include m.  They may
+#              overlap.
+# 
+# Options:        -i n-m,...  comma-seperated intervals are specified on the
+#                          command line.  Each inteval is a n-m pair of
+#                          hyphen-separated integers
+#
+#                 -f file    read intervals from file, each pair on one line
+#                            (- or space separated).
+#
+# $Id: intervals,v 1.1 2004/09/08 18:58:14 mccorkle Exp mccorkle $
+#
+use strict;
+use vars qw( $opt_f $opt_i );
+use Getopt::Std;
+
+
+#
+# The "queue" in output "queue" refers to a string of characters
+# that collected to be written out as a FASTA sequence
+#
+my $qnum = 0;
+my %output_queues;          # $output_queue{$qnum} is the output string
+my %queue_interval_start;   # $queue_interval_start{$qnum} start position
+my %queue_interval_stop;    # $queue_interval_start{$qnum} start position
+my %queue_finished;         # flags queue as done.
+my $num_queue = 0;          # number of open queues
+
+my @@rawintervals;           # will be list of [a,b] pairs, assumed unsorted
+
+my $line_len = 50;          # FASTA format output line length
+
+
+                             ################
+                             # Main Program #
+                             ################
+
+die "Bad option\n" unless( getopts( "f:i:" ) );
+
+#
+# First thing we do is to get the intervals
+#
+die "$0: use only one of -i or -f\n" if ( $opt_i && $opt_f );
+if ( $opt_i )                
+   { @@rawintervals = parse_intervals( $opt_i ); }       # user specified -i
+elsif ( $opt_f )
+   { @@rawintervals = read_ints_from_file( $opt_f ) }    # user specified -f
+else
+   { die "$0: you must specify intervals with -i or -f option\n" }
+
+my @@intervals = check_and_sort( @@rawintervals );        # sort them
+
+
+
+$_ = <STDIN>;
+/^>(.*)/ || die "$0: 1st line not FASTA header:\n$_\n"; # get the fasta header 
+my $seqname = $1;                                       # and save it
+
+my $pos = -1;                                           # positon in string
+
+#   For each character (while we still have intervals to 
+#   extract), ....
+
+while ( ( @@intervals || ($num_queue > 0) ) && (my $c = getc()) ) 
+   {
+    next if ( $c eq ' ' || $c eq "\n" || $c eq "\t" );  # ignore whitespace
+    $pos++;                                             # where are we now?
+
+    while (  $#intervals >= 0  &&  $pos >= ${$intervals[0]}[0]  )
+       { open_output_queue( shift( @@intervals ) ); }
+
+    foreach my $queue ( keys( %output_queues ) )
+       {
+        next if ( $queue_finished{$queue} );
+        if ( past_interval( $pos, $queue ) )
+           { flush_and_close( $queue ); }
+        else
+           { insert( $c, $queue ); }
+       }
+   }
+
+
+                               ###############
+                               # Subroutines #
+                               ###############
+
+sub  parse_intervals   # turn -i n-m,... string into interval array
+   {
+    my $str = shift;
+    my @@ints = ();
+
+    foreach my $int ( split( /,/, $str ) )
+       {
+        ( $int =~ /^(\d+)-(\d+)$/ ) || 
+             die "$0: $str is bad. must be comma-separated n-m pairs\n";
+        push( @@ints, [ $1, $2 ] );
+       }
+    return( @@ints );
+   }
+
+
+sub  read_ints_from_file     # read intervales from $file, return as list
+   {
+    my $file = shift;
+    my @@ints = ();
+
+    open( INTS, $file ) || die "$0: can't open interval file $file: $!\n";
+    while ( $_= <INTS> )
+       {
+        next if ( /^\s*$/ );  # ignore blank lines
+        /^\s*(\d+)[\-\s]+(\d+)\s*$/ 
+               || die "$0: bad interval line $_ in file $file\n";
+        push( @@ints, [ $1, $2 ] );
+       }
+    return( @@ints );
+   }
+
+
+sub  check_and_sort    # ensure that a < b for all [a,b] and sort on a
+   {
+    my ( @@raw ) = @@_;
+
+    foreach my $p ( @@raw )
+       { $p = [ $$p[1], $$p[0] ] if ( $$p[1] < $$p[0] ); }
+    return( sort by_pos ( @@raw ) );
+   }
+
+
+sub  open_output_queue      # create a brand new output queue for this 
+   {                        # interval.
+    my $int = shift;
+
+    $output_queues{++$qnum} = "";
+    $queue_interval_start{$qnum} = $$int[0];
+    $queue_interval_stop{$qnum} =  $$int[1];
+    $num_queue++;
+   }
+
+
+sub  past_interval         # returns true if $pos is >= the end of this 
+   {                       # queue interval
+    my ( $pos, $q ) = @@_;
+
+    return( $pos >= $queue_interval_stop{$q} );
+   }
+
+
+sub  flush_and_close       # print out the queue string (in fasta format)
+   {                       # and mark it finished.
+    my ( $q ) = @@_;
+
+    print_fasta( "$seqname:" . $queue_interval_start{$q} . "-" .
+                  $queue_interval_stop{$q},
+                  $output_queues{$q} );
+
+    $queue_finished{$q} = 1;
+    $num_queue--;
+   }
+
+       
+sub  insert               # insert letter $c into queue
+   {
+    my ( $c, $q ) = @@_;
+
+    $output_queues{$q} .= $c;
+   }
+
+
+
+sub  print_fasta         # print out string in fasta format
+   {
+    my ( $hdr, $seq ) = @@_;
+    my $i;
+
+    print ">$hdr\n";
+    my $n = length( $seq );                       # calculate length once
+    for ( $i = 0; $i < $n; $i++ )                 # for each character
+       {
+        print substr( $seq, $i, 1 );              # print it out
+        if ( ( ($i + 1) % $line_len ) == 0 )      # every 50 characters
+            { print "\n"; }                       #   put a newline
+       }
+    print "\n" if ( ( $i % $line_len ) != 0 );    # last newline ensures tidy 
+                                                  #output
+   }
+
+sub  by_pos 
+   { return( $$a[0] <=> $$b[0] ); }
+
+
+
+
+@

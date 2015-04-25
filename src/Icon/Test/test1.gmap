@@ -1,0 +1,25 @@
+# This is a test gmap instruction file
+#
+window 800 300 test
+tiers  3 3 20 20 
+scale  0 10000
+
+t_hline 1 3000 6000 0.5 green
+t_hline 1 4000 5000 0.1 blue
+t_hline 1 4000 5000 0.9 orange
+
+
+t_vline 1 3000 0.0 0.5 red
+t_vline 1 	6000 0.5 1.0 yellow      
+
+
+window 800 300 test  # these should be ignored
+tiers  3 3 20 20     #
+scale  0 10000       #
+
+t_hline -1 4000 6000 0.5 green
+t_hline -1 4000 5500 0.1 blue
+t_hline -1 4000 5500 0.9 orange
+
+t_vline -1 4000 0.0 0.5 red
+t_vline -1 6000 0.5 1.0 yellow      

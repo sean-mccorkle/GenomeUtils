@@ -1,0 +1,19 @@
+#!/usr/bin/perl
+# Take a REBASE all-enzyme list, multi-line records, print out
+# all fields (except for references), one per line, tab separated.
+
+while ( <> )
+   {
+    if ( /^<(\d)>(.*)$/ )
+       {
+        ($fld,$val) = ($1,$2);
+        next if ( $fld >= 8 );
+        if ( $fld == 1 && scalar( @curr ) )
+           {
+            print join( "\t", @curr ), "\n";
+            @curr = ();
+           }
+        push( @curr, $val );
+       }
+   }
+

@@ -1,0 +1,273 @@
+# Module:       io.icn
+# Programmer:   Sean R. McCorkle
+# Language:     Icon
+# Description:  Library for reading & writing sequence data, i.e handling
+#               FASTA format, etc.  Includes a line-buffered input system
+#
+# Usage:        link io
+#
+#               Datatypes: 
+#                   f_handle - handle for linebuffered and FASTA input
+#                              Note: NOT an icon file type returned by open()
+#                   fasta_rec( heading, seq) - fasta sequence record
+# 
+#               Reading multiple fasta records from an input file:
+#               (uses buffered line input)
+#               
+#               f_handle := open_file( "data.fasta" )  # not a icon file!
+#               fasta_seq := read_fasta( f_handle )    # returns record 
+#               close_file( f_handle )
+#
+#               Example:
+#
+#                     fh := open_file( "data.fasta" )
+#                     while fseq := read_fasta( fh ) do
+#                        {
+#                         write( "heading: ", fseq.heading )
+#                         write( "sequence: ", fseq.seq )
+#                        }
+#                     close_file( fh )
+#
+#               Buffered Line input:
+#
+#               f_handle := open_file( "name" )
+#               status( f_handle ) == "eof" or "ready"
+#               line := current_line( f_handle )
+#               [ line := ] next_line( f_handle )
+#               close_file( f_handle )
+#
+#               open_file() initializes the file input buffer, causing the 
+#               first line to be read into the buffer.  The buffer contents 
+#               are returned by current_line(), which performs no other 
+#               operation on the file.  next_line() causes the next line 
+#               to be transfered from the file into the line buffer (also 
+#               returning the new value for convenience).  At any point, 
+#               status() returns the state of the buffer - "ready" means 
+#               a line is waiting, "eof" means an eof has been encountered. 
+#               next_line() and current_line() both fail if status is "eof"
+#
+#               Examples:
+#                
+#                     fh := open_file( "datafile.dat" )
+#                     while ( status( fh ) ~== "eof" ) do
+#                        {
+#                         write( current_line( fh ) )
+#                         next_line( fh )
+#                        }
+#                     close_file( fh )
+#
+#               or
+#                     fh := open_file( "datafile.dat" )
+#                     while write( current_line( fh ) ) do
+#                         next_line( fh )
+#                     close_file( fh )
+#
+#
+#               Miscellaneous:
+#
+#                 write_fasta( icon_file, seq, heading ) - output a fasta seq
+#                 seq := rc( seq )         - returns reverse complement of s
+#                 s := squeeze_space( s )  - removes whitespace from s
+#                 is_blank( s ) - succeds if s is a empty or whitespace string
+#
+# $Id: io.icn,v 0.4 1999/11/04 23:20:00 mccorkle Exp mccorkle $
+#
+record fasta_seq( heading, seq )
+
+                     ###########################
+                     # Buffered Input Routines #
+                     ###########################
+
+#
+# io_file_record - f is the file type returned by icon open()
+#                  status is "ready", "eof"
+#                  lbuff contains the current line
+#  (this is intended for internal use only)
+#
+record io_file_rec( f, status, lbuff )
+
+#
+# io_file_table is a table of io_file_recs, one for each open file.
+# open_file() creates an entry, and close_file() deletes it
+#
+global io_file_table
+#
+# open files with open_file() for use with read_fasta() or any other
+# line-buffered input.  open_file() creats an io_file_rec entry in 
+# io_file_table, returns index to this as f_handle, and immediately
+# does a next_line() operation to put something in the line buffer.
+# if filename is "" or "-", standard input is used.
+#
+procedure open_file( filename )
+
+    local f, f_handle
+
+    /io_file_table := table()     # initialize table if not initialized
+
+    if ( filename == "" )
+      then filename := "-"
+    if ( filename == "-"  )
+      then 
+        f := &input
+       else
+        ( f := open( filename ) | stop( "can't open ", filename ) )
+
+    f_handle := image( f )
+    io_file_table[ f_handle ] := io_file_rec( f, "ready", "" )
+    next_line( f_handle )
+
+    return( f_handle )
+
+end
+
+procedure close_file( f_handle )
+
+    close( io_file_table[ f_handle ].f )
+    delete( io_file_table, f_handle )
+
+end
+
+#
+# this returns the contents of the current line buffer.  If the file
+# status is "eof", then this fails
+#
+
+procedure current_line( f_handle )
+   
+    if ( status( f_handle ) == "eof" )
+      then fail
+    return( io_file_table[ f_handle ].lbuff )
+
+end
+
+#
+# next_line() loads the next line from the file into the line buffer,
+# and also returns it, and sets status to "ready".  However, if the read() 
+# fails, then status is set to "eof" and then it fails
+# 
+procedure next_line( f_handle )
+
+    if ( status( f_handle ) == "eof" )
+      then fail
+    if io_file_table[ f_handle ].lbuff := read( io_file_table[ f_handle ].f )
+      then { 
+            io_file_table[ f_handle ].status := "ready"
+            return( io_file_table[ f_handle ].lbuff )
+   	   }
+      else {
+            io_file_table[ f_handle ].status := "eof"
+            fail
+           }
+end
+
+procedure status( f_handle )
+
+   return( io_file_table[f_handle].status  )
+
+end
+
+#
+#  fails if eof.
+#  (In principle this could skip numbers at the beginning of the line too)
+#
+procedure read_fasta( f_handle )
+
+    local heading, seq, s
+
+    # First, advance, if possible, past ; comments or blank lines
+    #
+    while ( status( f_handle ) ~== "eof"  &
+            ( ( current_line( f_handle ) ? match( ';' ) ) |
+              is_blank( current_line( f_handle ) )
+            )
+          ) do
+        next_line( f_handle )
+        
+    if ( status( f_handle ) == "eof" )      # Now check for EOF condition
+      then fail
+    
+    heading := ""                           # Okay, we've got a line.  What
+    s := current_line( f_handle )           # is in it?  A real FASTA file
+    if s ? match( ">" )                     # should start with a > header,
+        then {                              # but we consider them optional
+              heading := s[2:0]             # (wide acceptance of fasta here
+              next_line( f_handle )         # at BNL!)  If not a header, leave
+	     }                              # line buffer alone
+    seq := ""
+    while s := current_line( f_handle ) & not ( s ? match( ">" ) ) do
+	{
+         if not ( s ? match( ";" ) )          # ignore ; comments
+             then seq ||:= squeeze_space( s ) # get the sequence, remove blanks
+         next_line( f_handle )                # and move next line into buffer
+        }
+
+    return( fasta_seq( heading, seq ) )   
+end
+
+
+procedure read_fasta_old( infile )
+
+    local seq 
+
+    seq := ""
+    while ( line := squeeze_space( read( infile ) ) ) do
+        if not ( line ?  tab( any( '>;' ) ) )
+            then
+                seq ||:= line
+    return( seq )
+
+end
+
+
+# write_fasta( outfile, seq, title )
+#              outfile - already opened icon _output_ file
+#              seq     - character string to be written
+#              title   - goes on the ">" header line
+#
+# I give up - I'm too tired to write this in a better way in icon
+#
+procedure write_fasta( outfile, s, title )
+
+    local i, l
+
+    l := 50
+    write( outfile, ">" || title )
+    i := 1
+    while i + l <= *s do
+       {
+        write( outfile, s[i+:l] )
+        i +:= l
+       }
+    if ( i <= *s )
+        then write( outfile, s[i:0] )
+end
+
+#
+# Return reverse complement of string.
+# (be nice to handle ambiguity codes here)
+#
+procedure  rc( s )
+
+    return( map( reverse( s ), "acgtnACGTN", "tgcanTGCAN" ) );
+
+end
+
+#
+# return a string with all whitespace squeezed out
+#
+procedure squeeze_space( s )
+    local t, i
+    t := map( s, "\t", " " )
+    while t[ i:=find(" ",t) : many( " ", t, i ) ] := ""
+    return( t )
+end
+
+procedure is_blank( s )
+
+    if *s = 0
+        then return
+    if  s ? ( tab( many( ' \t' ) ) & pos( 0 ) )
+        then return
+        else fail
+end
+

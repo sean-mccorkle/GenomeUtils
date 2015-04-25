@@ -1,0 +1,44 @@
+  
+void  print_alignment( FILE *f, char *top_name, char *bot_name,
+                       char *top, char *mid, char *bot, int n )
+
+   {
+    int  i, j, k;       /* top, middle and bottom array indices */
+    int  top_p;         /* top sequence position counter */
+    int  bot_p;         /* bottom sequence position counter */
+    int l, a;
+    int q;
+    int  r;
+
+
+    r = q = 0;
+    i = j = k = n;      /* the top, mid and bot arrays are backwards */
+    top_p = bot_p = 0;  /* but sequence positions are forwards */
+
+    do {                /* for each course of 60 chars */
+
+        /* first we print the top sequence positions (if any) every 10 nt */
+        repeat_out( f, '*', 19 );
+        l = 0;
+        /* how far do we have to go ahead to get to the next 10? */
+        a = i;
+        do {
+            while ( l < 60 && q < 10 )
+               {
+                if ( top[--a] != INDEL_SPACER )
+                    q++;
+                l++;  r++;
+               }
+            top_p += q;
+            if ( q >= 10 )
+               {
+                printf( "top_p = %d   q = %d, r = %d, l = %d, i = %d\n",
+                          q, r, l, top_p, i );
+                repeat_out( f, ' ', r - 10 );
+                fprintf( f, "%10d", top_p );
+                q = 0;
+                r = 0;
+               }
+           }
+        while ( l < 60 );
+

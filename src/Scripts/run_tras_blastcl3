@@ -1,0 +1,10 @@
+#!/bin/csh
+
+foreach p ( *.torf )
+   set f=`echo $p | sed -e 's/\.torf$//'`
+   echo blastcl3 -p blastp -d nr -i $p -o $f.trblastp
+   blastcl3 -p blastp -d nr -i $p -o $f.trblastp
+   end
+
+
+

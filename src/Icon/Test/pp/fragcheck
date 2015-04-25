@@ -1,0 +1,20 @@
+#!/usr/bin/perl
+# Repeatedly randomly fragement a sequence with pp (-B and -L) options,
+# and put back together and run a diff compare
+#
+
+$seq = shift;
+
+$pp = "/home/mccorkle/IconPrograms/Bio/pp";
+$ranseq = "/home/mccorkle/IconPrograms/Bio/ranseq";
+$seq_len = "/home/mccorkle/IconPrograms/Bio/seq_len";
+
+$t1 = "/tmp/f1.$$";   # initial ranseq output goes here
+$t2 = "/tmp/f2.$$";   # resultant file should be identical
+
+
+$s = `$seq_len $seq`;
+$s =~ /\s(\d+)$/;
+$len = $1;
+print "Length of $seq is $len\n";
+

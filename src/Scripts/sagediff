@@ -1,0 +1,66 @@
+#!/usr/bin/perl
+# Program:       sagediff
+# Programmer:    Sean R. McCorkle
+# Language:      perl
+#
+# Description:   differentiates clustered sage tag output (from clust-tags)
+#
+# Usage:         sagediff tags1 tags2
+# 
+#                where tags1 and tags2 are output files from clust-tags
+#
+# $Id$
+#
+
+
+use Getopt::Std;
+
+#die "bad option\n" unless ( getopts( 'ae:' ) );
+
+$tags1 = shift;
+$tags2 = shift;
+
+%counts1 = readtags( $tags1 );
+%counts2 = readtags( $tags2 );
+
+output();
+
+sub  readtags
+   {
+    my $filename = shift;
+    my %counts = ();
+ 
+    open( TAGS, $filename ) || die "Can't open $filename\n";
+    while ( $_ = <TAGS> )
+       {
+        my ($tag,$cnt) = split( /\s+/ );
+        $counts{$tag} = $cnt;
+        $have{$tag}++;
+       }
+    close( TAGS );
+    return( %counts );
+   }
+
+sub  output
+   {
+    foreach $k ( sort accordingly ( keys( %have ) ) )
+       {
+        printf( "%s        %d        %d\n", $k, $counts1{$k}, $counts2{$k} );
+       }
+   }
+
+sub  accordingly  
+   {
+    my $diff_a = abs( $counts1{$a} - $counts2{$a} );
+    my $diff_b = abs( $counts1{$b} - $counts2{$b} );
+    my $max_a = $counts1{$a} > $counts2{$a} ? $counts1{$a} : $counts2{$a};
+    my $max_b = $counts1{$b} > $counts2{$b} ? $counts1{$b} : $counts2{$b};
+
+    if ( $diff_a != $diff_b )
+        { return( $diff_b <=> $diff_a ); }
+    elsif ( $max_a != $max_b )
+        { return( $max_b <=> $max_a ); }
+    else
+        { return( $a cmp $b ); }
+   }
+

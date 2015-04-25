@@ -1,0 +1,62 @@
+#!/usr/bin/perl
+# Description:  convert NCBI Structural RNA files to tview graphics
+#
+# Usage:    rna2tv [-t <n>] [-c <color>] [-l<n>] [-h<n>] [-1]   <rna file>
+#
+# Options:
+#              -c <col>  set color color (default magenta)
+#              -l <n>    low and high range to pass, <n> are coordinates    
+#              -h <n>
+#              -t <n>    start counting tiers starting at <n>  (default 2)
+#              -1        use only one tier, not +/- tiers
+#          
+
+use Getopt::Std;
+
+getopts( 'c:h:l:t:1' );
+
+$label_color = "white";
+$color = defined( $opt_c ) ? $opt_c : "blue";
+$tier = defined( $opt_t ) ? $opt_t : 2;
+$low = defined( $opt_l ) ? $opt_l : 0;
+$high = defined( $opt_h ) ? $opt_h : 1e20;
+
+
+$_ = "start";
+
+while ( $_ )
+   {
+    while ( ($_ = <>) && ! /^(Ribosomal|Transfer)\s+RNAs\s+Location/ )  # Skip header
+       { }
+    
+        
+    /^(Ribosomal|Transfer)\s+RNAs\s+Location/
+        || last;
+    $type = $1;
+
+    if ($type eq "Transfer" )
+        {
+         $color = "green" ;
+         ($y1,$y2) = (0.7,1.0);
+        }
+    else
+        { ($y1,$y2) = (0.0,0.7); }
+
+    $_ = <>;  # skip next blank
+    while ( ($_ = <>) && ! /^\s*$/ )
+       {
+        chomp;
+        /^\s+(\d+)\.\.(\d+)\s+([\+\-])\s+(\S+)\s+(.*)/ ||  die "Bad line $_\n";
+        ($p1,$p2,$str,$gene,$desc) = ($1,$2,$3,$4,$5);
+        
+        #print join( ":", ($p1,$p2,$str,$len,$pid,$gene,$syn,$code,$cog,$desc) ), "\n";
+    
+        next if ( $p1 > $high || $p2 < $low );
+    
+        $desc =~ s/\s+$//;
+        $t = ( $str eq '+' || $opt_1 ) ? $tier : -$tier;
+        print "t_rect $t $p1 $p2 $y1 $y2 \"$color\"\n";
+        print "lpress $t $p1 $p2 $y1 $y2 display \"$gene $desc\"\n";
+       }
+
+   }

@@ -1,0 +1,66 @@
+#!/usr/bin/perl
+
+$base_len = 500000;
+$ovrlap = 10000;
+$out_len = $base_len + $ovrlap;
+
+
+while ( <> )
+   {
+    if ( /^>(.*)/ )
+       {
+        $new_hdr = $1;
+        output() if defined( $hdr );
+        $hdr = $new_hdr;
+        $seq = "";
+        $len = 0;
+        $count = 0;
+       }
+    else
+       {
+        chomp; 
+        s/\s//g;
+        $seq .= $_;
+        $len += length( $_ );
+        if ( $len > $out_len )
+           {
+            output();
+            $count++;
+           }
+
+       }
+   }
+
+output() if defined( $hdr );
+
+sub  output
+   {
+
+    if ( $len > $out_len )
+       {
+        print_fasta( "$count|$hdr", $seq, $out_len );
+        $seq = substr( $seq, $base_len );
+        $len -= $base_len;
+       }
+    else
+       {
+        print_fasta( "$count|$hdr", $seq, $len );
+       }
+   }
+
+sub  print_fasta
+   {
+    my ( $hdr, $seq, $n ) = @_;
+    my $i;
+
+    print ">$hdr\n";
+
+    for ( $i = 0; $i < $n; $i++ )       # for each character
+       {
+        print substr( $seq, $i, 1 );       # print it out
+        if ( ( ($i + 1) % 60 ) == 0 )      # every 50 characters
+            { print "\n"; }                # put a newline
+       }
+    print "\n" if ( ( $i % 60 ) != 0 );    # last newline ensures tidy output
+   }
+

@@ -1,0 +1,66 @@
+#!/usr/bin/perl
+# Program:      se
+# Programmer:   Sean R. McCorkle
+# Language:     Perl
+# Description:  search strings for substrings
+# 
+#                 -a all matches
+#                 -n total number of matches
+
+
+                                     ########
+                                     # Main #
+                                     ########
+
+use  Getopt::Std;
+
+die "Bad options\n" unless ( getopts( 'an' ) );
+
+$subseq = shift;
+
+
+while ( <> )
+   {
+    if ( /^>(.*)/ )
+       {
+        $new_hdr = $1;
+        scan() if ( $hdr );
+        $hdr = $new_hdr;
+        $seq = "";
+       }
+    else 
+       {
+        chomp;
+        s/\s//g;
+        s/^\d+//;
+        $seq .= uc $_;
+       }
+   }
+
+scan() if ( $hdr );
+
+
+                                 ###############
+                                 # Subroutines #
+                                 ###############
+
+
+sub scan
+   {
+    my $len = length( $seq );
+    my $count = 0;
+    my $pos = -1;
+    print "searching for [$subseq]\n";
+    while ( ($pos = index( $seq, $subseq, $pos )) > -1 )
+       {
+        $count++;
+        printf "%10d %10d %-60.60s\n", $pos, $len - $pos, $hdr
+               unless ( $opt_n );
+        $pos++;
+        last unless( $opt_a || $opt_n );
+       }
+    print "$count\n" if ( $opt_n );
+    
+   }
+
+

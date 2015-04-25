@@ -1,0 +1,82 @@
+#!/usr/bin/perl
+# Program:      poly_a
+# Programmer:   Sean R. McCorkle
+# Language:     perl
+#
+# Description:  Search for and report large strings of "aaa..." in
+#               DNA sequences. 
+#
+# Usage:        poly_a [-rt]  <seqfile> [<seqfile> ...]
+#             
+#               where each <seqfile> is a collection of DNA sequences in FASTA
+#               format.  If no input is specified, stdin is scanned.
+#
+# Options:
+#                -b <b>  report streches of base <b> instead of 'a'
+#                -l      append position from left end (after last hit)
+#                -m <n>  report all stretches >= n (default 4)
+#                -r      append remaining length (after last hit)
+#                -t      terse mode (no hdrs)
+#
+# Needs more options for output: 
+#   turn on/off multiples
+#   include poly_a tail
+#
+# $Id: poly_a,v 0.2 2003/05/13 20:03:38 mccorkle Exp mccorkle $
+#
+use Getopt::Std;
+
+
+getopts( "b:lm:rt" ) || exit( 1 );
+
+$char = $opt_b ? lc( $opt_b ) : 'a';
+$min_thresh = $opt_m ? $opt_m : 4;
+
+while ( <> )
+   {
+    chomp;
+    if ( s/^>// )
+       {
+        $new_hdr = $_;
+        process() if ( $hdr );
+        $seq = "";
+        $hdr = $new_hdr;
+       }
+    else
+       {
+        s/\s//g;          # remove whitespace
+        s/^\d*//;         # any option beginning line numbers
+        $seq .= lc( $_ );
+       }
+   }
+
+process() if $hdr;
+
+sub process
+   {
+    my ( $as, $rlen, $llen ) = ( "", 0, 0 );
+    my $pat = $char . "{$min_thresh,}";
+    while ( $seq =~ /($pat)/ )
+       { 
+        if ( length( $1 ) > length( $as ) && $' )
+           { 
+            $llen += length( $` ) + length( $1 );
+            $as = $1;
+            $rlen = length( $' );
+           }
+        $seq = $';
+       }
+    if ( $as )
+       {
+        $llen -= length( $as );
+        print "$hdr: " unless ( $opt_t );
+        printf " %4d", length( $as );
+        printf " %4d", $llen if ( $opt_l ); 
+        printf " %4d", $rlen if ( $opt_r ); 
+        print "\n";
+       }
+   }
+
+
+
+

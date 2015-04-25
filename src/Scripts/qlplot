@@ -1,0 +1,27 @@
+#!/usr/bin/perl
+
+$tier = 4;
+$color = "white";
+$_ = <>;
+chomp;
+$name = $_;
+
+$last_x = $last_y = 0;
+
+while ( $_ = <> )
+   {
+    while ( s/^\s*(\d+)// )
+       {
+        $q = $1;
+        $new_y = ($q * 1.0) / 100.0;
+        $new_x = $last_x + 1;
+        print "t_line $tier $last_x $last_y $new_x $new_y ", 
+              ( ( $q > 20 ) ?  "white" : "blue" ),
+              "\n"; 
+        $last_x = $new_x;
+        $last_y = $new_y;
+        $n++;
+       }
+   }
+
+print "# $n points\n";

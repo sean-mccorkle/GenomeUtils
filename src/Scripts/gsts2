@@ -1,0 +1,120 @@
+#!/usr/bin/perl
+
+use  Getopt::Std;
+
+
+die "bad option\n" unless ( getopts( 'ca:f:l:FIv' ) );
+
+
+$anchenz  = $opt_a ? uc( $opt_a ) : 'CATG';  # anchoring enzyme default NlaIII 
+#$fragenz  = $opt_f ? uc( $opt_f ) : 'GGATCC'; # frag'ing enzyme default BamHI 
+$fragenz  = $opt_f ? uc( $opt_f ) : 'GCGGCCGC';  # frag'ing enzyme, def. NotI 
+$linker = $opt_l ? uc( $opt_l ) : 'GGATCCGAAGGGGTTCG';
+
+$tag_len     = 17;
+$anchenz_len = length( $anchenz );
+$fragenz_len = length( $fragenz );
+$buff_len = $anchenz_len + $tag_len;
+$line_buff = "";
+$line_buff_len = 0;
+$next_char_ind = 0;
+$pos = 0;                     # indicates position within sequence
+
+                              ################
+                              # Main program #
+                              ################
+
+
+
+while ( $c = get_next_token() )
+   {
+    if ( $c =~ /^>/ )
+       {
+        print "$c\n";
+        flush_old_seq();
+        init_buff();
+       }
+    else
+       { add_char( $c ); } 
+    examine_buff();
+   }
+print "\n";
+
+flush_old_seq();
+
+
+                               ###############
+                               # Subroutines #
+                               ###############
+
+sub  examine_buff
+   {
+    if ( $buff =~ /^$anchenz/ )
+       {
+        print_buff();
+        print "This is an ANCHOR ENZYME SITE\n"; 
+       }
+    elsif ( $buff =~ /^$fragenz/ )
+       {
+        print_buff();
+        print "This is an FRAGMENTING ENZYME SITE\n"; 
+       }
+   }
+
+sub  flush_old_seq
+   {
+    print "flush_old_seq\n";
+   }
+
+sub  init_buff
+   {
+    $pr_buff = '.'x$tag_len;   # preceeding buff
+    $buff = "";
+    $pos = 0;
+    for (  my $i = 0;  $i < $buff_len;  $i++  )
+       {
+        my $c = get_next_token();
+        die "$0: (init_buff) short sequence\n" if ( $c eq "" || $c =~ /^>/ );
+        $buff .= $c;
+       }
+   }
+
+sub  add_char
+   {
+    my $c = shift;
+
+    $pr_buff .= substr( $buff, 0, 1 );
+    $pr_buff = substr( $pr_buff, 1 );
+
+    $buff .= $c;
+    $buff = substr( $buff, 1 );
+    $pos++;
+   }
+
+sub  print_buff
+   {
+    printf "%3d %17.17s | %24.24s %3d     pos %d\n", 
+            length( $pr_buff ), $pr_buff, $buff, length( $buff ),
+            $pos;
+   }
+
+#
+# returns:
+#    the next character from the data stream,
+#    OR ">header" if a new FASTA sequence header is encountered
+#    OR "" if end-of-input encountered, 
+#
+sub  get_next_token
+   {
+    while ( $next_char_ind >= $line_buff_len )
+       {
+        unless ( chomp( $line_buff = <> ) )
+           { return( "" ); }
+        return( $line_buff ) if ( $line_buff =~ /^>/ );
+        $line_buff = uc( $line_buff );
+        $line_buff =~ s/\s//g;
+        $line_buff_len = length( $line_buff );
+        $next_char_ind = 0;
+       }
+    return( substr( $line_buff, $next_char_ind++, 1 ) );
+   }

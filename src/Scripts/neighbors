@@ -1,0 +1,151 @@
+#!/usr/bin/perl
+# Program:  neighbors
+# Programmer:   Sean R. McCorkle, Biology Dept, Brookhaven National Laboratory
+#
+# $Id$
+#$cons_seq = "CACCGCCCGTCA";
+#$cons_seq = "TGTATCTTCATCAACCA";
+$cons_seq = "TT[CT]AT[ATC]GA[CT]GC[ACGT]GA[AG]CA[CT]GC";
+$len_cons_seq = length( $cons_seq );
+
+$left_len = 5;
+$right_len = 5;
+
+@left_counts = ();
+@right_counts = ();
+@int_counts = ();
+
+for ( $i = 0; $i < $left_len; $i++ )
+   { push( @left_counts, {} ); }
+
+for ( $i = 0; $i < $right_len; $i++ )
+   { push( @right_counts, {} ); }
+
+for ( $i = 0; $i < 30; $i++ )
+   { push( @int_counts, {} ); }
+
+
+while ( <> )
+   {
+    if ( /^>(.*)/ )
+       {
+        $new_hdr = $1;
+        process() if ( defined( $hdr ) );
+        $hdr = $new_hdr;
+        $seq = "";
+       }
+    else
+       {
+        chomp;
+        s/\s//g;
+        tr/a-z/A-Z/;
+        tr/U/T/;
+        $seq .= $_;
+       }
+   }
+
+process() if ( defined( $hdr ) );
+
+print "good: $good_cnt   bad: $bad_cnt   missing: $missing_cnt\n";
+print "left counts\n";
+for ( $i = 0; $i < $left_len; $i++ )
+   {
+    print "$i: ";
+    foreach $k ( sort keys( %{$left_counts[$i]} ) )
+       {
+        print "($k ", ${$left_counts[$i]}{$k}, ") ";
+       }
+    print "\n";
+   }
+
+print "right counts\n";
+for ( $i = 0; $i < $right_len; $i++ )
+   {
+    print "$i: ";
+    foreach $k ( sort keys( %{$right_counts[$i]} ) )
+       {
+        print "($k ", ${$right_counts[$i]}{$k}, ") ";
+       }
+    print "\n";
+   }
+
+print "internal counts\n";
+for ( $i = 0; $i < 30; $i++ )    # this stinks - fix the 30!
+   {
+    print "$i: ";
+    foreach $k ( sort keys( %{$int_counts[$i]} ) )
+       {
+        print "($k ", ${$int_counts[$i]}{$k}, ") ";
+       }
+    print "\n";
+   }
+
+
+sub  process
+   {
+    my $p = -1;
+    my $cnt = 0;
+    my $pos = -1;
+    my $seq_len = length( $seq );
+    my $mat, $last_mat;
+
+    ($p,$mat) = loc(  $seq, $cons_seq, $p );
+    while ( $p > -1 )
+       {
+        $cnt++;
+        $pos = $p++;
+        $last_mat = $mat;
+        ($p,$mat) = loc(  $seq, $cons_seq, $p );
+       }
+
+    if ( $cnt == 1 )
+       {
+        $good_cnt++; 
+        #printf "%8d  %8d $hdr\n", $seq_len - ( $pos + $len_cons_seq ), $pos;
+        if ( $pos >= $left_len )
+           {
+            my $left = substr( $seq, $pos - $left_len, $left_len );
+            for ( my ($i,$j) = (5, 0);  $i > 0;  $i--, $j++ )
+               {
+                my $nt = substr( $left, $j, 1 );
+                ${$left_counts[$i-1]}{$nt}++;
+               } 
+           }
+        if (  ($seq_len - ( $pos + $len_cons_seq )) > $right_len )
+           {
+            my $right = substr( $seq, $pos+$len_cons_seq, $right_len );
+            for ( my $i = 0; $i < $right_len; $i++ )
+               {
+                my $nt = substr( $right, $i, 1 );
+                ${$right_counts[$i]}{$nt}++;
+               } 
+           }
+        # internals
+        for ( my $i = 0; $i < length( $last_mat ); $i++ )
+           { 
+            my $nt = substr( $last_mat, $i, 1 );
+            ${$int_counts[$i]}{$nt}++;
+           }
+       }
+    elsif ( $cnt > 1 )
+       { $bad_cnt++; }
+    else
+       { $missing_cnt++; }
+   }
+
+
+#index(  $seq, $cons_seq, $p ) 
+
+sub loc
+   {
+    my ( $seq, $pat, $p ) = @_;
+    #return( index(  $seq, $cons_seq, $p ) );
+
+    $seq = substr( $seq, $p ) if ( $p > 0 );
+    if ( $seq =~ /$pat/ )
+       { return( ( length($`), $& ) ); }
+    else
+       { return( (-1, "") ); }
+   }
+
+

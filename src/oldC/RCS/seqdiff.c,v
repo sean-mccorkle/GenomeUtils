@@ -1,0 +1,1560 @@
+head	3.5;
+access;
+symbols;
+locks
+	mccorkle:3.5; strict;
+comment	@ * @;
+
+
+3.5
+date	2000.04.20.20.01.56;	author mccorkle;	state Exp;
+branches;
+next	3.4;
+
+3.4
+date	2000.03.22.01.05.56;	author mccorkle;	state Exp;
+branches;
+next	3.3;
+
+3.3
+date	2000.03.21.20.44.06;	author mccorkle;	state Exp;
+branches;
+next	3.2;
+
+3.2
+date	2000.03.16.19.46.14;	author mccorkle;	state Exp;
+branches;
+next	3.1;
+
+3.1
+date	97.09.30.05.21.44;	author mccorkle;	state Exp;
+branches;
+next	3.0;
+
+3.0
+date	97.04.22.01.47.28;	author mccorkle;	state Exp;
+branches;
+next	2.2;
+
+2.2
+date	97.04.22.01.46.25;	author mccorkle;	state Exp;
+branches;
+next	2.1;
+
+2.1
+date	97.03.14.18.53.17;	author mccorkle;	state Exp;
+branches;
+next	2.0;
+
+2.0
+date	97.02.25.04.41.27;	author mccorkle;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	97.02.24.19.34.29;	author mccorkle;	state Exp;
+branches;
+next	1.0;
+
+1.0
+date	97.02.21.16.14.00;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@Program to compare and align two sequences and print out
+differences.
+@
+
+
+3.5
+log
+@print_alignment now prints to file.  added fopen_safely().
+@
+text
+@/* Program:      seqdiff.c                                                */
+/* Programmer:   Sean McCorkle                                            */
+/* Language:     C                                                        */
+/* Description:  Compare two dna sequence strings, showing differences    */
+/* $Id: seqdiff.c,v 3.4 2000/03/22 01:05:56 mccorkle Exp mccorkle $       */
+/**************************************************************************/
+
+#include <errno.h>
+#include <libgen.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "seqlib.h"
+
+
+                         /************************/
+                         /* Macros and Constants */
+                         /************************/
+
+#define  MAX_FILE_NAME   100
+#define  MAX_MSG_LENGTH  200
+
+                                /***********/
+                                /* Globals */
+                                /***********/
+
+
+int  show_alignment = 0;     /* set true by -a */
+int  show_diffs     = 0;     /* set true by -l */
+
+static char seqdiff_rcs_id[] = 
+      "$Id: seqdiff.c,v 3.4 2000/03/22 01:05:56 mccorkle Exp mccorkle $";
+
+                         /*************************/
+                         /* Function Declarations */
+                         /*************************/
+
+FILE *fopen_safely( char *name, char *mode );
+void  getargs( int argc, char **argv, char *file1, char *file2, FILE **a_file);
+void  usage( void );
+void  getseq( char *file, int *n, char *seq );
+
+
+main( int argc, char **argv )
+
+   {
+    static char   file1[MAX_FILE_NAME];
+    static char   file2[MAX_FILE_NAME];
+    FILE         *al_file;
+    int           n, m;                  /* lengths of seq1 and seq2 */
+    static char   seq1[MAX_SEQ_LENGTH];
+    static char   seq2[MAX_SEQ_LENGTH];
+    static char   top[MAX_SEQ_LENGTH], 
+                  mid[MAX_SEQ_LENGTH], 
+                  bot[MAX_SEQ_LENGTH];
+    int           l;                     /* length of alignment arrays */
+    ALIGN_STATS   al_stats;
+
+#ifdef METROWERKS
+    show_alignment = 0;
+    show_diffs = 0;
+    strcpy( file1, "BB-045-C02D-R-472a-11-Jd" );
+    strcpy( file2, "045-C02-RV-472a.11" );
+#else
+    getargs( argc, argv, file1, file2, &al_file );
+#endif
+
+    getseq( file1, &m, seq1 );
+#ifdef DEBUG
+    printf( "sequence 1:\n" );
+    print_seq( stdout, seq1, 0, 0, 10 );
+#endif
+    getseq( file2, &n, seq2 );
+#ifdef DEBUG
+    printf( "sequence 2:\n" );
+    print_seq( stdout, seq2, 0, 0, 10 );
+    printf( "m, n = %d, %d\n", m, n );
+#endif
+
+    lpa_align( seq1, m, seq2, n, MAX_SEQ_LENGTH, top, mid, bot, &l );
+#ifdef DEBUG
+    printf( "size is %d, align l is %d\n", size, l );
+#endif
+    get_align_stats( top, mid, bot, l, m, n, &al_stats );
+    print_align_stats( &al_stats );
+    printf( "seq1 len:                %4d\n", m );
+    printf( "seq2 len:                %4d\n", n );
+
+    if ( show_diffs )
+        print_diffs( &al_stats, top, mid, bot, l );
+    if ( show_alignment )
+       {
+        print_alignment( al_file, basename(file1), basename(file2), 
+                         top, mid, bot, l );
+       }
+
+    /* Loose ends: not closing al_file */
+   }
+
+
+void getargs( int argc, char **argv, char *file1, char *file2, FILE **al_file )
+
+   {
+    char         *c;
+
+    progname = strdup( basename( *argv ) );
+    while ( --argc > 0 && **(++argv) == '-' )
+       {
+        c = (*argv)+1;
+        if ( ! *c )
+            usage();
+        while ( *c )
+            switch( *c++ )
+	       {
+	        case 'a':  show_alignment = 1;  
+                           *al_file = fopen_safely( *++argv, "w" );
+                           argc--;
+                           break;
+	        case 'l':  show_diffs = 1;      
+                           break;
+                default:  usage();
+	       }
+       }
+    if ( argc != 2 )
+       usage();
+    strncpy( file1, *argv++, MAX_FILE_NAME );
+    strncpy( file2, *argv++, MAX_FILE_NAME );
+#ifdef DEBUG
+    printf( "file1: %s\n", file1 );
+    printf( "file2: %s\n", file2 );
+    printf( "show_alignment: %d, show_diffs %d\n",show_alignment, show_diffs );
+#endif
+   }
+
+
+void usage( void )
+
+   {
+    printf( "usage: %s [-al] <seq-file 1> <seq-file 2>\n", progname );
+    exit( 1 );
+   }
+
+
+void getseq( char *file, int *n, char *seq )
+
+   {
+    int          seqf;
+    int          n_hdr_lines;
+    char       **hdr;
+    static char  raw_seq[MAX_SEQ_LENGTH];
+
+    if ( ( seqf = open_seqf( file, STD_ALLOWED, STD_IGNORED ) < 0 ) )
+       {
+        fprintf( stderr, "%s: fatal; ", progname );
+        perror( file );
+        exit( errno );
+       }
+    load_header( seqf, &n_hdr_lines, &hdr );
+    free_lines( n_hdr_lines, hdr );
+    load_seq( seqf, MAX_SEQ_LENGTH, raw_seq, n );
+    uppercase( raw_seq, seq );
+    close_seqf( seqf );
+   }
+
+
+
+FILE *fopen_safely( char *name, char *mode )
+
+   {
+    FILE        *f;
+    static char  msg[MAX_MSG_LENGTH];
+
+    printf( "Attempting to open [%s] safely, mode [%s]\n", name, mode );
+    sprintf( msg, "(%s) %s", progname, name );
+
+    if ( strcmp( "-", name ) == 0 )
+        return(  (mode[0] == 'r') ? stdin : stdout );
+    else
+        if ( f = fopen( name, mode ) )
+            return( f );
+        else
+           {
+            perror( msg );
+            exit( 1 );
+           }
+   }
+
+@
+
+
+3.4
+log
+@cosmetics.
+@
+text
+@d5 1
+a5 1
+/* $Id: seqdiff.c,v 3.3 2000/03/21 20:44:06 mccorkle Exp mccorkle $       */
+d21 2
+a22 1
+#define  MAX_FILE_NAME  100
+d33 1
+a33 1
+      "$Id: seqdiff.c,v 3.3 2000/03/21 20:44:06 mccorkle Exp mccorkle $";
+d39 2
+a40 2
+
+void  getargs( int argc, char **argv, char *file1, char *file2 );
+d48 3
+a50 2
+    char          file1[MAX_FILE_NAME];
+    char          file2[MAX_FILE_NAME];
+d52 2
+a53 2
+    char          seq1[MAX_SEQ_LENGTH];
+    char          seq2[MAX_SEQ_LENGTH];
+d66 1
+a66 1
+    getargs( argc, argv, file1, file2 );
+d93 4
+a96 1
+        print_alignment( basename(file1), basename(file2), top, mid, bot, l );
+d98 1
+d102 1
+a102 1
+void getargs( int argc, char **argv, char *file1, char *file2 )
+d105 1
+a105 1
+    char *c;
+d116 6
+a121 2
+	        case 'a':  show_alignment = 1;  break;
+	        case 'l':  show_diffs = 1;      break;
+d166 22
+@
+
+
+3.3
+log
+@open_seqf() and load_seq() changed calling arguments, seqdiff never
+changed.
+@
+text
+@d5 1
+a5 1
+/* $Id: seqdiff.c,v 3.2 2000/03/16 19:46:14 mccorkle Exp mccorkle $       */
+d32 1
+a32 1
+      "$Id: seqdiff.c,v 3.2 2000/03/16 19:46:14 mccorkle Exp mccorkle $";
+d85 2
+a86 2
+    printf( "seq1 len:              %3d\n", m );
+    printf( "seq2 len:              %3d\n", n );
+@
+
+
+3.2
+log
+@many differences, porting to linux
+@
+text
+@d5 1
+a5 1
+/* $Id: seqdiff.c,v 3.1 1997/09/30 05:21:44 mccorkle Exp mccorkle $       */
+d32 1
+a32 1
+      "$Id: seqdiff.c,v 3.1 1997/09/30 05:21:44 mccorkle Exp mccorkle $";
+d143 1
+a143 1
+    if ( ( seqf = open_seqf( file ) < 0 ) )
+d151 1
+a151 1
+    load_seq( seqf, "acgtnmrwsykvhdbACGTNMRWSYKVHDB", " \t\n", MAX_SEQ_LENGTH, raw_seq, n );
+@
+
+
+3.1
+log
+@Added handling for all ambiguity codes (not just Ns).
+@
+text
+@d5 1
+a5 1
+/* $Id: seqdiff.c,v 3.0 1997/04/22 01:47:28 mccorkle Exp mccorkle $       */
+d32 1
+a32 1
+      "$Id: seqdiff.c,v 3.0 1997/04/22 01:47:28 mccorkle Exp mccorkle $";
+d101 1
+a101 1
+    strncpy( progname, *argv, MAX_FILE_NAME );
+@
+
+
+3.0
+log
+@Going public with this and to the SGI.
+@
+text
+@d5 1
+a5 1
+/* $Id: seqdiff.c,v 2.2 1997/04/22 01:46:25 mccorkle Exp $                */
+d32 1
+a32 1
+      "$Id: seqdiff.c,v 2.2 1997/04/22 01:46:25 mccorkle Exp $";
+d151 1
+a151 1
+    load_seq( seqf, "acgtnACGTN", " \t\n", MAX_SEQ_LENGTH, raw_seq, n );
+@
+
+
+2.2
+log
+@Restructuring - put all the sequence alignment and related routines
+into libseq.a
+@
+text
+@d5 1
+a5 1
+/* $Id: seqdiff.c,v 2.1 1997/03/14 18:53:17 mccorkle Exp mccorkle $       */
+d30 1
+d32 1
+a32 1
+      "$Id: seqdiff.c,v 2.1 1997/03/14 18:53:17 mccorkle Exp mccorkle $";
+@
+
+
+2.1
+log
+@Implemented b-tree priority queue.  Much faster now, and is even faster
+than brute force search.
+Got rid of the e[] and q sub-priority stuff - now I just use a single
+distance and let j = 0 and i = 0 row and column penalties be zero until
+they reach an appropriate value, and then they become normal indels.
+So far so good....
+@
+text
+@d5 1
+a5 1
+/* $Id: seqdiff.c,v 2.0 1997/02/25 04:41:27 mccorkle Exp mccorkle $       */
+d9 1
+d14 1
+a14 2
+#include "labdb.h"
+#include "labdb_int.h"
+a20 4
+typedef  unsigned char  BYTE;
+
+#define  INDEL          2
+#define  SUBST          1
+a21 2
+#define  MAX_ARRAY_SIZE 360000
+#define  MAX_SUM        999999   /* max for d & e array minimizing */
+a22 24
+#define  UP             0x04     /* these are the backpointer directions    */
+#define  DIAG           0x02     /* they are bit masks so that they can be  */
+#define  LEFT           0x01     /* or-ed together to indicate combinations */
+#define  UNSEEN         0x7FFFFFFF /* must be positive!!! */
+#define  DIST_OFF       13       /* careful! if a distance exceeds these bits*/
+
+#define  INDEL_IND      '-'      /* used in the mid[] array */
+#define  AMB_IND        '|'
+#define  WRONG_IND      '*'
+#define  OK_IND         ' '
+#define  INDEL_SPACER   ' '     /* used in top[] and bot[] array's for indels*/
+
+#define  ISAMB(x)       ( (x) == 'n' || (x) == 'N' )
+
+                 /* DANGER: no () around i or j here - be careful! */
+#ifdef NO
+#define  A(i,j) ( ( ISAMB(seq1[(i)-1]) || ISAMB(seq2[(j)-1]) || \
+                    seq1[(i)-1]==seq2[(j)-1]) ? 0 : SUBST )
+#endif
+#define  A(i,j) ( (seq1[(i)-1]==seq2[(j)-1]) ? 0 : SUBST )
+#define  B(i,j) ( ( (j) == n ) ? 0 : INDEL )
+#define  C(i,j) ( ( (i) == m ) ? 0 : INDEL )
+
+
+d29 1
+a29 1
+int  terse = 0;              /* set ture by -t */
+d31 1
+a31 1
+      "$Id: seqdiff.c,v 2.0 1997/02/25 04:41:27 mccorkle Exp mccorkle $";
+a40 6
+void  print_alignment( char *top, char *mid, char*bot, int k );
+void  gen_alignment( BYTE *backpnt, int m, int n, 
+                     char *top, char *mid, char *bot, int *l,
+                     char *seq1, char *seq2 );
+void  print_stats( char *top, char *mid, char *bot, int l, 
+                   int m, int n );
+a41 9
+void  pq_init( int m, int n );
+int   pq_update( int i, int j, int d );
+int   pq_remove( int *i, int *j );
+void  pq_upheap( int k );
+void  pq_downheap( int k );
+#ifdef DEBUG
+void  print_matrices( int m, int n, short *a, short *b, short *c, 
+                      int *d, int *e, BYTE *backpnt );
+#endif
+a42 2
+#define ind(x,y) ( (x) * (n+1) + (y) )
+
+d48 1
+a48 1
+    int           n, m;               /* lengths of seq1 and seq2 */
+a50 9
+    int          *d;
+    BYTE         *backpnt;
+    int           size;
+    int           i, j, k;
+    int           x, y;
+    int           dist;
+    int           p;
+    int           max_right_lead_offset;
+    int           max_down_lead_offset;
+d54 2
+a55 1
+    int    l;                             /* length of alignment arrays */
+d59 1
+a59 5
+    terse = 0;
+#ifdef NO
+    strcpy( file1, "a" );
+    strcpy( file2, "b" );
+#endif
+a61 4
+#ifdef NO
+    strcpy( file1, "021-H10-RL-399b.21" );
+    strcpy( file2, "BB-021-H10-RL-399b-21-Je" );
+#endif
+d65 1
+d78 1
+a78 20
+    /* allocate storage for matrices */
+    size =  (m + 1) * (n + 1);
+    /* put in check for null returns (not enough memory) */
+    d = (int *) calloc( size, sizeof( int ) );
+    for ( i = 0; i < size; i++ )
+        d[i] = -UNSEEN;
+    backpnt = (BYTE *) calloc( size, sizeof( BYTE ) );
+
+    /* estimate lead offsets */
+ 
+    if ( n > m )
+       {
+        max_right_lead_offset = n - m;
+        max_down_lead_offset = m / 10;
+       }
+    else
+       {
+        max_right_lead_offset = n / 10;
+        max_down_lead_offset = m - n;
+       }
+a79 106
+    printf( "starting lpa\n" );  fflush( stdout );
+#endif
+    pq_init( m, n );
+    pq_update( 0, 0, UNSEEN );    
+
+    do {
+        if ( ! pq_remove( &i, &j ) )
+           {
+            fprintf( stderr, "error: priority queue empty!\n" );
+            exit( 1 );
+           }
+
+        if ( i < m || j < n )
+	   {
+            x = ind( i, j );
+            d[x] = -d[x];
+            if ( d[x] == UNSEEN )
+                d[x] = 0;
+#ifdef DEBUG
+            printf( "manging on (%d,%d) d = %d (%d) (%d)\n",
+                          i, j, d[x], (d[x] >> DIST_OFF), (d[x] & 0xFFF) );
+#endif
+
+            if ( j < n )
+ 	       {
+                y = ind( i, j+1 );                        /* RIGHT */
+                if ( d[y] < 0 )
+		   {
+                    /* p = ( i == m ? 0 : INDEL ); */
+                    if ( i == m )
+                        p = 0;
+		    else if ( i == 0 && j < max_right_lead_offset )
+                        p = 0;
+                    else 
+                        p = INDEL;
+                    /*q = ( ( i == 0 || i == m ) ? 0 : INDEL ); */
+                    /* dist = d[x] + (p << DIST_OFF) + q; */
+                    dist = d[x] + p;
+                    if ( pq_update( i, j+1, dist ) )
+	               {
+                        d[y] = -dist;
+                        backpnt[y] = LEFT;
+#ifdef DEBUG
+                        printf( "       RIGHT, %d,         %d, %d\n",
+                                                   p, dist, d[y] );
+#endif
+	               }
+		   }
+                
+	       }
+
+            if ( i < m )
+	       {
+                y = ind( i+1, j );                        /* DOWN */
+                if ( d[y] < 0 )
+		   {
+                    /*p = ( j == n ? 0 : INDEL ); */
+                    /* q = ( ( j == 0 || j == n ) ? 0 : INDEL ); */
+                    if ( j == n )
+                        p = 0;
+		    else if ( j == 0 && i < max_down_lead_offset )
+                        p = 0;
+                    else 
+                        p = INDEL;
+                    /*dist = d[x] + (p << DIST_OFF) + q; */
+                    dist = d[x] + p;
+                    if ( pq_update( i+1, j, dist ) )
+	               {
+                        d[y] = -dist;
+                        backpnt[y] = UP;
+#ifdef DEBUG
+                        printf( "       DOWN, %d,         %d, %d\n", 
+                                                   p, dist, d[y] );
+#endif
+	               }
+		   }
+	       }
+
+            if ( i < m && j < n )
+	       {
+                y = ind( i+1, j+1 );                      /* DIAG */
+                if ( d[y] < 0 )
+		   {
+                    p = A(i+1,j+1);
+/*                    dist = d[x] + (p << DIST_OFF); */
+                    dist = d[x] + p;
+                    if ( pq_update( i+1, j+1, dist ) )
+	               {
+                        d[y] = -dist;
+                        backpnt[y] = DIAG;
+#ifdef DEBUG
+                        printf( "       DIAG, %d,           %d, %d\n", p, dist, d[y] );
+#endif
+	               }
+		   }
+	       }
+	   }
+       }
+    while ( i < m || j < n );
+
+#ifdef DEBUG
+    printf( "Done lpa!\n" );
+#endif
+
+    gen_alignment( backpnt, m, n, top, mid, bot, &l, seq1, seq2 );
+#ifdef DEBUG
+d82 4
+d87 2
+a88 1
+    print_stats( top, mid, bot, l, m, n );
+d90 1
+a90 1
+        print_alignment( top, mid, bot, l );
+a91 2
+    free( d );
+    free( backpnt );
+d110 1
+a110 1
+	        case 't':  terse = 1;  break;
+d121 1
+a121 1
+    printf( "show_alignment: %d, terse %d\n", show_alignment, terse );
+d129 1
+a129 1
+    printf( "usage: %s [-at] <seq-file 1> <seq-file 2>\n", progname );
+a154 395
+
+
+
+void  gen_alignment( BYTE *backpnt, int m, int n, 
+                     char *top, char *mid, char *bot, int *l,
+                     char *seq1, char *seq2 )
+   {
+    int  i, j, k;
+    char *s1, *s2;
+    
+    i = m;
+    j = n;
+    k = 0;
+    s1 = seq1 + m;
+    s2 = seq2 + n;
+    while ( i > 0 || j > 0 )
+       {
+#ifdef DEBUG
+        printf( "gen al: %d %d: %d\n", i, j, backpnt[ ind(i,j) ] );
+#endif
+        switch ( backpnt[ ind(i,j) ] )
+           {
+            case  UP:
+                          top[k] = *--s1;
+                          mid[k] = INDEL_IND;
+                          bot[k] = INDEL_SPACER;
+                          i--;
+                          break;
+            case  LEFT:
+                          top[k] = INDEL_SPACER;
+                          mid[k] = INDEL_IND;
+                          bot[k] = *--s2;
+                          j--;
+                          break;
+            case  DIAG:
+                          top[k] = *--s1;
+                          bot[k] = *--s2;
+                          if ( *s1 == *s2 )
+                              mid[k] = OK_IND;
+                          else if ( ISAMB(*s1) || ISAMB(*s2) )
+                              mid[k] = AMB_IND;
+                          else
+                              mid[k] = WRONG_IND;
+                          i--; j--;
+                          break;
+	   }
+        k++;
+       }
+    *l = k;
+   }
+
+#define SUBST_TYPE      1
+#define TOP_INS_TYPE    2
+#define BOT_INS_TYPE    3
+
+void  print_stats( char *top, char *mid, char *bot, int l, 
+                   int m, int n )
+
+   {
+    static struct diff_s {
+                           int  typ;
+                           int  top_pos;
+                           int  bot_pos;
+                           int  top_char;
+                           int  bot_char;
+                         } diffs[MAX_SEQ_LENGTH];
+    int  top_end_off=0, bot_end_off=0;
+    int  top_beg_off=0, bot_beg_off=0;
+    int  i, k;
+    int  a, b;
+    int  top_pos, bot_pos;
+    int  num_ok = 0;
+    int  num_wrong = 0;
+    int  num_indels = 0;
+    int  num_ambs = 0;
+    int  num_seq1_inserts = 0;
+    int  num_seq2_inserts = 0;
+    int  num_seq1_ambs = 0;
+    int  num_seq2_ambs = 0;
+
+    /* advance past beginning offsets, and count them.  Don't forget that */
+    /* top, mid & bot are backwards!                                      */
+    l--;  
+    while ( l >= 0 && mid[l] == INDEL_IND )
+        if ( top[l--] == INDEL_SPACER )
+            top_beg_off++;
+        else
+            bot_beg_off++;
+    b = l;    
+
+    /* l now points at first "interior" char */
+    
+    i = 0;
+    while ( i <= l && mid[i] == INDEL_IND )
+        if ( top[i++] == INDEL_SPACER )
+            top_end_off++;
+        else
+            bot_end_off++;
+    a = i;
+
+    /* i now points at last "interior" character */
+
+    top_pos = bot_beg_off + 1;  /* note the "switched" sense here */
+    bot_pos = top_beg_off + 1;
+
+    if ( ! terse )
+       {
+        while ( l >= i )
+           {
+            if ( mid[l] != OK_IND )
+               {
+                printf( "%c: %d %c - %d %c\n", mid[l], top_pos, top[l], 
+                                                       bot_pos, bot[l] );
+                if ( top[l] != INDEL_SPACER )
+                    top_pos++;
+                if ( bot[l] != INDEL_SPACER )
+                    bot_pos++;
+               }
+            else
+               {
+                top_pos++;
+                bot_pos++;
+               }
+            l--;
+           }
+       }
+    printf( "seq1 offsets:  %d  %d\n", top_beg_off, top_end_off );
+    printf( "seq2 offsets:  %d  %d\n", bot_beg_off, bot_end_off );
+#ifdef DEBUG
+    printf( "i = %d, l = %d\n", i, l );
+    printf( "a = %d, b = %d\n", a, b );
+    printf( "%c %c %c   %c %c %c\n", top[a], mid[a], bot[a], 
+                                     top[b], mid[b], bot[b] );
+#endif
+    for ( k = a; k < b; k++ )
+        switch( mid[k] )
+	   {
+	    case  OK_IND:      num_ok++;
+                               break;
+            case  INDEL_IND:   num_indels++;
+                               if ( top[k] == INDEL_SPACER )
+                                   num_seq1_inserts++;
+                               else
+                                   num_seq2_inserts++;
+                               break;
+            case  AMB_IND:     num_ambs++;
+                               if ( ISAMB( top[k] ) )
+                                   num_seq1_ambs++;
+                               else
+                                   num_seq2_ambs++;
+                               break;
+            case  WRONG_IND:   num_wrong++;
+                               break;
+             /*INDEL_SPACER*/
+
+	   }
+    printf( "Matches:               %3d\n", num_ok );
+    printf( "Mismatches:            %3d\n", num_indels+num_ambs+num_wrong );
+    printf( "Indels:                %3d\n", num_indels );
+    printf( "Insertions in seq 1:   %3d\n", num_seq1_inserts );
+    printf( "Insertions in seq 2:   %3d\n", num_seq2_inserts );
+    printf( "Ambiguity substitions: %3d\n", num_ambs );
+    printf( "Ambiguities in seq 1:  %3d\n", num_seq1_ambs );
+    printf( "Ambiguities in seq 2:  %3d\n", num_seq2_ambs );
+    printf( "Substition Errors:     %3d\n", num_wrong );
+   }
+
+
+/* Prints out the alignment that was constructed backwards in top, */
+/* mid & bot starting at position n-1                              */
+
+void  print_alignment( char *top, char *mid, char *bot, int n )
+
+   {
+    int  i, j, k, l;
+
+    i = j = k = n;
+    do {
+        printf( "%-18.18s ", "file1" );
+        l = 0;
+        while ( i > 0 && l++ < 60 )
+            putchar( top[--i] );
+        putchar( '\n' );
+
+        printf( "%-18.18s ", " " );
+        l = 0;
+        while ( j > 0 && l++ < 60 )
+            putchar( mid[--j] );
+        putchar( '\n' );
+
+        printf( "%-18.18s ", "file2" );
+        l = 0;
+        while ( k > 0 && l++ < 60 )
+            putchar( bot[--k] );
+        putchar( '\n' );
+        for ( l = 0; l < 79; l++ )
+            putchar( '_' );
+        putchar( '\n' );
+       }
+    while ( i > 0 );
+   }
+
+#ifdef DEBUG
+
+void  print_matrices( int m, int n, short *a, short *b, short *c, 
+                      int *d, int *e, BYTE *backpnt )
+
+   {
+    int i, j;
+    int i_start = 0; /* m - 15; */
+    int j_start = 0; /* n - 15; */
+
+    printf( "m is %d, n is %d\n", m, n );
+    for ( i = i_start; i <= m; i++ )
+       {
+        printf( "%3d:", i );
+        for ( j = j_start; j <= n; j++ )
+            printf( "|%3d%3d", a[ ind(i,j) ], b[ ind(i,j) ] );
+        printf( "\n   :" );
+        for ( j = j_start; j <= n; j++ )
+            printf( "|%3d%3d", c[ ind(i,j) ], d[ ind(i,j) ] );
+        printf( "\n   :" );
+        for ( j = j_start; j <= n; j++ )
+            printf( "|   %3d", e[ ind(i,j) ]  );
+        /*if ( i > 0 ) */
+	   {
+            printf( "\n   :" );
+            for ( j = j_start; j <= n; j++ )
+                printf( "  (%3d)", backpnt[ind(i,j)] );
+	   }
+        printf( "\n\n" );
+       }
+   }
+
+#endif
+
+
+                              /******************/
+                              /* Priority Queue */
+                              /******************/
+
+
+#define PQ_TREE_SIZE   3000
+#define MAX_PRIOR        -1
+
+int     pq_n = 0;
+int     pq_tree_dist[PQ_TREE_SIZE+1];
+int     pq_tree_x[PQ_TREE_SIZE+1];
+int    *pq_lkup;
+short  *pq_i;
+short  *pq_j;
+int     pq_mat_n;
+int     pq_mat_m;
+int     pq_mat_size;
+
+
+
+#define pq_ind(x,y) ((x)*(pq_mat_n+1) + (y))
+
+void pq_init( int m, int n )
+
+   {
+    pq_mat_m = m;
+    pq_mat_n = n;
+    pq_mat_size = (n + 1) * (m + 1);
+#ifdef DEBUG
+    printf( "pq_mat size is %d\n", pq_mat_size );
+#endif
+    pq_lkup = (int *) calloc( pq_mat_size, sizeof(int) );
+    pq_i = (short *) calloc( pq_mat_size, sizeof(short) );
+    pq_j = (short *) calloc( pq_mat_size, sizeof(short) );
+    pq_n = 0;
+   }
+
+/* returns 1 if an insert is made or if the priority is raised     */
+/* (if dist is < the current value), and returns 0 if no change is */
+/* made.                                                           */
+
+int pq_update( int i, int j, int dist )
+
+   {
+    int x, k;
+
+    x = pq_ind(i,j);
+    /* Is  i,j (x rather) in pq already? */
+    if ( (k = pq_lkup[x]) > 0 )
+       {
+        if ( pq_tree_dist[k] <= dist )
+            return( 0 );
+        pq_tree_dist[k] = dist;
+        pq_upheap( k );
+       }
+    else
+       {
+        if ( pq_n >= PQ_TREE_SIZE )
+           {
+            fprintf( stderr, "pq tree overflow, i = %d, j = %d, dist = %d\n",
+                              i, j, dist );
+            exit( 1 );
+           }
+        x = pq_ind(i,j);
+        pq_tree_dist[++pq_n] = dist;
+        pq_tree_x[pq_n] = x;
+        pq_lkup[x] = pq_n;
+        pq_i[x] = i;
+        pq_j[x] = j;
+        pq_upheap( pq_n );
+       }
+
+    return( 1 );
+   }
+
+
+int pq_remove( int *i, int *j )
+
+   {
+    int x;
+    
+    if ( pq_n < 1 )
+        return( 0 );
+    x = pq_tree_x[1];
+    *i = pq_i[x];
+    *j = pq_j[x];
+    pq_lkup[x] = 0;   /* indicates that i,j is no longer in pq */
+                      /* - used by pq_update().                */
+    pq_tree_dist[1] = pq_tree_dist[pq_n];  /* now put last guy at top */
+    pq_tree_x[1]    = pq_tree_x[pq_n];     
+    pq_lkup[pq_tree_x[pq_n]] = 1;
+    pq_n--;
+    pq_downheap( 1 );                      /* and bubble him down */
+    return( 1 );
+   }
+
+   
+void  pq_upheap( int k )
+   {
+    int d, j, x;
+    
+    d = pq_tree_dist[k];
+    x = pq_tree_x[k];
+    pq_tree_dist[0] = MAX_PRIOR; 
+    while ( pq_tree_dist[ j = ( k / 2 ) ] > d )
+       {
+        pq_lkup[ pq_tree_x[j] ] = k;
+        pq_tree_dist[k] = pq_tree_dist[j];
+        pq_tree_x[k] = pq_tree_x[j];
+        k = j;
+       }
+    pq_lkup[x] = k;
+    pq_tree_dist[k] = d;
+    pq_tree_x[k] = x;
+   }
+
+void  pq_downheap( int k )
+   {
+    int d, x, j;
+
+    d = pq_tree_dist[k];
+    x = pq_tree_x[k];
+    while ( k <= pq_n / 2 )
+       {
+        j = k + k;            /* k <<1 */
+        if ( j < pq_n )
+            if ( pq_tree_dist[j] > pq_tree_dist[j+1] )
+                j++;
+        if ( d < pq_tree_dist[j] ) 
+            break;
+        pq_lkup[ pq_tree_x[j] ] = k;
+        pq_tree_dist[k] = pq_tree_dist[j];
+        pq_tree_x[k] = pq_tree_x[j];
+        k = j;
+       }
+     pq_tree_dist[k] = d;
+     pq_tree_x[k] = x;
+     pq_lkup[x] = k;
+   }
+
+void pq_dump()
+
+   {
+    int i, j;
+    
+    printf( "pq tree size: %d\n", pq_n );
+    for ( i = 0; i <= pq_n; i++ )
+        printf( "%3d: %4d  (%3d %3d)\n", 
+                 i, pq_tree_dist[i], pq_i[pq_tree_x[i]], 
+                 pq_j[pq_tree_x[i]]);
+#ifdef NO
+    for ( i = 1; i <= pq_mat_m; i++ )
+        for ( j = 1; j <= pq_mat_n; j++ )
+            printf( "(%2d %2d) [%2d] %2d (%2d %2d)\n", 
+                     i, j, pq_ind(i,j), pq_lkup[pq_ind(i,j)],
+                     pq_i[pq_ind(i,j)], pq_j[pq_ind(i,j)] );
+#endif
+   }
+@
+
+
+2.0
+log
+@Got the priority queue least-path version working, but
+its even slower than before! (Hopefully because the priority queue
+is stupid and linear in time!).
+@
+text
+@d5 1
+a5 1
+/* $Id: seqdiff.c,v 1.1 1997/02/24 19:34:29 mccorkle Exp mccorkle $       */
+d23 1
+a23 1
+#define  INDEL          1
+d39 1
+a39 1
+#define  INDEL_SPACER   ' '      /* used in top[] and bot[] array's for indels*/
+d44 1
+d47 2
+a52 11
+#ifdef METROWERKS
+
+typedef unsigned short int SUM_INT;
+
+#else
+
+typedef int SUM_INT;
+
+#endif
+
+
+a56 1
+int max_pq = 0;
+d61 1
+a61 1
+      "$Id: seqdiff.c,v 1.1 1997/02/24 19:34:29 mccorkle Exp mccorkle $";
+d78 2
+a79 2
+void  pq_init();
+int   pq_update( int i, int j, SUM_INT d );
+d81 2
+d85 1
+a85 1
+                      SUM_INT *d, SUM_INT *e, BYTE *backpnt );
+d98 1
+a98 1
+    SUM_INT      *d, *e;
+d103 4
+a106 2
+    SUM_INT       dist;
+    int           p, q;
+d143 1
+a143 1
+    d = (SUM_INT *) calloc( size, sizeof( SUM_INT ) );
+a145 1
+    e = (SUM_INT *) calloc( size, sizeof( SUM_INT ) );
+d148 13
+d162 2
+a163 1
+    pq_init();
+d189 10
+a198 3
+                    p = ( i == m ? 0 : INDEL );
+                    q = ( ( i == 0 || i == m ) ? 0 : INDEL );
+                    dist = d[x] + (p << DIST_OFF) + q;
+d204 2
+a205 2
+                        printf( "       RIGHT, %d, %d,         %d, %d\n",
+                                                   p, q, dist, d[y] );
+d217 10
+a226 3
+                    p = ( j == n ? 0 : INDEL );
+                    q = ( ( j == 0 || j == n ) ? 0 : INDEL );
+                    dist = d[x] + (p << DIST_OFF) + q;
+d232 2
+a233 2
+                        printf( "       DOWN, %d, %d,         %d, %d\n", 
+                                                   p, q, dist, d[y] );
+d245 2
+a246 1
+                    dist = d[x] + (p << DIST_OFF);
+d261 1
+d263 1
+a273 2
+    printf( "max_pq = %d\n", max_pq );
+
+a274 1
+    free( e );
+d356 1
+d358 1
+d376 3
+a378 1
+                          if ( ISAMB(*s1) || ISAMB(*s2) )
+a379 2
+                          else if ( *s1 == *s2 )
+                              mid[k] = OK_IND;
+d408 1
+d410 8
+d427 3
+a430 2
+    /* l now points at first "interior" char */
+
+d437 1
+d444 1
+a444 2
+    k = 0;
+    while ( l >= i )
+d446 1
+a446 1
+        if ( mid[l] != OK_IND )
+d448 11
+a458 8
+            printf( "%c: %d %c - %d %c\n", mid[l], top_pos, top[l], 
+                                                   bot_pos, bot[l] );
+
+#ifdef NO
+            if ( mid[l] == INDEL_IND )
+            else if ( mid[l] == WRONG_IND )
+#endif
+            if ( top[l] != INDEL_SPACER )
+a459 1
+            if ( bot[l] != INDEL_SPACER )
+d461 2
+a463 6
+        else
+           {
+            top_pos++;
+            bot_pos++;
+           }
+        l--;
+d465 3
+a467 2
+    printf( "top offsets:  %d  %d\n", top_beg_off, top_end_off );
+    printf( "bot offsets:  %d  %d\n", bot_beg_off, bot_end_off );
+d469 35
+d544 1
+a544 1
+                      SUM_INT *d, SUM_INT *e, BYTE *backpnt )
+d576 3
+a578 1
+#define  PQ_SIZE        2000
+d581 2
+a582 4
+short     pq_i[PQ_SIZE];
+short     pq_j[PQ_SIZE];
+SUM_INT   pq_d[PQ_SIZE];
+short     pq_n;
+d584 16
+a599 1
+void pq_init()
+d601 9
+d613 3
+a615 2
+/* returns 0 if i,j already present with an equal or lower dist, */
+/* or 1 if it makes an addition or changes d                     */
+d617 1
+a617 1
+int  pq_update( int i, int j, SUM_INT d )
+d620 1
+a620 1
+    int k;
+d622 3
+a624 11
+    for ( k = 0; k < pq_n; k++ )
+        if ( pq_i[k] == i && pq_j[k] == j )
+            if ( pq_d[k] <= d )
+                return( 0 );
+            else
+	       {
+                pq_d[k] = d;
+                return( 1 );
+	       }
+
+    if ( pq_n >= PQ_SIZE )
+d626 4
+a629 2
+        fprintf( stderr, "priorty queue overflow\n" );
+        exit( 1 );
+d631 17
+a647 7
+    pq_i[pq_n] = (short) i;
+    pq_j[pq_n] = (short) j;
+    pq_d[pq_n++] = d;
+    if ( pq_n > max_pq ) max_pq = pq_n;
+#ifdef DEBUG
+    printf( "                          pq size now %d\n", pq_n );
+#endif
+d652 1
+d654 17
+a670 2
+/* returns 0 if q is empty, otherwise returns 1 and the i,j & d of the */
+/* record with the smallest distance                                   */
+d672 19
+a690 1
+int  pq_remove( int *i, int *j )
+d692 1
+d694 1
+a694 2
+    int      k;
+    SUM_INT  min_d, min_k;
+d696 3
+a698 14
+    if ( pq_n <= 0 )
+        return( 0 );
+
+    min_d = pq_d[0];
+    min_k = 0;
+    for ( k = 1; k < pq_n; k++ )
+        if ( pq_d[k] < min_d )
+	   {
+            min_d = pq_d[k];
+            min_k = k;
+	   }
+    *i = pq_i[min_k];
+    *j = pq_j[min_k];
+    if ( --pq_n != min_k )
+d700 10
+a709 3
+        pq_i[min_k] = pq_i[pq_n];
+        pq_j[min_k] = pq_j[pq_n];
+        pq_d[min_k] = pq_d[pq_n];
+d711 3
+a713 1
+    return( 1 );
+d716 1
+d718 16
+@
+
+
+1.1
+log
+@Whoops located a bug in the e[] array - fixed it.
+Gearing up for a priority queue search through the matrix now.
+@
+text
+@d5 1
+a5 1
+/* $Id: seqdiff.c,v 1.0 1997/02/21 16:14:00 mccorkle Exp mccorkle $       */
+d32 2
+a42 7
+#ifdef USE_ALL_ARRAYS
+
+#define  A(i,j)    a[ ind(i,j) ]
+#define  B(i,j)    b[ ind(i,j) ]
+#define  C(i,j)    c[ ind(i,j) ]
+
+#else
+d44 4
+a47 4
+#define  A(i,j) ( (ISAMB(seq1[i-1])||ISAMB(seq2[j-1])||seq1[i-1]==seq2[j-1]) \
+                  ? 0 : SUBST )
+#define  B(i,j) ( ( j == n ) ? 0 : INDEL )
+#define  C(i,j) ( ( i == m ) ? 0 : INDEL )
+a48 1
+#endif
+d56 1
+a56 1
+typedef unsigned int SUM_INT;
+d65 2
+d70 1
+a70 1
+      "$Id: seqdiff.c,v 1.0 1997/02/21 16:14:00 mccorkle Exp mccorkle $";
+d88 2
+a89 2
+int   pq_update( int i, int j, int d );
+int   pq_remove( int *i, int *j, int *d );
+d100 12
+a111 23
+    char   file1[MAX_FILE_NAME];
+    char   file2[MAX_FILE_NAME];
+    int    n, m;               /* lengths of seq1 and seq2 */
+    char   seq1[MAX_SEQ_LENGTH];
+    char   seq2[MAX_SEQ_LENGTH];
+#ifdef STATIC
+    static short    a[MAX_ARRAY_SIZE], b[MAX_ARRAY_SIZE], c[MAX_ARRAY_SIZE];
+    static SUM_INT  d[MAX_ARRAY_SIZE], e[MAX_ARRAY_SIZE];
+    static BYTE     backpnt[MAX_ARRAY_SIZE];
+#else
+#ifdef USE_ALL_ARRAYS
+    short    *a, *b, *c;
+#endif
+    SUM_INT  *d, *e;
+    BYTE     *backpnt;
+#endif
+    int    size;
+    int    i, j, k;
+    int    x, y;
+    int    d_sum, e_sum;
+    BYTE   dir[3] = { LEFT, DIAG, UP };
+    int    i_offset[3] = { 0, -1, -1 };   /* bckwrd offsets corresponding to */
+    int    j_offset[3] = { -1, -1, 0 };   /* the directions LEFT, DIAG, & UP */
+a115 1
+    int    q;
+a146 8
+#ifdef STATIC
+    if ( size >= MAX_ARRAY_SIZE ) 
+       {
+        fprintf( stderr, "size %d >= %d (MAX_ARRAY_SIZE)\n", 
+                         size, MAX_ARRAY_SIZE );
+        exit( 0 );
+       }
+#else
+a147 5
+#ifdef USE_ALL_ARRAYS
+    a = (short *) calloc( size, sizeof( short ) );
+    b = (short *) calloc( size, sizeof( short ) );
+    c = (short *) calloc( size, sizeof( short ) );
+#endif
+d149 2
+a152 1
+#endif
+d154 3
+d158 2
+a159 8
+#ifdef USE_ALL_ARRAYS
+    for ( i = 1; i <= m; i++ )
+        b[ ind(i,0) ] = INDEL;      /* weight w(s1[i],0) */
+    for ( j = 1; j <= n; j++ )
+        c[ ind(0,j) ] = INDEL;      /* weight w(0,s2[j]) */
+
+    for ( i = 1; i <= m; i++ )
+        for ( j = 1; j <= n; j++ )
+d161 2
+a162 9
+            x = ind(i,j);
+            /* put in generalized ambiguity check here */
+
+            if ( ISAMB(seq1[i-1]) || ISAMB(seq2[j-1]) || seq1[i-1]==seq2[j-1] )
+                a[ x ] = 0;
+            else
+                a[ x ] = SUBST;
+            b[ x ] = INDEL;        /* weight w(s1[i],0) */
+            c[ x ] = INDEL;        /* weight w(0,s2[i]) */
+d165 9
+a173 5
+    /* remove these cols from above if it works! */
+    for ( i = 1; i <= m; i++ )
+        b[ ind(i,n) ] = 0;
+    for ( j = 1; j <= n; j++ )
+        c[ ind(m,j) ] = 0;
+d176 20
+a195 1
+    /* compute d-sums */
+d197 19
+a215 4
+    printf( "at 1\n" );  fflush( stdout );
+    d[ ind(0,0) ] = 0;
+    e[ ind(0,0) ] = 0;
+    printf( "at 2\n" );  fflush( stdout );
+d217 4
+a220 25
+    for ( i = 1; i <= m; i++ )
+       {
+        d[ ind(i,0) ] = d[ ind(i-1,0) ] + B(i,0); /* weight w(s1[i],0)*/
+        backpnt[ ind(i,0) ] = UP;
+        e[ ind(i,0) ] = 0;
+       }
+    printf( "at 3\n" );  fflush( stdout );
+    for ( j = 1; j <= n; j++ )
+       {
+        d[ ind(0,j) ] = d[ ind(0,j-1) ] + C(0,j); /* weight w(0,s2[j])*/
+        backpnt[ ind(0,j) ] = LEFT;
+        e[ ind(0,j) ] = 0;
+       }
+    printf( "at 4\n" );  fflush( stdout );
+ 
+    /* given d, e, i, j determine direction, d_sum, e_sum */
+    for ( i = 1; i <= m; i++ )
+        for ( j = 1; j <= n; j++ )
+           {
+            x = ind( i, j );
+            e[x] = d[x] = MAX_SUM;
+            for ( k = 0; k < 3; k++ )
+               {
+                y = ind( i + i_offset[k], j + j_offset[k] );
+                switch( k )
+d222 8
+a229 29
+		    case 0:    /* LEFT */
+                             q = C(i,j);
+                             d_sum = d[y] + q;
+		             e_sum = e[y] + q;
+		             break;
+                    case 1:    /* DIAG */
+                             q = A(i,j);
+                             d_sum = d[y] + q;
+                             e_sum = e[y] + q;
+                             break;
+                    case 2:    /* UP */
+                             q = B(i,j);
+                             d_sum = d[y] + q;
+                             e_sum = e[y] + q;
+                             break;
+                   }
+                if ( ( d_sum < d[x] ) || ( d_sum == d[x] && e_sum < e[x] ) )
+                   {
+                    d[x] = d_sum;
+                    e[x] = e_sum;
+                    backpnt[x] = dir[k];
+                   }
+               }
+           }
+    printf( "at 5\n" );  fflush( stdout );
+
+#ifdef NO
+    print_matrices( m, n, a, b, c, d, e, backpnt );
+    printf( "done\n" );
+d231 6
+d238 1
+d249 1
+a250 6
+#ifndef STATIC
+#ifdef USE_ALL_ARRAYS
+    free( a );
+    free( b );
+    free( c );
+#endif
+a253 1
+#endif
+d334 1
+d508 1
+a509 1
+#ifdef NO
+d511 4
+a514 4
+short pq_i[PQ_SIZE];
+short pq_j[PQ_SIZE];
+int   pq_dist[PQ_SIZE];
+short pq_n;
+d524 1
+a524 1
+int  pq_update( int i, int j, int d )
+d531 1
+a531 1
+            if ( pq_dist[k] >= d )
+d535 1
+a535 1
+                pq_dist[k] = (short) d;
+d546 5
+a550 1
+    pq_dist[pq_n++] = d;
+d559 1
+a559 1
+int  pq_remove( int *i, int *j, int *d )
+d562 2
+a563 1
+    int k, min, min_k;
+d568 1
+a568 1
+    min = pq_dist[0];
+d571 1
+a571 1
+        if ( pq_dist[k] > min )
+d573 1
+a573 1
+            min = pq_dist[k];
+a577 1
+    *d = min;
+d582 1
+a582 1
+        pq_dist[min_k] = pq_dist[pq_n];
+a588 2
+
+#endif
+@
+
+
+1.0
+log
+@Initial revision
+@
+text
+@d5 1
+a5 1
+/* $Id$ */
+d73 2
+a74 2
+static char seqdiff_rcs_id = 
+      "$Id$";
+d91 3
+d231 2
+a232 1
+
+d246 1
+a246 1
+		             e_sum = e[y] + ( i == m ? 0 : q );
+d256 1
+a256 1
+                             e_sum = e[y] + ( j == n ? 0 : q );
+d340 1
+a340 1
+    FILE        *f;
+d345 1
+a345 1
+    if ( ! ( f = fopen( file, "r" ) ) )
+d351 1
+a351 1
+    load_header( f, &n_hdr_lines, &hdr );
+d353 1
+a353 1
+    *n = load_seq( f, "acgtnACGTN", " \t\n", raw_seq );
+d355 1
+a355 1
+    fclose( f );
+d544 81
+@

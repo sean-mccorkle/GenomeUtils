@@ -1,0 +1,322 @@
+head	0.5;
+access;
+symbols;
+locks
+	mccorkle:0.5; strict;
+comment	@# @;
+
+
+0.5
+date	2006.09.21.20.21.15;	author mccorkle;	state Exp;
+branches;
+next	0.4;
+
+0.4
+date	2004.03.23.20.10.24;	author mccorkle;	state Exp;
+branches;
+next	0.3;
+
+0.3
+date	2003.06.06.22.28.18;	author mccorkle;	state Exp;
+branches;
+next	0.2;
+
+0.2
+date	2003.06.06.22.20.19;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	2003.05.28.20.19.27;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@perl program to split concatmers (GSTs, SAGE, etc)
+@
+
+
+0.5
+log
+@looks like I added vector trimming.
+@
+text
+@#!/usr/bin/perl
+# Program:       split-tags
+# Programmer:    Sean R. McCorkle,
+#                Biology Department, Brookhaven National Laboratory
+#
+# Language:      perl5
+#
+# Description:   Read GST concatemer sequences (FASTA format), split into 
+#                individual tags and print them out
+#
+#                This has a couple of output modes, determined by command
+#                line options -ABFR.  The default is to print out forward
+#                and reverse tags within the length thresholds
+# 
+# Usage:         split-tags [options] [<seq-file> ...]
+#
+#                where <seq-file>'s are in FASTA format.  Stdin is scanned
+#                if none are specified.
+#
+# Options:       -a<seq>   recognize anchor enz. sequence <seq> (def. CATG)
+#                -p<seq>   recognize punctuation sequence <seq> (def. TT)
+#                -v<seq>   recognize vector junction sequence <seq> (def = -a)
+#                            - 5' end, 3' end is assumed to be rc( <seq> )
+#                -l<n>     lowest accepted tag extent <n> (def. 17)     
+#                -h<n>     highest accepted tag extent <n> (def. 18)
+#                -A        show ambigous only
+#                -B        show bad (rejects only)
+#                -F        show forward only
+#                -R        show reverse tags only
+#                -s        output a stream of raw tag lengths (total seq
+#                          between separating enzymes), one per line
+#
+# Note:          -A, -B  tags are printed without the punctuation removed
+#                (its probably a bad idea to mix -A,-B and -F,-R output
+#                 unless you're doing diagnostics)
+#
+# $Id: split-tags,v 0.4 2004/03/23 20:10:24 mccorkle Exp mccorkle $
+#
+
+use  Getopt::Std;
+
+die "bad option\n" unless ( getopts( 'a:p:v:l:h:sABFR' ) );
+
+$anch = defined( $opt_a ) ? $opt_a : "CATG";
+$anch_len = length( $anch );
+$punc = defined( $opt_p ) ? $opt_p : "TT";
+$punc_r = rc( $punc );
+$punc_len = length( $punc );
+$vector_junc = $opt_v if ( defined( $opt_v ) );
+$low_ext = defined( $opt_l ) ? $opt_l : 17;
+$high_ext = defined( $opt_h ) ? $opt_h : 18;
+
+if ( ! ( $opt_A || $opt_B || $opt_F || $opt_R ) )   # -F and -R are defaults
+   { $opt_F = $opt_R = 1; }  
+
+$n_raw = 0;      # number of "raw" (unprocessed tags) tags
+
+
+                             ################
+                             # Main Program #
+                             ################
+
+#
+# state machine loop to read fasta format sequences, make them into
+# perl character strings, and then process them
+#
+while ( <> )                                         # keep reading lines
+   {
+    if ( /^>(.*)/ )                                  # is it a FASTA >header?
+       {                                             # handle current sequence
+        $new_header = $1;         
+        process( $seq, $header ) if ( defined( $header ) );  
+        $header = $new_header;                       # reset sequence header
+        $seq = "";                                   # and buffer
+       }
+    else                                     # not a header? must be sequence
+       {
+        chomp;                               # off with the newline
+        s/\s//g;                             # hose out all whitespace (if any)
+        $seq .= uc( $_ );                    # uppercase it & append to buffer
+       }
+   }
+
+process( $seq, $header ) if ( defined( $header ) );  #handle last sequence
+
+
+                              ###############
+                              # Subroutines #
+                              ###############
+
+
+sub process
+   {
+    my ( $seq, $header ) = @@_;    
+    my $pos = 0;
+    if ( $seq =~ s/^$anch// )           # trim any beginning anchor seq
+       { $pos += $anch_len; }           # (affects position counter)
+    $seq =~ s/$anch$//;                 # trim any trailing anchor sequences
+    @@raw_tags = split( /$anch/, $seq ); # capture sequences between anch sites
+
+    trim_vector_ends() if ( $vector_junc );
+
+    foreach $raw ( @@raw_tags )
+       { 
+         if ( $raw =~ /^$punc_r.*$punc$/ )
+            {
+             $true_tag = $raw;   # tag begins and ends with punctuation, 
+             $dir = "a";           # so we can't determine direction.
+            }
+         elsif ( $raw =~ /^(.*)$punc$/ )
+            {
+             $true_tag = $1;       # this is clearly a forward tag
+             $dir = "f";
+            }
+         elsif ( $raw =~ /^$punc_r(.*)$/ )
+            {
+             $true_tag = rc($1);   # this is clearly a reverse tag
+             $dir = "r";
+            }
+         else
+            {
+             #$true_tag = "";       # this is a bad tag: no punction or
+             $true_tag = $raw; 
+             $dir = "b"            # GGG direction marker
+            }
+         #printf "       %-25.25s  %s  %-25.25s\n", $raw, $dir, $true_tag;
+         my $len = length( $true_tag );
+         $len -= $punc_len if ( $dir eq 'a' || $dir eq 'b' );
+         if ( $len >= $low_ext && $len <= $high_ext )
+            {
+             if ( ( ($dir eq 'a') && $opt_A ) ||
+                  ( ($dir eq 'b') && $opt_B ) || 
+                  ( ($dir eq 'f') && $opt_F ) ||
+                  ( ($dir eq 'r') && $opt_R )    )
+                {
+                 if ( $opt_s )
+                    { printf "%d\n", length( $raw );
+                    }
+                 else
+                    { #printf "%-25.25s %s %5d %s\n", 
+                      printf "%-25s %s %5d %s\n", 
+                              $true_tag, $dir, $pos, $header;
+                    }
+
+                }
+            }
+         $n_raw++;
+         $pos += length( $raw ) + $anch_len;
+       }
+   }
+
+#
+# this attempts to trim vector sequence from the very end members
+# (first and last) from 
+#
+sub  trim_vector_ends
+   {
+    my @@left = split( /$vector_junc/, shift( @@raw_tags ) );
+    #printf "left [%s]\n", $left[$#left];
+
+    unshift( @@raw_tags, $left[$#left] );
+    unshift( @@raw_tags, join('',@@left[0..($#left-1)]) ) if ( $#left > 0 );
+
+    # Note to self: caution - what happens if there are no tag/tag
+    # junctions - does this behave properly?
+     $vector_junc_r = rc( $vector_junc );
+    my @@right = split( /$vector_junc_r/, pop( @@raw_tags ) );
+    
+    push( @@raw_tags, $right[0] );
+    push( @@raw_tags, join('',@@right[1..$#right]) ) if ( $#right > 0 );
+   }
+
+#
+# rc( $seq ) returns the reverse complement of $seq
+# 
+sub  rc
+   {
+    my $r = reverse( split( '', shift ) );
+    $r =~ tr/acgtmrwsykvhdbnACGTMRWSYKVHDBN/tgcakywsrmbdhvnTGCAKYWSRMBDHVN/;
+    return( $r );
+   }
+
+@
+
+
+0.4
+log
+@added -v option for specifying vector  junction sequences that differ from
+tag-tag junctions
+@
+text
+@d12 1
+a12 1
+#                line options xxx.  The default is to print out forward
+a13 4
+#
+#
+#
+#
+d37 1
+a37 1
+# $Id: split-tags,v 0.3 2003/06/06 22:28:18 mccorkle Exp mccorkle $
+d101 1
+a101 17
+    if ( $vector_junc )
+       {
+        my @@left = split( /$vector_junc/, shift( @@raw_tags ) );
+        #printf "left [%s]\n", $left[$#left];
+        unshift( @@raw_tags, $left[$#left] );
+        unshift( @@raw_tags, join('',@@left[0..($#left-1)]) ) if ( $#left > 0 );
+
+        # Note to self: caution - what happens if there are no tag/tag
+        # junctions - does this behave properly?
+
+        $vector_junc_r = rc( $vector_junc );
+        my @@right = split( /$vector_junc_r/, pop( @@raw_tags ) );
+        
+        push( @@raw_tags, $right[0] );
+        push( @@raw_tags, join('',@@right[1..$#right]) ) if ( $#right > 0 );
+
+       }
+d150 21
+@
+
+
+0.3
+log
+@whoops - left in a debug io last time.
+@
+text
+@d26 2
+d41 1
+a41 1
+# $Id: split-tags,v 0.2 2003/06/06 22:20:19 mccorkle Exp mccorkle $
+d46 1
+a46 1
+die "bad option\n" unless ( getopts( 'a:p:l:h:sABFR' ) );
+d53 1
+d105 18
+d160 2
+a161 1
+                    { printf "%-25.25s %s %5d %s\n", 
+@
+
+
+0.2
+log
+@fixed problem with 0 and "" option values (using defined() now)
+@
+text
+@d39 1
+a39 1
+# $Id: split-tags,v 0.1 2003/05/28 20:19:27 mccorkle Exp mccorkle $
+a58 1
+print "low $low_ext high $high_ext\n";
+@
+
+
+0.1
+log
+@going public.
+@
+text
+@d39 1
+a39 1
+# $Id$
+d46 1
+a46 1
+$anch = $opt_a ? $opt_a : "CATG";
+d48 1
+a48 1
+$punc = $opt_p ? $opt_p : "TT";
+d51 2
+a52 2
+$low_ext = $opt_l ? $opt_l : 17;
+$high_ext = $opt_h ? $opt_h : 18;
+d59 1
+@

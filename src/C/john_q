@@ -1,0 +1,44 @@
+#!/usr/bin/perl
+
+while ( <> )
+  {
+   if ( /^>(.*)/ )
+      {
+       $new_heading = $1;
+       process() if ( $heading );
+       $seq = "";
+       $heading = $new_heading;
+      }
+   else
+      {
+       chomp;
+       s/\s//g;
+       $seq .= uc( $_ );
+      }
+  }
+
+process() if ( $heading );
+
+print ( "\nTotal $total\n" );
+
+
+sub process()
+   {
+    if ( $seq =~ /TTAATTAA/ )
+       { $count = 1; }
+    else
+       { $count = 0; }
+    $total++ if ( $count > 0 );    
+    print( ">$heading\n" ) if ( $count > 0 );
+    output_seq() if ( $count > 0 );
+   }
+
+
+sub output_seq
+   {
+    $_ = $seq;
+    while ( s/^(.{60})// )
+       { print "$1\n"; }
+
+    print "$_\n" if ( $_ );
+   }

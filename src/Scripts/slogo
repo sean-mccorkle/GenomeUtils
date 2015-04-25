@@ -1,0 +1,101 @@
+#!/usr/bin/perl
+#
+#  Input: lines of   <let> <f1>  <let2> <f2> ...
+#  where <let> is a letter, <f1>, <f2> etc are  fractions
+#
+#  thoughts:  1) maybe its better not to sort or make it optional and
+#                let input order decide plot order
+# 
+
+$hoffset = 100;
+$voffset = 200;
+$colwidth = 16;  
+$vscale = 8;
+
+$fontscale = 15;
+$lineskip = 11;
+
+while ( <> )
+   {
+    next if ( /^\s*$/ );
+    $fr = {};
+    $sum = 0.0;
+    while ( s/^\s*([a-z])\s+(\S+)//i )
+       {
+        ($let,$f) = ($1,$2);
+        $$fr{$let} = $f;
+        $sum +=  $f;
+       }
+    $maxsum = $sum if ( $sum > $maxsum );
+    push( @sums, $sum );
+    push( @columns, $fr );
+   }
+
+# 
+# Data is now in @sums and @columns (and $maxsum).  Now lets
+# plot it out!
+#
+
+graphic_preamble();
+
+for my $col ( 0..$#sums )
+   {
+    $y = 0;
+    %fracs = %{$columns[$col]};
+    foreach my $l ( sort by_frac keys( %fracs ) )
+       {
+        draw_letter( $col, $y, $l, $fracs{$l} );
+        $y +=  $fracs{$l};
+       }
+   }
+
+graphic_postamble();
+
+                             ###############
+                             # Subroutines #
+                             ###############
+
+
+sub by_frac { return( $fracs{$b} <=> $fracs{$a} ); }
+
+sub  graphic_preamble
+   {
+    print <<EndOfPreamble;
+%!PS-Adobe-2.0
+%%Creator: slogo version -1
+%%CreationDate: Tue Jan 11 11:05:30 2000
+%%DocumentFonts: (atend)
+%%BoundingBox: 50 50 554 770
+%%Orientation: Landscape
+%%Pages: (atend)
+%%EndComments
+
+/Helvetica-Bold findfont
+$fontscale scalefont
+setfont 
+
+
+EndOfPreamble
+   }
+
+sub  graphic_postamble
+   {
+    print "showpage\n";
+   }
+
+
+sub  draw_letter
+   {
+    my ( $col, $y, $l, $h ) = @_;
+
+    #print "%draw letter [$l], col $col y = $y, h = $h\n";
+    print "gsave\n";
+    my $x = $hoffset + $col * $colwidth;
+    my $ynew = $voffset + $y * $lineskip * $vscale;
+    print "$x $ynew translate\n";
+    print "1 ", $h * $vscale, " scale\n";
+    print "0 0 moveto\n";
+    print "($l) show\n";
+    print "grestore\n";
+    return( $ynew );
+   }

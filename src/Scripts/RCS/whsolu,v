@@ -1,0 +1,157 @@
+head	0.2;
+access;
+symbols;
+locks
+	mccorkle:0.2; strict;
+comment	@# @;
+
+
+0.2
+date	2003.07.23.20.14.16;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	2003.07.23.20.08.00;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@calculate Wilkinson-Harrison probability of solubitly of a protein as a
+a function of length.
+@
+
+
+0.2
+log
+@fixed typos
+@
+text
+@#!/usr/bin/perl
+# Program:      whsolu
+# Programmer:   Sean R. McCorkle, Biology Dept., Brookhaven National Lab
+# Language:     perl
+# Description:  Calculate Wilkinson-Harrison Probability of Solubility
+#               of a protein, as a function of cutoff length of the protein.
+#               Reads protein sequence(s), writes out probability as calcuated
+#               for protein up to that position.  P > 0.5 indicates soluble,
+#               P < 0.5 indicates insoluble
+#
+# Usage:        whsolu  [-p] [<protein file>]
+#
+#               where <protein file> is a fasta-format amino acid sequence.
+#
+#                  -p write position as fractional length
+#
+#               The output is a stream of position/probability pairs, suitable
+#               for x-y plotting.  Output from a single protein can be fed 
+#               directly into gnuplot.  For multiple proteins, feed the
+#               output into "icplot".
+#
+#               For each protein sequence, the following is printed
+#
+#                    # header
+#                    pos1  prob1
+#                    pos2  prob2
+#                    pos3  prob3
+#                     .       .
+#                     .       .
+#                     .       .
+#                    pos-n  prob-n   where n is the protein sequence length
+#                    
+# $Id: whsolu,v 0.1 2003/07/23 20:08:00 mccorkle Exp mccorkle $
+#
+
+use  Getopt::Std;
+
+getopts( 'p' ) || die "Bad option\n";
+
+
+print "# $opt_p\n";                        # printout heading
+
+while ( <> )                               # read lines of input into $_
+   {
+    chomp;                                 # remove trailing \n if its there
+    next if ( /^\s*$/ );                   # ignore blank lines
+    if ( /^>(.*)/ )                        # is it a FASTA header line?
+       {
+        $new_h = ($1 ? $1 : "prot " . ++$p );  # make default name if blank hdr
+        if ( defined( $heading ) )             # did we already have a sequence
+           { process( $seq, $heading ); }      # ?  then process it
+        $heading = $new_h;                     # reset sequence header
+        $seq = "";                             # reset sequence accumulator
+       }
+    else                                   # not a FASTA header, so it must
+       {                                   # be sequence characters
+        s/\s//g;                           # strip out any blanks or tabs
+        s/\%[0-9A-F][0-9A-F]//ig;          # strip out hex %dd codes
+        s/[^A-Z]//ig;                      # remove non-letters
+        $seq .= uc( $_ );                  # accumulate new sequence(uppercase)
+       }
+   }
+
+process( $seq, $heading ) if ( defined( $heading ) ); 
+                                           # process any sequence left in
+                                           # accumulator
+
+                               ###############
+                               # Subroutines #
+                               ###############
+
+
+# 
+#  process( $seq, $heading ) - calculate WH CV (profile or end) for one protein
+#
+sub  process
+   {
+    my ( $seq, $heading ) = @@_;     # get the two arguments, $seq & $heading
+    my $len = length( $seq );       # length of sequence
+    my $i;                          # position counter
+    my %count = ();
+    my $lambda_1 = 15.43;
+    my $lambda_2 = -29.56;
+    my $CV_prime = 1.71;
+
+    print "#$heading \n";           # print out "# name on output"
+
+    for ( my $i = 0;  $i < $len;  $i++ )    # for each amino acid, in order
+       {
+        my $aa = substr( $seq, $i, 1 );
+        if ( $aa =~ /[NGPSRKDE]/ )
+           { $count{$aa}++; }
+        my $CV = $lambda_1 * ( $count{'N'} + $count{'G'} + 
+                                 $count{'P'} + $count{'S'} ) / ($i + 1.0)
+                 + $lambda_2 * abs( (($count{'R'} + $count{'K'})
+                                    - ($count{'D'} + $count{'E'})) / ($i + 1.0)
+                                   - 0.03 );
+        my $P = 0.4934 + 0.276 * abs( $CV - $CV_prime )
+                       - 0.0392 * (( $CV - $CV_prime ) ** 2);
+        $P = 1.0 - $P if ($CV - $CV_prime > 0);
+        if ( $opt_p )                            
+            { printf "%8.4f ", ( ($i * 100.0) / $len ); }   # % len
+        else
+            { printf "%4d ", $i; }                          # residue num.
+        printf "%lf\n", $P;
+       }
+    undef( %count );
+   }
+
+@
+
+
+0.1
+log
+@going public.
+@
+text
+@d3 1
+a3 1
+# Programmer:   Sean R. McCorkle
+d11 2
+a12 1
+# Usage:        whsolu  [-np] [<protein file>]
+d33 1
+a33 1
+# $Id$
+@

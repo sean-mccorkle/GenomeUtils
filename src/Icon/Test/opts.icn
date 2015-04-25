@@ -1,0 +1,22 @@
+
+procedure main( args )
+
+   opt_str := "ab1:c:%"
+   take_arg := set()
+   no_arg := set()
+   opt_str ? {
+              while d := tab( any( &letters ++ &digits ) ) do
+		 {
+                  if member( take_arg ++ no_arg, d ) 
+                     then stop( "\"", d, "\" occurs more than once in \"",
+                                &subject, "\"" )
+                  if tab( match( ":" ) )
+                     then 
+                     else write( "option ", d )
+		 }
+              pos( 0 ) | 
+                 stop( "bad char \"", &subject[&pos], "\", position ", &pos,
+                       ",  in option string \"", &subject, "\"" )
+             }
+
+end

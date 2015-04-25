@@ -1,0 +1,1811 @@
+head	1.8;
+access;
+symbols;
+locks
+	mccorkle:1.8; strict;
+comment	@ * @;
+
+
+1.8
+date	2008.08.13.20.30.28;	author mccorkle;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2008.08.13.15.35.46;	author mccorkle;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2008.08.12.21.53.44;	author mccorkle;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2005.07.15.19.14.12;	author mccorkle;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2005.07.11.20.42.55;	author mccorkle;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2004.09.29.21.17.45;	author mccorkle;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2004.04.05.23.36.27;	author mccorkle;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2004.03.18.20.23.34;	author mccorkle;	state Exp;
+branches;
+next	1.0;
+
+1.0
+date	2004.03.18.18.57.49;	author mccorkle;	state Exp;
+branches;
+next	0.8;
+
+0.8
+date	2004.03.18.15.33.31;	author mccorkle;	state Exp;
+branches;
+next	0.7;
+
+0.7
+date	2003.11.13.14.12.18;	author mccorkle;	state Exp;
+branches;
+next	0.6;
+
+0.6
+date	2003.11.10.20.52.16;	author mccorkle;	state Exp;
+branches;
+next	0.5;
+
+0.5
+date	2003.11.06.22.33.29;	author mccorkle;	state Exp;
+branches;
+next	0.4;
+
+0.4
+date	2003.11.06.21.03.46;	author mccorkle;	state Exp;
+branches;
+next	0.3;
+
+0.3
+date	2003.11.06.13.39.27;	author mccorkle;	state Exp;
+branches;
+next	0.2;
+
+0.2
+date	2003.11.06.03.05.01;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	2003.11.05.20.27.32;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@search for candidate promoter sequences in DNA sequences.
+@
+
+
+1.8
+log
+@okay - added u and v buffers and now we should have bisulfite modified DNA
+working...
+@
+text
+@/* Program:     prosearch.c                                                  */
+/* Programmer:  Sean R. McCorkle                                             */
+/*              Biology Dept., Brookhaven National Laboratory                */
+/* Language:    C                                                            */
+/*                                                                           */
+/* Description: Search DNA sequence files (FASTA format) for candidate       */
+/*              promoter sequences, with adjustable mismatch threshold       */
+/*                                                                           */
+/* Usage:       prosearch [-aBmNSFvhV] <pat> [<file> [...]]                  */
+/*                                                                           */
+/*              where <file>s are DNA sequence files (FASTA format).  If no  */
+/*              files are given, stdin is scanned.  "-" may also be used as  */
+/*              a file name to indicate stdin.                               */
+/*                                                                           */
+/*              <pat>  is a short DNA sequence composed of any of            */
+/*                                                                           */
+/*                uppercase A,C,G,T - which will always match the appropriate*/
+/*                                    position - they will never mismatch    */
+/*                lowercase a,c,g,t - which match the appropriate base, but  */
+/*                                    which are allowed to mismatch provided */
+/*                                    the total number of mismatches doesn't */
+/*                                    exceed the value specifed by -m        */
+/*                ., n, N (wildcard)- matches any base and never counts as a */
+/*                                    mismatch.                              */
+/*                M,R,W,S,Y,K,V,H,D,B- match appropriate bases ONLY and are  */
+/*                                    not allowed to mismatch outside their  */
+/*                                    definitions                            */
+/*                m,r,w,s,y,k,v,h,d,b- match appropriate bases and ARE       */
+/*                                    allowed to mismatch outside their      */
+/*                                    definitions, provided that the total   */
+/*                                    number of mismatches doesn't exceed the*/
+/*                                    value specifed by -m                   */
+/*                                                                           */
+/* Options:     -a<n>  accept up to <n> ambiguity codes in the search        */
+/*                     sequence for any match (either upper or lower case    */
+/*                     in the pattern is matched)                            */
+/*              -B<n>  Bisulfite modify the DNA before matching              */
+/*                      -B1    change all C -> T except C's in CpGs          */
+/*                      -B2    change all C -> T including C's in CpGs       */
+/*              -m<n>  accept up to <n> mismatches in LOWER case bases in    */
+/*                     <pat>.  Default is 0 (exact matches).                 */
+/*              -N<n>   print neighborhood <n> on each side                  */
+/*              -S     print sequence names                                  */
+/*              -F     print filenames                                       */
+/*              -v     verbose output                                        */
+/*              -h     print help, then exit                                 */
+/*              -V     print version, then exit                              */
+/*                                                                           */
+/* Example:       prosearch -m1  GCAcct.ac                                   */
+/*                                                                           */
+/*                   will match GCACCTAAC                                    */
+/*                              GCACCTCAC                                    */
+/*                              GCACCTGAC                                    */
+/*                              GCACCTTAC                                    */
+/*                   and also will match any of these with one additional    */
+/*                   mismatch that doesn't occur in the first three positions*/
+/*                                                                           */
+/* Caveats:                                                                  */
+/*             After v1.3, ambiguity codes in the input sequence are         */
+/*             accepted, up to the limit set by -a.  However, only the       */
+/*             FIRST possible match is reported.  This may impact any        */
+/*             statistical analysis performed on the output of this program  */
+/*                                                                           */
+/* $Id: prosearch.c,v 1.7 2008/08/13 15:35:46 mccorkle Exp mccorkle $        */
+/*                                                                           */
+/*****************************************************************************/
+
+#include <ctype.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+static char proc_rcs_id[] =
+    "$Id: prosearch.c,v 1.7 2008/08/13 15:35:46 mccorkle Exp mccorkle $";
+
+#define MAX_HDR_LEN      256
+#define MAX_PAT_LEN      256
+#define MAX_STR_LEN      256
+#define MAX_NEIGHBOR_LEN 50
+#define MAX_BUFF_LEN     (MAX_NEIGHBOR_LEN  + MAX_PAT_LEN + MAX_NEIGHBOR_LEN)
+
+#define NULL        ((void *) 0)
+
+char  bases[] = "ACGT";
+/* char  templ[] = "ttcaGCacc.cGGacagc.cc"; */
+char  templ[MAX_PAT_LEN+1];
+int   templ_len;
+
+int   buff_len;
+
+int   amb_thresh      = 0;   /* set by -a */
+int   bisulfite_level = 0;   /* set by -B */
+int   mis_thresh      = 0;   /* set by -m */
+int   neighbor_len    = 0;   /* set by -N */
+int   print_headers   = 0;   /* set by -S */
+int   print_filenames = 0;   /* set by -F */
+int   verbose         = 0;   /* set by -v */
+
+#ifdef SHOW_PERM_STATS
+size_t       num_perms = 0;
+#endif
+
+void  version( void )                      /* print version number */
+   {
+    char *v;
+    v = strdup("$Revision: 1.7 $"+11 );
+    v[strlen(v)-2] = '\0';
+    printf( "prosearch v%s\n", v );
+   }
+
+
+void  help( void )
+   {
+    version();
+    printf( " \n\
+             Search DNA sequence files (FASTA format) for candidate         \n\
+             promoter sequences, with adjustable mismatch threshold.        \n\
+                                                                            \n\
+Usage:       prosearch [-aBmNSFvhV]  <pat> [<file> [...]]                   \n\
+                                                                            \n\
+             where <file>s are DNA sequence files (FASTA format).  If no    \n\
+             files are given, stdin is scanned.  \"-\" may also be used as  \n\
+             a file name to indicate stdin.                                 \n\
+                                                                            \n\
+             <pat>  is a short DNA sequence composed of any of              \n\
+                                                                            \n\
+               uppercase A,C,G,T   - which will always match the appropriate\n\
+                                     position - they will never mismatch    \n\
+               lowercase a,c,g,t   - which match the appropriate base, but  \n\
+                                     which are allowed to mismatch provided \n\
+                                     the total number of mismatches doesn't \n\
+                                     exceed the value specifed by -m        \n\
+               ., n, N (wildcard)  - matches any base and never counts as a \n\
+                                     mismatch.                              \n\
+               M,R,W,S,Y,K,V,H,D,B - match appropriate bases ONLY and are   \n\
+                                     not allowed to mismatch outside their  \n\
+                                     definitions                            \n\
+               m,r,w,s,y,k,v,h,d,b - match appropriate bases and ARE        \n\
+                                     allowed to mismatch outside their      \n\
+                                     definitions, provided that the total   \n\
+                                     number of mismatches doesn't exceed the\n\
+                                     value specifed by -m                   \n\
+                                                                            \n\
+Options:     -a<n>  accept up to <n> ambiguity codes in the search          \n\
+                    sequence for any match (either upper or lower case      \n\
+                    in the pattern is matched)                              \n\
+             -B<n>  Bisulfite modify the DNA before matching                \n\
+                     -B1    change all C -> T except C's in CpGs            \n\
+                     -B2    change all C -> T including C's in CpGs         \n\
+             -m<n>  accept up to <n> mismatches in LOWER case bases in      \n\
+                    <pat>.  Default is 0 (exact matches).                   \n\
+             -N<n>  print neighboring sequences of length <n>               \n\
+             -S     print sequence names                                    \n\
+             -F     print filenames                                         \n\
+             -v     verbose output                                          \n\
+             -h     print help, then exit                                   \n\
+             -V     print version, then exit                                \n\
+                                                                            \n\
+Example:       prosearch -m1  GCAcct.ac                                     \n\
+                                                                            \n\
+                  will match GCACCTAAC                                      \n\
+                             GCACCTCAC                                      \n\
+                             GCACCTGAC                                      \n\
+                             GCACCTTAC                                      \n\
+                  and also will match any of these with one additional      \n\
+                  mismatch that doesn't occur in the first three positions  \n\
+                                                                            \n\
+Caveats:                                                                    \n\
+              Ambiguity codes in the input sequence files are NOT handled   \n\
+              properly.  They are ignored (for now).                        \n\
+\n\
+");
+   } 
+
+/* verfies that val is inside [a,b] inclusive.  Dies with an error  */
+/* message if not                                                   */
+
+void  check_int_range( int val, int a, int b, char *s )
+   {
+    if ( val < a || val > b )
+       {
+        fprintf( stderr, "%s must be between %d and %d (inclusive)\n",
+                           s, a, b );
+        fprintf( stderr, "run \"proserearch -h\" for more help\n" );
+        exit( 1 );
+       }
+   }
+
+
+void  parse_args( int argc, char **argv, int *nfiles, char ***filenames )
+   {
+    extern char *optarg;
+    extern int   optind;
+    int          c;
+    static char *def_files[] = { "-", "" };
+
+    while ( (c = getopt( argc, argv, "a:B:hm:FN:SvV" ) ) != -1 )
+        switch( c )
+           {
+            case  'a':   amb_thresh = atoi( optarg );
+                         check_int_range( amb_thresh, 1, MAX_PAT_LEN, 
+                                          "-a value" );
+                         break;
+            case  'B':   bisulfite_level = atoi( optarg );
+                         check_int_range( bisulfite_level, 0, 2, "-B value" );
+                         break;
+            case  'h':   help();
+                         exit( 0 );
+            case  'm':   mis_thresh = atoi( optarg );
+                         check_int_range( mis_thresh, 1, MAX_PAT_LEN, 
+                                          "-m value" );
+                         break;
+            case  'N':   neighbor_len = atoi( optarg );
+                         check_int_range( neighbor_len, 1, MAX_NEIGHBOR_LEN, 
+                                         "-N value" );
+                         break; 
+            case  'S':   print_headers = 1;
+                         break;
+            case  'F':   print_filenames = 1;
+                         break;
+            case  'v':   verbose = 1;
+                         break;
+            case  'V':   version();
+                         exit( 0 );
+            default:     help();
+                         exit( 1 );
+           }
+    argc -= optind;
+    argv += optind;
+    if ( argc <= 0 )
+       {
+        fprintf( stderr, "no pattern specified.  (prosearch -h for help)\n" );
+        exit( 1 );
+       }
+    /* Note to self:  needed here is a length check and a check on allowable */
+    /* characters in pattern                                                 */
+    strncpy( templ, *argv, MAX_PAT_LEN );
+    argc--;
+    argv++;
+    if ( argc > 0 )
+       {
+        *nfiles = argc;
+        *filenames = argv;
+       }
+    else
+       {
+        *nfiles = 1;
+        *filenames = def_files;
+       }
+   }
+
+/* comp_char[c] contains the complementary nucleotide character for c */
+
+char comp_char[] = {
+                  /*          0     1     2     3     4     5     6     7   */
+                  /* 000 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 010 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 020 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 030 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 040 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 050 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 060 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 070 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 100 */  'X',  'T',  'V',  'G',  'H',  'X',  'X',  'C',
+                  /* 110 */  'D',  'X',  'X',  'M',  'X',  'K',  'N',  'X',
+                  /* 120 */  'X',  'X',  'Y',  'S',  'A',  'X',  'B',  'W',
+                  /* 130 */  'X',  'R',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 140 */  'X',  't',  'v',  'g',  'h',  'X',  'X',  'c',
+                  /* 150 */  'd',  'X',  'X',  'm',  'X',  'k',  'n',  'X',
+                  /* 160 */  'X',  'X',  'y',  's',  'a',  'X',  'b',  'w',
+                  /* 170 */  'X',  'r',  'X',  'X',  'X',  'X',  'X',  'X',
+                 };
+
+void  rc( char *r, char *s )
+   {
+    char *p;
+
+    p = s + strlen( s );
+    while ( p > s )
+       *r++ = comp_char[*(--p)];
+    *r = '\0';
+   }
+
+
+/* allowed_matches maps each nucleotide and ambiguity code to an array  */
+/* of all the nucleotides (ACGT) that will match it.                    */
+
+char *allowed_matches[256]; 
+
+/* this initializes the allowed_matches table */
+
+void  fill_allowed_matches( void )
+   {
+    int i;
+
+    for ( i = 0; i < 256; i++ )      /* all characters map to NULL */
+        allowed_matches[i] = NULL;   /* except for the DNA codes: */
+
+    allowed_matches['a'] = allowed_matches['A'] = "A";
+    allowed_matches['c'] = allowed_matches['C'] = "C";
+    allowed_matches['g'] = allowed_matches['G'] = "G";
+    allowed_matches['t'] = allowed_matches['T'] = "T";
+
+    allowed_matches['m'] = allowed_matches['M'] = "AC";
+    allowed_matches['r'] = allowed_matches['R'] = "AG";
+    allowed_matches['w'] = allowed_matches['W'] = "AT";
+    allowed_matches['s'] = allowed_matches['S'] = "CG";
+    allowed_matches['y'] = allowed_matches['Y'] = "CT";
+    allowed_matches['k'] = allowed_matches['K'] = "GT";
+
+    allowed_matches['v'] = allowed_matches['V'] = "ACG";
+    allowed_matches['h'] = allowed_matches['H'] = "ACT";
+    allowed_matches['d'] = allowed_matches['D'] = "AGT";
+    allowed_matches['b'] = allowed_matches['B'] = "GCT";
+
+    allowed_matches['n'] = allowed_matches['N'] = "ACGT";
+   }
+
+
+/**************************************************************************/
+/* match( a, b ) compares a, which must be a nucleotide A, C, G or T with */
+/* b, which may be a nucleotide or an ambiguity code.  If a is in one     */
+/* of the allowed matches of b as listed above, 1 is returned, otherwise  */
+/* 0 is returned, indicating a mismatch                                   */
+/**************************************************************************/
+
+int  match( char a, char b )
+   {
+    char c;
+    char *matches;
+    int   k, n;
+
+    c = toupper( a );
+    matches = allowed_matches[b];
+    n = strlen( matches );
+    for ( k = 0; k < n; k++ )
+        if ( c == matches[k] )
+            return( 1 );
+    return( 0 );
+   }
+
+
+                          /********************/
+                          /* Permutation tree */
+                          /********************/
+
+int ind[128];  /* maps a,g,c,t chars to 0,1,2,3 indices, set in init_tree() */
+
+char nt[] = { 'A', 'C', 'G', 'T' };  /* reverse map of ind[] */
+
+typedef struct tnode {
+                       struct tnode *ch[4];
+                       char         *desc;
+                     } TNODE;
+
+TNODE *t_root;            /* tree root */
+
+TNODE *new_tnode( void )
+   {
+    TNODE *t;
+
+    if ( !( t = (TNODE *) malloc( sizeof(TNODE) ) ) )
+       {
+        perror( "can't allocate a tree node" );
+        exit( errno );
+       }
+    t->ch[0] = t->ch[1] = t->ch[2] = t->ch[3] = NULL;
+    t->desc = NULL;
+    return( t );
+   }
+
+/*******************/
+/* initialize tree */
+/*******************/
+
+void  init_tree( void )
+   {
+    int i;
+
+    t_root = new_tnode();
+
+    for ( i = 0; i < 128; i++ )
+        ind[i] = -1;   
+    ind['a'] = ind['A'] = 0;
+    ind['c'] = ind['C'] = 1;
+    ind['g'] = ind['G'] = 2;
+    ind['t'] = ind['T'] = 3;
+    if ( verbose )
+       printf( "tree created\n" );
+   }
+
+
+/************************************************************************/
+/* search tree for string.  If found, return value string for the match */
+/* match, otherwise return NULL                                         */
+/************************************************************************/
+
+char *tree_lookup( char *s, int len )
+   {
+    TNODE *t;
+
+    if ( verbose )
+        printf( "tree_lookup [%s]\n", s );
+    t = t_root;
+    while ( len > 0 && ind[*s] >= 0 && t->ch[ind[*s]] !=NULL )
+       {
+        t = t->ch[ind[*s++]];
+        len--;
+       }
+
+    if ( len == 0 )
+        return( t->desc );
+    else if ( ind[*s] < 0 )
+        return( NULL );       /* 'X' or anything else in s fails */
+    else
+        return( NULL );
+   }
+
+
+char  *tree_rlookup( TNODE *t, char *s, int len, int allowed_ambs )
+   {
+    TNODE  *r;
+    int     i, k, n;
+    char   *matches;
+    char   *res;
+    
+    if ( len <= 0 )                           /* end of string, so we're done*/
+        return( t->desc );                    /* return the result           */
+    else if ( (i = ind[*s]) >= 0 )            /* is this a nucl.? (a,c,g,t)? */
+       {                                      /* if so,  is this nucleotide  */
+        if ( (r = t->ch[i]) != NULL )         /* present here in the tree?   */
+                                              /* then recurse...             */
+            return( tree_rlookup( r, s+1, len-1, allowed_ambs ) );
+        else
+            return( NULL );                   /* otherwise stop: not found */
+       }
+    else if ( matches = allowed_matches[*s] ) /* is this an ambiguity code? */
+       {
+        if ( allowed_ambs > 0 )               /* can we match one more amb? */
+           {
+            n = strlen( matches );            /* then for each possibility, */
+            for ( k = 0; k < n; k++ )         /* if its in the tree, recurse*/
+                if ( r = t->ch[ind[matches[k]]] )  /* and return 1st hit */
+                    if ( res = tree_rlookup( r, s+1, len-1, allowed_ambs-1 ) )
+                        return( res );
+            return( NULL );                   /* not found if we finished loop*/
+           }
+        else                                  /* no more ambiguities allowed, */
+            return( NULL );                   /* sorry.                       */
+       }                                    
+    else
+        return( NULL );                       /* must be an 'X' or something.*/
+   }
+
+/********************************************/
+/* make one entry into the permutation tree */
+/********************************************/
+
+void  tree_enter( TNODE *t, char *s, char *desc )
+   {
+    if ( verbose ) printf( "insert [%s]\n", s );
+    if ( *s == '\0' )
+       {
+        t->desc = strdup( desc );
+        /* printf( "inserted: %s\n", desc );  */
+       }
+    else
+       {
+        if ( t->ch[ind[*s]] == NULL )
+           {
+            /* printf( "need new node\n" );  */
+            t->ch[ind[*s]] = new_tnode();
+           }
+        tree_enter( t->ch[ind[*s]], s+1, desc );
+       }
+   }
+
+/***************************************************************************/
+/* put a new pattern entry and its reverse-complement into the permutation */
+/* tree                                                                    */
+/***************************************************************************/
+
+void  enter_pat( char *pat, int n_mis )
+   {
+    static  char  rpat[MAX_PAT_LEN];
+    static  char  desc[MAX_STR_LEN];
+
+    if ( verbose ) printf( "enter table [%s] %d\n", pat, n_mis );
+    sprintf( desc, "%2d %s", n_mis, pat );
+    tree_enter( t_root, pat, desc );
+   }
+
+
+                            /****************/
+                            /* Permutations */
+                            /****************/
+
+
+/****************************************************/
+/* convert all occurances of '.' to 'N' in string t */
+/****************************************************/
+
+void  unify_wildcards( char *t )
+   {
+    while ( *t != '\0' )
+       {
+        if ( *t == '.' ) *t = 'N';
+        t++;
+       }
+   }
+
+
+/* returns 1 if character c is a conserved nucleotide or ambiguity code. */
+/* (uppercase indicates that its conserved                               */
+
+int  is_conserved( int c )   
+   {  return( isupper( c ) ); }
+
+
+/*****************************************************************************/
+/* permute() recursively generates all permuations of the pattern template,  */
+/* entering each permution and its reverse complement into the permuation    */
+/* tree.                                                                     */
+/*                                                                           */
+/*  char templ[] - pattern template string (command line argument), which    */
+/*                 contains upper and/or lower case nucleotides and ambiguity*/
+/*                 codes.                                                    */
+/*  int max_mis  - this is the maximum number of total mismatches which are  */
+/*                 are allowed.                                              */
+/*  char s[]     - this is pre-allocated storage where the permuations are   */
+/*                 "assembled"                                               */
+/*  int  i       - recursion depth, or rather current position in templ[]    */
+/*                 being considered.                                         */
+/*  int  n_mis   - current number of accumulated mismatches at this          */
+/*                 position, up to but not including s[i]                    */
+/*                                                                           */
+/*****************************************************************************/
+
+
+void  permute( char templ[], int max_mis, char s[], int i, int n_mis )
+   {
+    char *matches;
+    int   k, n;
+
+    /* printf( "permute i = %d n_mis = %d\n", i, n_mis ); */
+
+    if ( templ[i] == '\0' )   /* termination test - are we at end of templ?  */
+       {                      /* if so, then s[] contains a permutation, so  */
+        s[i] = '\0';          /* cap it off and then enter it and its rc into*/
+        enter_pat( s, n_mis ); /* the permuation tree */
+        if ( verbose ) printf( "%s %d\n", s, n_mis );
+#ifdef SHOW_PERM_STATS
+        num_perms++;
+#endif
+       }
+    else /* if we have exhausted our mismatches at this point, or if */
+         /* or if the template at this position is fixed (capitalized) */
+        if ( n_mis >= max_mis  || is_conserved( templ[i] ) )  
+           {    
+            matches = allowed_matches[templ[i]];
+            n = strlen( matches );
+            for ( k = 0; k < n; k++ )   /* for each of the allowed possible */
+               {                        /* nucleotides at this position */
+                s[i] = matches[k];      /* insert it into s and then recurse */
+                permute( templ, max_mis, s, i+1, n_mis );  /* do not update */
+                                                           /* mismatch count*/
+               }
+           }
+        else    /* otherwise, we're allowed at least one more mismatch at */
+           {    /* this  position, so we'll generate four subpermutations */
+            for ( k = 0; k < 4; k++ )
+               {                                /* for each of A, C, G and T */
+                s[i] = "ACGT"[k];               /* update s at this position */
+                permute( templ, max_mis, s, i+1,  /* and then recurse, but   */
+                         ( match("ACGT"[k],templ[i]) ? n_mis : (n_mis + 1) ) );
+                                                  /* increment mismatch count*/
+                                                  /* only if we mismatch   */
+               }
+           }
+   }
+
+void  generate_permutations( void )
+   {
+    static char  res[MAX_PAT_LEN];
+
+    unify_wildcards( templ );
+
+    init_tree();
+    fill_allowed_matches(); 
+
+    permute( templ, mis_thresh, res, 0, 0 ); 
+#ifdef SHOW_PERM_STATS
+    printf( "%d permutations\n", num_perms );
+#endif
+   }
+
+/*********************************************************************/
+/* open_file() opens a file or returns stdin if name is "-", or does */
+/* error exit if file can't be opened                                */
+/*********************************************************************/
+
+FILE *open_file( char *name )
+   {
+    FILE *f;
+
+    if ( strcmp( name, "-" ) == 0 )
+        return( stdin );
+    else
+        if ( (f = fopen( name, "r" ) ) )
+            return( f );
+        else
+           {
+            perror( name );
+            exit( errno );
+           }
+   }
+
+/* close_file() closes the file unless its stdin */
+
+void  close_file( FILE *f )
+   {
+    if ( f != stdin )
+        fclose( f );
+   }
+
+                       /**********************/
+                       /* comparision buffer */
+                       /**********************/
+
+static char  f_buff[MAX_BUFF_LEN+1];  /* top strand - possibly bisulf. mod. */
+static char  r_buff[MAX_BUFF_LEN+1];  /* bottom strand   "        "     "   */
+static char  u_buff[MAX_BUFF_LEN+1];  /* complement of top strand (after mod)*/
+static char  v_buff[MAX_BUFF_LEN+1];  /* complement of bottom strand "    " */
+
+
+void  init_buff( void )
+   {
+    size_t i;
+
+    buff_len = neighbor_len + templ_len + neighbor_len;
+    if ( buff_len > MAX_BUFF_LEN )
+       {
+        fprintf( stderr, "prosearch: buffer length %d exceeds max %d\n",
+                          buff_len, MAX_BUFF_LEN );
+        exit( 1 );
+       }
+    
+    for ( i = 0; i < buff_len; i++ )
+        r_buff[i] = f_buff[i] = 'X';
+    r_buff[buff_len] = f_buff[buff_len] = '\0';
+
+    if ( bisulfite_level > 0 )
+       {
+        for ( i = 0; i < buff_len; i++ )
+            v_buff[i] = u_buff[i] = 'X';
+        v_buff[buff_len] = u_buff[buff_len] = '\0';
+       }
+
+    if ( verbose )
+        printf( "buffer initialized: %d + %d + %d = %d\n",
+                     neighbor_len, templ_len, neighbor_len, buff_len );
+   }
+
+
+/* bisulfite_mod[c] contains the complementary nucleotide character for c */
+
+char bisulfite_mod[] = {
+                  /*          0     1     2     3     4     5     6     7   */
+                  /* 000 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 010 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 020 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 030 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 040 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 050 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 060 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 070 */  'X',  'X',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 100 */  'X',  'A',  'B',  'T',  'D',  'X',  'X',  'G',
+                  /* 110 */  'H',  'X',  'X',  'K',  'X',  'M',  'N',  'X',
+                  /* 120 */  'X',  'X',  'R',  'S',  'T',  'X',  'V',  'W',
+                  /* 130 */  'X',  'Y',  'X',  'X',  'X',  'X',  'X',  'X',
+                  /* 140 */  'X',  'a',  'b',  't',  'd',  'X',  'X',  'g',
+                  /* 150 */  'h',  'X',  'X',  'k',  'X',  'm',  'n',  'X',
+                  /* 160 */  'X',  'X',  'r',  's',  't',  'X',  'v',  'w',
+                  /* 170 */  'X',  'y',  'X',  'X',  'X',  'X',  'X',  'X',
+                 };
+
+void  enter_base( int c )
+   {
+    size_t i;
+    char   d;
+
+    d = comp_char[c];
+
+    if ( bisulfite_level > 0 )
+       {
+        c = bisulfite_mod[c];
+        d = bisulfite_mod[d];
+
+        memmove( u_buff+1, u_buff, buff_len-1 );
+        u_buff[0] = comp_char[c];
+
+        memmove( v_buff, v_buff+1, buff_len-1 );
+        v_buff[buff_len-1] = comp_char[d];
+       }
+    memmove( f_buff, f_buff+1, buff_len-1 );   /* left shift f tag buffer */
+    f_buff[buff_len-1] = c;
+
+    memmove( r_buff+1, r_buff, buff_len-1 );
+    r_buff[0] = d;
+#ifdef DEBUG
+    printf( "f %s\n", f_buff );
+    printf( "u %s\n", u_buff );
+    printf( "v %s\n", v_buff );
+    printf( "r %s\n", r_buff );
+    printf( "\n" );
+#endif
+   }
+
+
+void  neighbor_output( char *desc, int pos, char *buf, char dir, 
+                       char *filename )
+   {
+    static char pbuff[MAX_BUFF_LEN+1];
+    static char left[MAX_NEIGHBOR_LEN+1];
+    static char mat[MAX_PAT_LEN+1];
+    static char fmt[MAX_STR_LEN+1];
+    int   n_mis;
+
+    /* TO FIX- don't scan dir from desc - get dir from dir,  */
+    /*         use buf instead of buff, don't rc() */
+
+    /* printf( "neigh %d [%s] [%s]\n", pos, buff, desc );  return; */
+
+    sscanf( desc, "%d", &n_mis );
+    strncpy( pbuff, buf, buff_len );
+     
+    strncpy( left, pbuff, neighbor_len );
+    strncpy( mat,  pbuff + neighbor_len, templ_len );
+    sprintf( fmt, "%%10d  %%c  %%s %%-%d.%ds %%-10s %%2d", 
+                             templ_len, templ_len );
+    printf( fmt,
+             pos, dir, left, mat, pbuff+neighbor_len+templ_len, n_mis );
+   }
+
+
+void  lookup( char *buf, char *fbuf, char dir, int pos, 
+              char *filename, char *hdr )
+   {
+    char        *rec;
+    static char  pbuff[MAX_PAT_LEN+1];
+
+    if ( rec = tree_rlookup( t_root, buf + neighbor_len, templ_len,
+                            amb_thresh ) )
+       {
+        if ( neighbor_len > 0 )
+            neighbor_output( rec, pos, buf, dir,
+                            (print_filenames ? filename : hdr ));
+        else
+           {
+            strncpy( pbuff, fbuf+neighbor_len, templ_len );
+            printf( "%s %c %s %10d", pbuff, dir, rec, pos );
+           }
+        if ( print_headers )
+            printf( " %s\n", hdr );    /* hdr has a \n in it */
+        else
+            putchar( '\n' );
+       }
+   }
+
+/*****************************************************/
+/* scan_file() - open file and process its sequences */
+/*****************************************************/
+
+void  scan_file( char *filename )
+   {
+    FILE        *f;
+    int          c;
+    int          last;
+    static char  hdr[MAX_HDR_LEN+1];
+    int          l;     /* header length */
+    int          pos;   /* position within string */
+
+    if ( verbose )
+        printf( "file %s\n", filename );
+    f = open_file( filename );
+    last = '\n';
+    if ( verbose ) 
+        printf( "templ_len is %d\n", templ_len );
+    while ( (c = fgetc( f ) ) != EOF )
+       {
+        if ( last == '\n' && c == '>' )
+           {
+            fgets( hdr, MAX_HDR_LEN, f );
+            if ( verbose )
+                printf( "seq: %s", hdr );
+            l = strlen( hdr );
+            if ( l > 0 && hdr[l-1] == '\n' )       /* behavior of fgets() */
+                hdr[l-1] = '\0';
+            init_buff();
+            pos = 1 - (templ_len + neighbor_len);  /* counting from one */
+            last = '\n';
+           }
+        else if ( isalpha( c ) )
+           {
+            enter_base( c );
+            ++pos;
+            /* if ( rec = tree_lookup( buff + neighbor_len, templ_len ) ) */
+            lookup( f_buff, f_buff, 'f', pos, filename, hdr );
+            lookup( r_buff, f_buff, 'r', pos, filename, hdr );
+            if ( bisulfite_level > 0 )
+               {
+                lookup( u_buff, f_buff, 'u', pos, filename, hdr );
+                lookup( v_buff, f_buff, 'v', pos, filename, hdr );
+               }
+            last = c;
+           }
+        else
+            last = c;
+       }
+    close_file( f );
+   }
+
+
+
+                              /****************/
+                              /* Main Program */
+                              /****************/
+
+
+main( int argc, char **argv )
+   {
+    int     nfiles;
+    char  **filenames;
+    int     i;
+
+    parse_args( argc, argv, &nfiles, &filenames );
+    templ_len = strlen( templ );
+
+    if ( verbose )
+        printf( "mismatch threshold: %d\n", mis_thresh );
+
+    generate_permutations();
+
+    for ( i = 0; i < nfiles; i++ )
+        scan_file( filenames[i] );
+   }
+@
+
+
+1.7
+log
+@this version now has only forward patterns stored in the tree and handles
+reverse matches using a running rbuff in addition to buff.
+@
+text
+@d9 1
+a9 1
+/* Usage:       prosearch [-amNSFvhV] <pat> [<file> [...]]                   */
+d37 3
+d64 1
+a64 1
+/* $Id: prosearch.c,v 1.6 2008/08/12 21:53:44 mccorkle Exp mccorkle $        */
+d76 1
+a76 1
+    "$Id: prosearch.c,v 1.6 2008/08/12 21:53:44 mccorkle Exp mccorkle $";
+d94 1
+d108 1
+a108 1
+    v = strdup("$Revision: 1.6 $"+11 );
+d121 1
+a121 1
+Usage:       prosearch [-m<n>] [-hvV] <pat> [<file> [...]]                  \n\
+d149 3
+d199 1
+a199 1
+    while ( (c = getopt( argc, argv, "a:hm:FN:SvV" ) ) != -1 )
+d206 3
+d632 5
+a636 2
+static char   buff[MAX_BUFF_LEN+1];
+static char  rbuff[MAX_BUFF_LEN+1];
+d651 9
+a659 2
+        rbuff[i] = buff[i] = 'X';
+    rbuff[buff_len] = buff[buff_len] = '\0';
+d666 23
+d692 3
+d696 4
+a699 2
+    memmove( buff, buff+1, buff_len-1 );   /* left shift forward tag buffer */
+    buff[buff_len-1] = c;
+d701 18
+a718 2
+    memmove( rbuff+1, rbuff, buff_len-1 );
+    rbuff[0] = comp_char[c];
+d779 2
+a780 1
+    int          c, last;
+d810 7
+a816 2
+            lookup( buff, buff, 'f', pos, filename, hdr );
+            lookup( rbuff, buff, 'r', pos, filename, hdr );
+@
+
+
+1.6
+log
+@preparing to restructure so that reverse strand is handled in a different
+buffer rather than by reverse entries in the permuation tree.  The ultimate
+goal is for bisulfite modifications.
+@
+text
+@d61 1
+a61 1
+/* $Id: prosearch.c,v 1.5 2005/07/15 19:14:12 mccorkle Exp mccorkle $        */
+d73 1
+a73 1
+    "$Id: prosearch.c,v 1.5 2005/07/15 19:14:12 mccorkle Exp mccorkle $";
+d104 1
+a104 1
+    v = strdup("$Revision: 1.5 $"+11 );
+d481 1
+a481 1
+    sprintf( desc, "f %2d %s", n_mis, pat );
+a482 4
+
+    rc( rpat, pat );
+    sprintf( desc, "r %2d %s", n_mis, pat );
+    tree_enter( t_root, rpat, desc );
+d672 2
+a673 6
+    sscanf( desc, "%c %d", &dir, &n_mis );
+    /* if ( desc[0] == 'r' ) */
+    if ( dir == 'r' )
+        rc( pbuff, buff );
+    else
+        strncpy( pbuff, buff, buff_len );
+d684 2
+a685 1
+void  lookup( char *buf, char dir, int pos, char *filename, char *hdr )
+d698 2
+a699 2
+            strncpy( pbuff, buf+neighbor_len, templ_len );
+            printf( "%s %s %10d",  pbuff, rec, pos );
+d745 2
+a746 1
+            lookup( buff, 'f', pos, filename, hdr );
+@
+
+
+1.5
+log
+@fixed double sequence name in neighbor output
+@
+text
+@d61 1
+a61 1
+/* $Id: prosearch.c,v 1.4 2005/07/11 20:42:55 mccorkle Exp mccorkle $        */
+d73 1
+a73 1
+    "$Id: prosearch.c,v 1.4 2005/07/11 20:42:55 mccorkle Exp mccorkle $";
+d104 1
+a104 1
+    v = strdup("$Revision: 1.4 $"+11 );
+d395 1
+a395 1
+        printf( "lookup [%s]\n", s );
+d626 2
+a627 1
+static char  buff[MAX_BUFF_LEN+1];
+d642 2
+a643 2
+        buff[i] = 'X';
+    buff[buff_len] = '\0';
+d655 1
+d657 2
+a658 1
+    buff[buff_len-1] = c;
+d662 2
+a663 1
+void  neighbor_output( char *desc, int pos, char *filename )
+a668 1
+    char  dir;
+d671 3
+d692 22
+a725 2
+    char        *rec;
+    static char  pbuff[MAX_PAT_LEN+1];
+d752 1
+a752 16
+            if ( rec = tree_rlookup( t_root, buff + neighbor_len, templ_len,
+                                    amb_thresh ) )
+               {
+                if ( neighbor_len > 0 )
+                    neighbor_output( rec, pos, 
+                                    (print_filenames ? filename : hdr ));
+                else
+                   {
+                    strncpy( pbuff, buff+neighbor_len, templ_len );
+                    printf( "%s %s %10d",  pbuff, rec, pos );
+                   }
+                if ( print_headers )
+                    printf( " %s\n", hdr );    /* hdr has a \n in it */
+                else
+                    putchar( '\n' );
+               }
+@
+
+
+1.4
+log
+@added capablity for matching ambiguity codes in input sequence.
+@
+text
+@d61 1
+a61 1
+/* $Id: prosearch.c,v 1.3 2004/09/29 21:17:45 mccorkle Exp mccorkle $        */
+d73 1
+a73 1
+    "$Id: prosearch.c,v 1.3 2004/09/29 21:17:45 mccorkle Exp mccorkle $";
+d104 1
+a104 1
+    v = strdup("$Revision: 1.3 $"+11 );
+d679 1
+a679 1
+    sprintf( fmt, "%%10d  %%c  %%s %%-%d.%ds %%-10s %%2d %%s", 
+d682 1
+a682 2
+             pos, dir, left, mat, pbuff+neighbor_len+templ_len, n_mis,
+             filename );
+@
+
+
+1.3
+log
+@fixed a problem with newlines and headers for -S option.
+@
+text
+@d9 1
+a9 1
+/* Usage:       prosearch [-m<n>] [-hvV] <pat> [<file> [...]]                */
+d34 4
+a37 1
+/* Options:     -m<n>  accept up to <n> mismatches in LOWER case bases in    */
+d56 4
+a59 2
+/*               Ambiguity codes in the input sequence files are NOT handled */
+/*               properly.  They are ignored (for now).                      */
+d61 1
+a61 1
+/* $Id: prosearch.c,v 1.2 2004/04/05 23:36:27 mccorkle Exp mccorkle $        */
+d73 1
+a73 1
+    "$Id: prosearch.c,v 1.2 2004/04/05 23:36:27 mccorkle Exp mccorkle $";
+d90 1
+a90 1
+
+d101 1
+a101 1
+void  version( void )
+d104 1
+a104 1
+    v = strdup("$Revision: 1.2 $"+11 );
+d109 1
+d142 4
+a145 1
+Options:     -m<n>  accept up to <n> mismatches in LOWER case bases in      \n\
+d170 3
+d192 1
+a192 1
+    while ( (c = getopt( argc, argv, "hm:FN:SvV" ) ) != -1 )
+d195 4
+d276 59
+d411 36
+d494 1
+a515 51
+/* allowed_matches maps each nucleotide and ambiguity code to an array  */
+/* of all the nucleotides (ACGT) that will match it.                    */
+
+char *allowed_matches[128]; 
+
+/* this initializes the allowed_matches table */
+
+void  fill_allowed_matches( void )
+   {
+    allowed_matches['a'] = allowed_matches['A'] = "A";
+    allowed_matches['c'] = allowed_matches['C'] = "C";
+    allowed_matches['g'] = allowed_matches['G'] = "G";
+    allowed_matches['t'] = allowed_matches['T'] = "T";
+
+    allowed_matches['m'] = allowed_matches['M'] = "AC";
+    allowed_matches['r'] = allowed_matches['R'] = "AG";
+    allowed_matches['w'] = allowed_matches['W'] = "AT";
+    allowed_matches['s'] = allowed_matches['S'] = "CG";
+    allowed_matches['y'] = allowed_matches['Y'] = "CT";
+    allowed_matches['k'] = allowed_matches['K'] = "GT";
+
+    allowed_matches['v'] = allowed_matches['V'] = "ACG";
+    allowed_matches['h'] = allowed_matches['H'] = "ACT";
+    allowed_matches['d'] = allowed_matches['D'] = "AGT";
+    allowed_matches['b'] = allowed_matches['B'] = "GCT";
+
+    allowed_matches['n'] = allowed_matches['N'] = "ACGT";
+   }
+
+/**************************************************************************/
+/* match( a, b ) compares a, which must be a nucleotide A, C, G or T with */
+/* b, which may be a nucleotide or an ambiguity code.  If a is in one     */
+/* of the allowed matches of b as listed above, 1 is returned, otherwise  */
+/* 0 is returned, indicating a mismatch                                   */
+/**************************************************************************/
+
+int  match( char a, char b )
+   {
+    char c;
+    char *matches;
+    int   k, n;
+
+    c = toupper( a );
+    matches = allowed_matches[b];
+    n = strlen( matches );
+    for ( k = 0; k < n; k++ )
+        if ( c == matches[k] )
+            return( 1 );
+    return( 0 );
+   }
+
+d726 3
+a728 1
+            if ( rec = tree_lookup( buff + neighbor_len, templ_len ) )
+@
+
+
+1.2
+log
+@added hdr or filename (-F option) to neighbor_output.
+@
+text
+@d56 1
+a56 1
+/* $Id: prosearch.c,v 1.1 2004/03/18 20:23:34 mccorkle Exp mccorkle $        */
+d68 1
+a68 1
+    "$Id: prosearch.c,v 1.1 2004/03/18 20:23:34 mccorkle Exp mccorkle $";
+d99 1
+a99 1
+    v = strdup("$Revision: 1.1 $"+11 );
+d636 1
+d654 3
+a656 2
+            if ( strlen( hdr ) > 0 )
+                hdr[strlen(hdr)-1] = '\0';
+d676 1
+a676 1
+                    printf( " %s", hdr );    /* hdr has a \n in it */
+@
+
+
+1.1
+log
+@whoops - fixed a bug with direction in the neighboring sequence output.
+@
+text
+@d38 1
+d56 1
+a56 1
+/* $Id: prosearch.c,v 1.0 2004/03/18 18:57:49 mccorkle Exp mccorkle $        */
+d68 1
+a68 1
+    "$Id: prosearch.c,v 1.0 2004/03/18 18:57:49 mccorkle Exp mccorkle $";
+d86 5
+a90 4
+int   mis_thresh    = 0;   /* set by -m */
+int   neighbor_len  = 0;   /* set by -N */
+int   print_headers = 0;   /* set by -S */
+int   verbose       = 0;   /* set by -v */
+d99 1
+a99 1
+    v = strdup("$Revision: 1.0 $"+11 );
+d140 1
+d180 1
+a180 1
+    while ( (c = getopt( argc, argv, "hm:N:SvV" ) ) != -1 )
+d195 2
+d598 1
+a598 1
+void  neighbor_output( char *desc, int pos )
+d603 3
+d609 3
+a611 1
+    if ( desc[0] == 'r' )
+d615 1
+d618 5
+a622 2
+    printf( "%10d  %c  %s %-10.10s %-10s",
+             pos, desc[0], left, mat, pbuff+neighbor_len+templ_len );
+d653 2
+d666 2
+a667 1
+                    neighbor_output( rec, pos );
+@
+
+
+1.0
+log
+@added -N option for printing neighboring sequences, -S option to control fasta headers.
+@
+text
+@d55 1
+a55 1
+/* $Id: prosearch.c,v 0.8 2004/03/18 15:33:31 mccorkle Exp mccorkle $        */
+d67 1
+a67 1
+    "$Id: prosearch.c,v 0.8 2004/03/18 15:33:31 mccorkle Exp mccorkle $";
+d97 1
+a97 1
+    v = strdup("$Revision: 0.8 $"+11 );
+d601 1
+a601 1
+    if ( desc[0] = 'r' )
+@
+
+
+0.8
+log
+@getting ready to print neighborhood strings (different output) for Soren's CRE's
+@
+text
+@d36 2
+d55 1
+a55 1
+/* $Id: prosearch.c,v 0.7 2003/11/13 14:12:18 mccorkle Exp mccorkle $        */
+d67 1
+a67 1
+    "$Id: prosearch.c,v 0.7 2003/11/13 14:12:18 mccorkle Exp mccorkle $";
+d69 5
+a73 3
+#define MAX_HDR_LEN 256
+#define MAX_PAT_LEN 256
+#define MAX_STR_LEN 256
+a81 1
+int   neighbor_len = 10;
+d85 4
+a88 2
+int   verbose = 0;      /* set by -v */
+int   mis_thresh = 0;   /* set by -m */
+d97 1
+a97 1
+    v = strdup("$Revision: 0.7 $"+11 );
+d136 2
+d158 11
+d177 1
+a177 1
+    while ( (c = getopt( argc, argv, "hm:vV" ) ) != -1 )
+d183 8
+d310 1
+a310 1
+char *tree_lookup( char *s )
+d317 2
+a318 1
+    while ( *s != '\0' && ind[*s] >= 0 && t->ch[ind[*s]] !=NULL )
+d320 2
+d323 1
+a323 1
+    if ( *s == '\0' )
+d560 1
+a560 1
+static char  buff[MAX_PAT_LEN+1];
+d566 8
+a573 2
+    buff_len = templ_len;
+
+d577 4
+a586 4
+#ifdef NO
+    for ( i = 1; i < templ_len; i++ )   /* memmove would be better */
+        buff[i-1] = buff[i];
+#endif
+d593 20
+d624 1
+d640 1
+a640 1
+            pos = -templ_len;
+d647 14
+a660 2
+            if ( rec = tree_lookup( buff ) )
+                printf( "%s %s %10d %s",  buff, rec, pos, hdr );
+@
+
+
+0.7
+log
+@fixed a bug with lower case input handling.
+@
+text
+@d53 1
+a53 1
+/* $Id: prosearch.c,v 0.6 2003/11/10 20:52:16 mccorkle Exp $        */
+d65 1
+a65 1
+    "$Id: prosearch.c,v 0.6 2003/11/10 20:52:16 mccorkle Exp $";
+d78 3
+d85 3
+a87 1
+
+d92 1
+a92 1
+    v = strdup("$Revision: 0.6 $"+11 );
+d453 3
+a484 1
+    size_t       num_perms = 5000000;
+d493 3
+d536 4
+a539 1
+    for ( i = 0; i < templ_len; i++ )
+d541 1
+a541 1
+    buff[templ_len] = '\0';
+d548 1
+d551 4
+a554 1
+    buff[templ_len-1] = c;
+@
+
+
+0.6
+log
+@adding some comments
+@
+text
+@d53 1
+a53 1
+/* $Id: prosearch.c,v 0.5 2003/11/06 22:33:29 mccorkle Exp mccorkle $        */
+d65 1
+a65 1
+    "$Id: prosearch.c,v 0.5 2003/11/06 22:33:29 mccorkle Exp mccorkle $";
+d82 2
+d87 1
+a87 1
+    v = strdup("$Revision: 0.5 $"+11 );
+d268 1
+a268 1
+    ind['T'] = ind['T'] = 3;
+d602 1
+d604 1
+@
+
+
+0.5
+log
+@fixed a bug or two.  Added comments, -h help and the pattern now
+is read from the command line.
+@
+text
+@d53 1
+a53 1
+/* $Id: prosearch.c,v 0.4 2003/11/06 21:03:46 mccorkle Exp mccorkle $        */
+d65 1
+a65 1
+    "$Id: prosearch.c,v 0.4 2003/11/06 21:03:46 mccorkle Exp mccorkle $";
+d85 1
+a85 1
+    v = strdup("$Revision: 0.4 $"+11 );
+d356 3
+d362 7
+a368 1
+char *allowed_matches[128];
+d392 7
+d414 20
+d441 4
+a444 3
+    if ( templ[i] == '\0' )
+       {
+        s[i] = '\0';
+a445 1
+        enter_pat( s, n_mis );
+d447 4
+a450 5
+    else
+        if ( n_mis >= max_mis  || is_conserved( templ[i] ) )
+           {
+            /* printf( "no-change branch %d >= %d %c %d\n",
+                      n_mis, max_mis, templ[i], is_conserved( templ[i] ) ); */
+d453 5
+a457 4
+            for ( k = 0; k < n; k++ )
+               {
+                s[i] = matches[k];
+                permute( templ, max_mis, s, i+1, n_mis );
+d460 2
+a461 3
+        else
+           {
+            /* printf( "change branch\n" ); */
+d463 3
+a465 3
+               {
+                s[i] = "ACGT"[k];
+                permute( templ, max_mis, s, i+1,
+d467 2
+a483 1
+    printf( "permutations finished\n" );
+@
+
+
+0.4
+log
+@converted to tree for storing permutations.
+@
+text
+@d7 1
+a7 2
+/*              promoter sequences, with adjustable mismatch threshold,      */
+/*              and wildcard and conserved bases                             */
+d11 22
+a32 6
+/*              where <file>s are fasta-format sequence files.  If no files  */
+/*              are given, stdin is scanned.  "-" may also be used as a file */
+/*              to specify stdin                                             */
+/*              <pat>  is a short DNA sequence which may contain single base */
+/*                     wildcards ("."), upper case bases (ALWAYS conserved)  */
+/*                     or lower case (may mismatch).                         */
+d40 14
+a53 1
+/* $Id: prosearch.c,v 0.3 2003/11/06 13:39:27 mccorkle Exp mccorkle $        */
+d65 1
+a65 1
+    "$Id: prosearch.c,v 0.3 2003/11/06 13:39:27 mccorkle Exp mccorkle $";
+d74 2
+a75 1
+char  templ[] ="ttcaGCacc.cGGacagc.cc";
+d82 8
+d92 50
+a141 1
+    printf( "help?  you want help?  hahahah\n" );
+a143 4
+void  version( void )
+   {
+    printf( "$Revision: 0.3 $\n" );
+   }
+d168 10
+d257 2
+d260 3
+d280 1
+a280 1
+ 
+d284 1
+a284 1
+    while ( *s != '\0' && t->ch[ind[*s]] !=NULL )
+d289 2
+d305 1
+a305 1
+        /* printf( "inserted: %s\n", desc ); */
+d311 1
+a311 1
+            /* printf( "need new node\n" ); */
+d447 1
+d560 1
+a563 1
+    templ_len = strlen( templ );
+a564 1
+
+@
+
+
+0.3
+log
+@added recursive generalized permuation handling.
+@
+text
+@d20 1
+a20 1
+/*                     <p>.  Default is 0 (exact matches).                   */
+d24 2
+a25 1
+/* $Id: prosearch.c,v 0.2 2003/11/06 03:05:01 mccorkle Exp mccorkle $        */
+a33 1
+#include <search.h>
+d36 2
+a37 1
+static char proc_rcs_id[] = "$Id: prosearch.c,v 0.2 2003/11/06 03:05:01 mccorkle Exp mccorkle $";
+d43 2
+d60 1
+a60 1
+    printf( "$Revision: 0.2 $\n" );
+d130 7
+a136 3
+/*************************/
+/* initialize hash table */
+/*************************/
+d138 8
+a145 1
+void  create_table( size_t size )
+d147 3
+a149 1
+    if ( ! hcreate( size ) )
+d151 1
+a151 2
+        fprintf( stderr, "Can't create hash table of size %d\n", size );
+        perror( "" );
+d154 16
+d171 1
+a171 1
+       printf( "table created, size %d\n", size );
+d175 4
+a178 3
+/**************************************/
+/* make one entry into the hash table */
+/**************************************/
+d180 1
+a180 1
+void  enter_table( char *key, char dir, int n_mis, char *pat )
+d182 13
+a194 2
+    ENTRY   e;
+    static  char vbuff[MAX_STR_LEN];
+d196 20
+a215 10
+    sprintf( vbuff, "%c %2d %s", dir, n_mis, pat );
+    e.key = strdup( key );
+    e.data = strdup( vbuff );
+    if ( verbose )
+        printf( "entering e.pat->e.data [%s]->[%s]\n", e.key, e.data );
+    if ( ! hsearch( e, ENTER ) )
+       { 
+        fprintf( stderr, "Can't enter into hash table\n" );
+        perror( pat );
+        exit( errno );
+d220 2
+a221 1
+/* put a new pattern entry and its reverse-complement into the hash table  */
+d226 2
+a227 1
+    char    rpat[MAX_PAT_LEN];
+d230 3
+a232 1
+    enter_table( pat, 'f', n_mis, pat );
+d234 2
+a235 1
+    enter_table( rpat, 'r', n_mis, pat );
+a237 23
+/********************************************************************/
+/* search hash table for string.  If found, return value string for */
+/* match, otherwise return null                                     */
+/********************************************************************/
+
+char *lookup( char *pat )
+   {
+    ENTRY   e;
+    ENTRY  *g;
+
+    if ( verbose )
+        printf( "lookup [%s]\n", pat ); fflush( stdout );
+    e.key = pat;
+    g = hsearch( e, FIND );
+    if ( verbose )
+        printf( "got g = %x\n", g );  fflush( stdout );
+    if ( verbose && g )
+      {
+       printf( "g->key is [%s]\n", g->key ); fflush( stdout );
+       printf( "g->data is [%s]\n", g->data ); fflush( stdout );
+      }
+    return( g ? g->data : 0 );
+   }
+d299 1
+a299 1
+void  permute( char s[], int max_mis, char t[], int i, int n_mis )
+d306 1
+a306 1
+    if ( s[i] == '\0' )
+d308 3
+a310 3
+        t[i] = '\0';
+        if ( verbose ) printf( "%s %d\n", t, n_mis );
+        enter_pat( t, n_mis );
+d313 1
+a313 1
+        if ( n_mis >= max_mis  || is_conserved( s[i] ) )
+d316 2
+a317 2
+                              n_mis, max_mis, s[i], is_conserved( s[i] ) ); */
+            matches = allowed_matches[s[i]];
+d321 2
+a322 2
+                t[i] = matches[k];
+                permute( s, max_mis, t, i+1, n_mis );
+d330 3
+a332 3
+                t[i] = "ACGT"[k];
+                permute( s, max_mis, t, i+1,
+                         ( match("ACGT"[k],s[i]) ? n_mis : (n_mis + 1) ) );
+d344 1
+a344 1
+    create_table( num_perms );
+d436 2
+a437 2
+            if ( rec = lookup( buff ) )
+               printf( "%s %s %10d %s",  buff, rec, pos, hdr );
+@
+
+
+0.2
+log
+@added wildcards but I'm going to change to a new scheme.
+.,
+@
+text
+@d24 1
+a24 1
+/* $Id: prosearch.c,v 0.1 2003/11/05 20:27:32 mccorkle Exp mccorkle $        */
+d36 1
+a36 1
+static char proc_rcs_id[] = "$Id: prosearch.c,v 0.1 2003/11/05 20:27:32 mccorkle Exp mccorkle $";
+d47 2
+a48 1
+int   verbose = 0;     /* set by -v */
+d57 1
+a57 1
+    printf( "$Revision$\n" );
+d67 1
+a67 1
+    while ( (c = getopt( argc, argv, "hvV" ) ) != -1 )
+d72 2
+d204 9
+a212 1
+void  find_wildcards( char *templ, int templ_len, int *n_wild, int **wilds )
+d214 10
+a223 1
+    int i;
+d225 8
+a232 2
+    *wilds = calloc( templ_len, sizeof( int ) );
+    *n_wild = 0;
+d234 28
+a261 3
+    for ( i = 0; i < templ_len; i++ )
+        if ( templ[i] == '.' )
+            (*wilds)[(*n_wild)++] = i;
+d264 1
+a264 1
+void  generate_permutations( void )
+d266 4
+a269 5
+    size_t       num_perms = 1000;
+    char        *s;
+    int          i, j;
+    int          *wilds;
+    int          n_wild;
+d271 30
+a300 2
+    templ_len = strlen( templ );
+    create_table( num_perms );
+d302 4
+a305 5
+    find_wildcards( templ, templ_len, &n_wild, &wilds ); 
+    printf( "there are %d wildcards in %s\n", n_wild, templ );
+    for ( i = 0; i < n_wild; i++ )
+        printf( "     %d\n", wilds[i] );
+    exit(0);   
+d307 1
+a307 6
+    if ( verbose ) 
+        printf( "[%s]\n", templ );
+    for ( s = templ; *s != '\0'; s++ )
+        *s = toupper( *s );
+    if ( verbose ) 
+        printf( "[%s]\n", templ );
+d309 2
+a310 9
+    for ( i = 0; i < 4; i++ )
+        for ( j = 0; j < 4; j++ )
+            {
+             templ[9] = bases[i];
+             templ[18] = bases[j];
+             if ( verbose ) 
+                 printf( "[%s] %d %d\n", templ, i, j );
+             enter_pat( templ, 0 );
+            }
+d312 1
+d402 1
+a402 1
+               printf( "%10d %s %s %s", pos, buff, rec, hdr );
+d425 4
+@
+
+
+0.1
+log
+@about to go to mismatching, so I'm starting to record versions here.
+@
+text
+@d24 1
+a24 1
+/* $Id$ */
+d36 1
+a36 1
+static char proc_rcs_id[] = "$Id$";
+d56 1
+a56 1
+    printf( "version?\n" );
+d201 12
+d218 2
+d223 6
+@

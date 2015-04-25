@@ -1,0 +1,24 @@
+
+link graphics
+
+procedure main()
+
+   Window( "size=300,300", "bg=black", "fg=white" )
+   
+   while ( e := Event() ) & ( e ~== "q" ) do
+       {
+        what := ""
+        e = &lpress & what := "lpress"
+        e = &ldrag & what := "ldrag"
+        e = &lrelease & what := "lrelease"
+        e = &rpress & what := "rpress"
+        e = &rdrag & what := "rdrag"
+        e = &rrelease & what := "rrelease"
+        e = &mpress & what := "mpress"
+        e = &mdrag & what := "mdrag"
+        e = &mrelease & what := "mrelease"
+        write( "e = ", e, " x = ", &x, "  y = ", &y, "  what = ", what )
+       }
+   WDone()
+
+end

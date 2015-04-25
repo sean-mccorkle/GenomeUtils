@@ -1,0 +1,136 @@
+# Program:      ranseq
+# Programmer:   Sean R. McCorkle
+# Language:     Icon
+# Description:  Generate random DNA and AMINO acid sequences.
+#
+# Usage:        ranseq [-a <n>] [-b <n>] [-n <n>] [-dhpv]
+#
+# Options:
+#
+#               -a <n>   minimum sequence size, inclusive  (default 100)
+#               -b <n>   maximum sequence size, inclusive  (default 1000)
+#               -d       don't randomize seed using time & date
+#                        (will produce repeatable results)
+#               -h       print help, then exit
+#               -n <n>   generate <n> sequences (default: 1)
+#               -p       generate protein (amino acid) sequences instead of
+#                        DNA sequences 
+#               -v       print version, then exit
+#
+# Ideas for the future:
+#               1) option to add N or X to character set
+#               2) non-flat distributions
+#
+# $Id: ranseq.icn,v 0.2 2000/03/24 17:46:23 mccorkle Exp mccorkle $
+#
+
+link  io
+link  options      # uses options.icn from the Icon Program Library
+link  random       # and random.icn from the Icon Program Library
+
+                      ###############################
+                      # Output Control globals,     #
+                      # set by command line options #
+                      ###############################
+
+global num_seqs      # number of sequences to generate, default 1, set by -n
+global min_length    # min length of generated sequence,                  -a
+global max_length    # min length of generated sequence,                  -a
+global alphabet      # nucleotides or amino acids, default nucleotides    -p
+
+                             ################
+                             # Main Program #
+                             ################
+
+
+procedure main( args )
+
+    local opts, n, offset
+
+    opts := options( args, "-a+ -b+ -d -h -n+ -p -v", opt_err )
+    handle_opts( opts )
+
+    n := (max_length - min_length ) + 1
+    offset := min_length - 1
+
+    every i := 1 to num_seqs do
+        generate_seq( i, (?n) + offset )
+
+
+end
+
+procedure  generate_seq( i, len, chars )
+
+    local s
+    s := ""
+    every 1 to len do
+        s ||:= ?alphabet
+    write_fasta( &output, s, i || "-" || len )
+
+end
+
+#
+# set globals and take actions according to what's present in the opts
+# table.
+#
+# Note: should put checks on values of -a, -b and -n
+#
+procedure handle_opts( opts )
+
+    if member( opts, "h" )  then { help(); exit() }
+    if member( opts, "v" )  then { version(); exit() }
+
+    if not member( opts, "d" )  then randomize()
+
+    num_seqs := ( \opts["n"] | 1 )
+    min_length := ( \opts["a"] | 100 )
+    max_length := ( \opts["b"] | 1000 )
+
+    alphabet := "ACGT"
+    if member( opts, "p" )  then  alphabet := "AVLIWFMPGSTYCNQKRHDE"
+
+end
+
+#
+# print version number & help
+#
+
+procedure help()
+
+    version()
+    write( "\nUsage:  ranseq [-a <n>] [-b <n>] [-n <n>] [-hpv]\n" )
+    write( "Options:" )
+    write( "        -a <n>   minimum sequence size, inclusive  (default 100)" )
+    write( "        -b <n>   maximum sequence size, inclusive  (default 1000)")
+    write( "        -d       don't randomize seed using time & date" )
+    write( "                 (will produce repeatable results)" )
+    write( "        -h       print help, then exit" )
+    write( "        -n <n>   generate <n> sequences (default: 1)" )
+    write( "        -p       generate protein (amino acid) sequences instead ")
+    write( "                 of DNA sequences " )
+    write( "        -v       print version, then exit" )
+
+end
+
+#
+# print version number
+#
+procedure version()
+
+    "$Revision: 0.2 $" ? { tab( upto( ' ' ) )
+                           write( "ranseq", tab( many( &digits ++ ' .' ) ),
+                                  " Generate random DNA or Protein sequences"
+                                )
+		         }
+end
+
+#
+# slightly more informative option error message
+#
+procedure opt_err( msg )
+
+   write( &errout, "ranseq: ", msg, "  (type ranseq -h for help)" )
+   exit( 1 )
+end
+
+

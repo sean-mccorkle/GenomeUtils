@@ -1,0 +1,39 @@
+#!/usr/bin/perl
+# Description:  Reads tag output from split-tags, truncates 
+#               counts, identicals, and then prints out tags with counts
+# 
+# Options:      -e<n>  truncate to extent <n>  (default 17)
+#               -v     verbose - list all positions,orientations for each tag
+
+use  Getopt::Std;
+
+die "bad option\n" unless ( getopts( 'e:v' ) );
+
+
+$ext = $opt_e ? $opt_e : 17;
+$format = "%-$ext.$ext" . "s %4d";
+
+while ( <> )
+   {
+    /^([A-Z]{$ext,})\s+([abfr])\s+(\d+)\s+(\S.*)/ || die "bad line $_";
+    ($t,$dir,$pos,$label) = ($1,$2,$3,$4);
+    next unless ( $dir eq 'f' || $dir eq 'r' );
+    $tag = substr( uc( $t ), 0, $ext );
+    $count{$tag}++;
+    $coord{$tag} .= sprintf( "%8.8s%5d$dir ", $label, $pos ) if ( $opt_v);
+   }
+
+foreach $t ( sort by_count keys( %count ) )
+   {
+    printf $format, $t, $count{$t};
+    print " ", $coord{$t} if ( $opt_v );
+    print "\n";
+   }
+
+sub by_count
+   {
+    if ( $count{$a} == $count{$b} )
+       { return( $a cmp $b ); }
+    else
+       { return( $count{$b} <=> $count{$a} ); }
+   }

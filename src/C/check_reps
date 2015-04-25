@@ -1,0 +1,76 @@
+#!/usr/bin/perl
+
+%comp = ( "a" => "t", "c" => "g", "g" => "c", "t" => "a", "n" => "n",
+          "A" => "T", "C" => "G", "G" => "C", "T" => "A", "N" => "N",
+        );
+load_src_seq( shift );
+
+while( <> )
+   {
+    chomp;
+    if ( /^>/ )
+       {
+        $new_hdr = $_;
+        process() if ( $rep );
+        $rep = "";
+        $hdr = $new_hdr;
+       }
+    else
+       {
+        s/\s//g;
+        $rep .= $_;
+       }
+   }
+process();
+
+sub  load_src_seq
+   {
+    my $file = shift;
+    open( SEQ, $file ) || die "Can't read file $file\n";
+    chomp( $srchdr = <SEQ> );
+    ( $srchdr =~ /^>/ ) || die "First line not FASTA header in $file\n";
+    while ( $_ = <SEQ> )
+       {
+        s/\s//g;
+        $src_seq .= $_;
+       }
+    close( SEQ );
+    my $i = length( $src_seq );
+    $src_rc = "";
+    while ( --$i >= 0 )
+        { $src_rc .= $comp{substr( $src_seq, $i, 1)}; }
+   }
+
+sub  process
+   {
+    ( $hdr =~ /^>(rep\d+)\s+(\d+)\s+(.*)$/ ) || die "Bad hdr $hdr\n";
+    ($name,$len,$locs) = ($1,$2,$3);
+    printf( "%8s: %4d %s\n", $name, $len, $locs );
+    die "Seq len doesn't agree\n" unless ( $len == length( $rep ) );
+    #seq_out( $rep );
+    foreach $l ( split( /\s+/, $locs ) )
+       {
+        ( $l =~ /^([RF])(\d+)$/ ) || die "bad loc $l\n";
+        ($dir,$pos) = ($1,$2);
+        printf( "        $dir:  $pos   " );
+        $subs = substr( ( ( $dir eq 'F' ) ? $src_seq : $src_rc ), $pos, $len );
+        if ( $subs ne $rep )
+           {
+            print( "---mismatch:\n" );
+            seq_out( $subs );
+           }
+        else
+           { print( "okay!\n" ); }
+       }
+    print( "====\n" );
+   }
+
+sub seq_out
+   {
+    my $s = shift;
+    while ( $s =~ s/^(.{60})// )
+       { print( "$1\n" ); }
+    print "$s\n" if ( $s );
+   }
+
+

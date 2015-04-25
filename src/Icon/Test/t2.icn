@@ -1,0 +1,14 @@
+
+link graphics
+
+procedure main()
+
+   Window( "size=200,200", "bg=white", "fg=black" )
+   DrawLine(  5, 5, 100, 100 )
+   Shade( "red" )
+   FillRectangle( 50, 50, 50, 50 )
+   Fg( "blue" )
+   DrawLine( 5, 10, 100, 105 )
+   
+   WDone()
+end

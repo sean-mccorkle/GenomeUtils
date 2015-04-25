@@ -1,0 +1,27 @@
+#!/usr/bin/perl
+# Usage:    restr <file> | re2tv [-t <n>] [-i <m>]
+#              -t <n> - start counting tiers starting at <n>  (def = 1)
+#              -i <m> - increment by <m> each time (def = 1)
+#
+use Getopt::Std;
+
+getopts( 't:' );
+
+$label_color = "white";
+$color = "yellow";
+$t = $opt_t ? $opt_t : 1;
+$incr = $opt_i ? $opt_i : 1;
+
+while ( <> )
+   {
+    next if ( /^\s*$/ );
+    s/^\s*//;  s/\s*$//;
+    ($enz,@pos) = split( /\s+/ );
+    print( "t_llabel $t \"$enz\" $label_color\n" );
+    print( "t_rlabel $t \"$enz\" $label_color\n" );
+    foreach $p ( @pos )
+       {
+        print( "t_vline $t $p 0.0 1.0 $color\n" );
+       }
+    $t += $incr;
+   }

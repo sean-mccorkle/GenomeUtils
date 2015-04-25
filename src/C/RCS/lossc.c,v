@@ -1,0 +1,1619 @@
+head	1.5;
+access;
+symbols;
+locks
+	mccorkle:1.5; strict;
+comment	@// @;
+
+
+1.5
+date	2003.01.19.13.35.11;	author mccorkle;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2003.01.19.03.07.18;	author mccorkle;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2003.01.18.22.36.25;	author mccorkle;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2002.05.06.04.02.52;	author mccorkle;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2002.05.06.04.00.22;	author mccorkle;	state Exp;
+branches;
+next	1.0;
+
+1.0
+date	2002.05.06.03.16.57;	author mccorkle;	state Exp;
+branches;
+next	0.5;
+
+0.5
+date	2002.05.02.21.28.45;	author mccorkle;	state Exp;
+branches;
+next	0.4;
+
+0.4
+date	2002.04.11.21.30.05;	author mccorkle;	state Exp;
+branches;
+next	0.3;
+
+0.3
+date	2002.04.11.19.04.11;	author mccorkle;	state Exp;
+branches;
+next	0.2;
+
+0.2
+date	2002.04.10.21.38.23;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	2002.04.10.18.43.59;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@re-organizing L. Brenner's original code, and making the same program
+do double duty: self-checks in one sequence list, or cross-checks between
+two.
+@
+
+
+1.5
+log
+@added different penalties for substitutions and indels, making them
+user-setable with -i and -s options.
+@
+text
+@/* Program:      lossc                                                       */
+/* Programmers:  Lawrence Brenner, initial development Aug, 2001.            */
+/*               updated by Sean McCorkle, Mar 2002                          */
+/* Language:     C                                                           */
+/*                                                                           */
+/* Description:  Lots of short sequence comparisons.                         */
+/*                                                                           */
+/* Usage:        lossc [-hmV] [-v<n>] <thresh> <data seqs> [<db seqs>]       */
+/*                                                                           */
+/*               <thresh> is an integer indicated the maximum edit distance  */
+/*                        considered for a match                             */
+/*               <data seqs> is a file of short sequences and descriptions   */
+/*               <db seqs>  is a file of short sequences and descriptions    */
+/*                                                                           */
+/*                 -f<c>  change desc seperator to <c> (default is '|')      */
+/*                 -i<n>  use <n> for indel penalty (default is 1)           */
+/*                 -m     show misses as well as hits                        */
+/*                 -s<n>  use <n> for substitution penalty (default is 1)    */
+/*                 -v<n>  verbosity level n (1, 2, ...) higher means more    */
+/*                 -h     print usage message, then exit                     */
+/*                 -V     print version, then exit                           */
+/*                                                                           */
+/* $Id: lossc.c,v 1.4 2003/01/19 03:07:18 mccorkle Exp mccorkle $ */
+/*****************************************************************************/
+
+#include <errno.h>
+#include <libgen.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#ifndef SOLARIS        /* Sun's are really a pain in the neck sometimes */
+#include <unistd.h>
+#endif
+
+
+static char const rcsid[] =
+    "$Id: lossc.c,v 1.4 2003/01/19 03:07:18 mccorkle Exp mccorkle $";
+static char rcsvers[] = "$Revision: 1.4 $";
+
+
+#define   MAX_SEQ_SIZE       100     /* max sequence length (matrix size) */
+#define   LARGE             (MAX_SEQ_SIZE + 1)
+#define   MAX_FILENAME       255     /* max length of filename */
+#define   MAX_MSG_LEN        255     /* max length of filename */
+#define   MAX_NUM_SEQS  10000000     /* maximum number of sequences */
+#define   MAX_DESCRIP_LEN   1000     /* cutoff for descriptions */
+#define   MAX_LINE_LEN      (MAX_SEQ_SIZE + MAX_DESCRIP_LEN + 10)
+
+typedef struct {  char *seq;         /* pointer to tag sequence */
+                  char *descrip;     /* pointer to tag description */
+               } TAGREC;
+
+int         min_seq_length;           /* set by main() */
+char        field_sep = '|';          /* set by -f<char> */
+int         misses;                   /* set by -m option in get_args */
+int         verbosity;                /* set by -v option in get_args */
+int         indel_penalty = 1;        /* set by -i option in get_args */
+int         subst_penalty = 1;        /* set by -s option in get_args */
+char       *progname = "lossc";       /* set by get_args */
+
+static int  ed_dist[MAX_SEQ_SIZE][MAX_SEQ_SIZE]; /*The Smith-Waterman matrix*/
+
+
+/**********************************************/
+/* usage() - print usage message and bomb out */
+/**********************************************/
+
+void  usage( void )
+   {
+    printf( "Usage:  lossc [-hmV] [-f<c>] [-i<n>] [-s<n>] [-v<n>] <thresh> <seqfile> [<seqfile2>]\n" );
+    exit( 1 );
+   }
+
+void  *malloc_safely( size_t size )
+   {
+    void        *p;
+
+    if ( ! (p = malloc( size )) )
+       {
+        fprintf( stderr, "%s: failed to malloc %d bytes\n(run again with -v2 option for estimating shortfall)", progname, size );
+        exit( 1 );
+       }
+    return( p );
+   }
+
+/*************************************************************************/
+/* allocates storage (safely) for a new copy of string s, or a substring */
+/* of s of length n.  If n < 0, the whole string is safely duplicated.   */
+/*************************************************************************/
+
+char  *dup_safely( char *s, int n )
+   {
+    char *t;
+
+    if ( n < 0 )
+        n = strlen( s );
+    t = (char *) malloc_safely( n + 1 );
+    strncpy( t, s, n );
+    t[n] = '\0';            /*  need to terminate strncpy() */
+    return( t );  
+   }
+
+/**************************************************/
+/* repeat_char( c, n ) - return a string of n c's */
+/**************************************************/
+
+char *repeat_char( char c, int n )
+   {
+    char *s;
+    int   i;
+
+    s = malloc_safely( n + 1 );
+    for ( i = 0; i < n; i++ )
+        s[i] = c;
+    s[i] = '\0';
+    return( s );
+   }
+
+/**************************************************************************/
+/* get_args() - parse args for options and set global values accordingly, */
+/* and then extract edit_threshold and filenames and return them.         */
+/**************************************************************************/
+
+void get_args( int     argc,         /* input- argc from main( argc, argv )*/
+               char   *argv[],       /* input- argv from main( argc, argv )*/
+               int    *edit_thresh,  /* output- edit distance threshold    */
+               char   *file1,       /* output- mandatory filename         */
+               char   *file2        /* output- opt. 2nd file or "" if none*/
+            )
+   {
+    extern char *optarg;
+    extern int   optind;
+    int          c;
+
+    progname = strdup( basename( *argv ) );
+    misses = 0;
+    verbosity = 0;
+    while ( (c = getopt( argc, argv, "f:hi:ms:v:V")) != -1 )
+        switch ( c )
+           {
+            case 'f':  field_sep = *optarg;
+                       break;
+            case 'i':  indel_penalty = atoi( optarg );
+                       break;
+            case 'm':  misses = 1;
+                       break;
+            case 's':  subst_penalty = atoi( optarg );
+                       break;
+            case 'v':  verbosity = atoi( optarg );
+                       break;
+            case 'V':  
+                       rcsvers[strlen(rcsvers)-1] = '\0';
+                       printf( "lossc, %s\n", rcsvers+1 );
+                       exit( 0 );
+            case 'h':  
+            default:
+                       usage();
+           }
+    argc -= optind;
+    argv += optind;
+
+    if ( argc < 2 )
+        usage();
+
+    *edit_thresh = atoi( argv[0] );
+    strncpy( file1, argv[1], MAX_FILENAME );  /* note: add termination here */
+    if ( argc > 2 )
+        strncpy( file2, argv[2], MAX_FILENAME );
+    else
+        *file2 = '\0';
+
+    if ( verbosity > 1 )
+        printf( "file1 [%s] file2 [%s]\n", file1, file2 );
+   }
+
+
+/* note to self: put in lots of input checks, including max seq length */
+/* check. */
+
+void  load_sequences(  char   *filename, /* input- short seq filename        */
+                       TAGREC *tags,     /* output- array of seqs & descrips */
+                       int    *count     /* output- number of tags in file   */
+                    )
+ {
+  FILE          *in;                     /* input file handle */
+  static char    line[MAX_LINE_LEN+1];   /* input line buffer */
+  int            len;                    /* input line length */
+  int            line_num = 0;           /* line number for diagnostic output*/
+  char          *d;
+  int            k;
+  static char    msg[MAX_MSG_LEN+1];
+
+  sprintf( msg, "(%s) %s ", progname, filename );  /* check on sizes */
+  if ( ! (in = fopen( filename, "r" ) ) )
+    {
+     perror( msg );
+     exit( errno );
+    }
+
+  *count = 0;
+  while ( ( *count < MAX_NUM_SEQS ) && fgets( line, MAX_LINE_LEN, in ) )
+    {
+     line_num++;
+     len = strlen( line );
+     if ( ( len > 0 ) && ( line[len-1] == '\n' ) ) /* chomp ending '\n' */
+         line[--len] = '\0';
+      d = strchr( line, ' ' );  /* note: update this to include tabs too */
+      k = (int) ( d - line );
+      if ( verbosity > 1 )
+          printf( "k %d d %x [%s] %d\n", k, d, line, len );
+      if ( k > MAX_SEQ_SIZE )
+         {
+          fprintf( stderr, "(%s) %s, line %d: sequence length > %d\n%s\n",
+                           progname, filename, line_num, MAX_SEQ_SIZE, line );
+          exit( 1 );
+         }
+      if ( k > 0 )
+        {
+         tags->seq = dup_safely( line, k );
+         tags->descrip = dup_safely( d + 1, -1 );
+         if ( verbosity > 1 )
+   	     printf( "input: [%s] [%s]\n", tags->seq, tags->descrip );
+         tags++, (*count)++;
+	}
+      else if ( len > 0 )
+        {
+         tags->seq = dup_safely( line, -1 );
+         tags->descrip = " ";
+         if ( verbosity > 1 )
+   	     printf( "input: [%s] [%s]\n", tags->seq, tags->descrip );
+         tags++, (*count)++;
+        }
+    }
+    fclose( in );
+    if ( *count >= MAX_NUM_SEQS )
+       {
+        fprintf( stderr, "(%s) file %s exceeds limit of %d sequences\n",
+                           progname, filename, MAX_NUM_SEQS );
+        exit( 1 );
+       }
+    if ( verbosity > 0 )
+        printf( "%d sequences in file %s\n", *count, filename );
+} 
+
+/*******************************************************************/
+/* min_length() returns the minium length of the seqs in the array */
+/* note that this expects the initial value of min as an argument  */
+/*******************************************************************/
+
+int   min_length( TAGREC *tags, int n, int min )
+   {
+    int  len;
+
+    while ( n-- > 0 )
+       {
+        len = strlen( (tags++)->seq );
+        if ( len < min )
+            min = len;
+       }
+    if ( verbosity > 0 )
+        printf(  "Min seq length %d\n", min );
+    return( min );
+   }
+
+/*******************************************************/
+/* trunc_lengths() truncates all seqs down to size len */
+/*******************************************************/
+
+void  trunc_lengths( TAGREC *tags, int n, int len )
+   {
+    char *seq;
+
+    while ( n-- > 0 )
+       {
+        seq = (tags++)->seq;
+        if ( strlen( seq ) > len )
+           {
+            if ( verbosity > 1 ) printf( "    truncating [%s] ", seq );
+            seq[len] = '\0';
+	    if ( verbosity > 1 ) printf( " to [%s]\n", seq );
+           }
+       }
+   }
+
+               /*****************************/
+               /* Edit distance calculation */
+               /*****************************/
+
+/*****************************************************************/
+/* Fills the very top row and left column with increasing scores */
+/*****************************************************************/
+
+void  initialize_matrix( void )
+   {
+    int row;
+    int col;
+
+    for ( row = 0; row < MAX_SEQ_SIZE; row++ ) /*Sets the values of r,0 */
+        ed_dist[row][0] = row;
+
+    for ( col = 1; col < MAX_SEQ_SIZE; col++ ) /*Sets the values of 0,c */
+        ed_dist[0][col] = col;
+   }
+
+
+/***************************************************************************/
+/* update_min() - selects the minimum score at ed_dist[row,col], which may */
+/* necessitate checking seq1[row-1] and seq2[col-1].  Returns the minimum  */
+/* value in final                                                          */
+/***************************************************************************/
+
+void  update_min( int     row,   /* input- row number for evaluation */
+                  int     col,   /* input- col number for evaluation */
+                  char  *seq1,   /* input- 1st short sequence        */
+                  char  *seq2,   /* input- 2nd short sequence        */
+                  int   *final    /* output- minimum value            */
+                )
+   {
+    int           b = 0;          /*Used in the substitution, match function.*/
+  
+
+    if ( seq1[row - 1] == seq2[col - 1] ) /*Checks for matches. */
+        b = 0;
+    else                                     /* Checks for substitutions. */
+        b = subst_penalty;
+  
+    *final = ed_dist[row - 1][col - 1] + b;    /* - 1; */
+  
+    if ( ed_dist[row - 1][col] + 1 < *final )  /* Checks for insertions. */
+        *final = ed_dist[row - 1][col] + indel_penalty;
+    if ( ed_dist[row][col - 1]  + 1 < *final ) /* Checks for deletions. */
+        *final  = ed_dist[row][col - 1] + indel_penalty; 
+
+    ed_dist[row][col] = *final; /*++final; */
+   }
+
+/*****************************************************************************/
+/* This version of edit_distance counts on the previous values of            */
+/* ed_dist[r][c] from the previous sequence comparsion to be present,        */
+/* up to the subsquare determined by start_diag.                             */
+/*                                                                           */
+/* returns:  dist - edit distance (or threshold + 1 if aborted)              */
+/*           last_diag - matrix diag indicates where calculation stopped     */
+/*                       (< seq.length() if aborted early because threshold  */
+/*                        exceeded)                                          */
+/*****************************************************************************/
+
+void edit_distance( char *seq1,       /* input- first short sequence         */
+		    char *seq2,       /* input- 2nd short sequence           */
+		    int   threshold,  /* input- abort if dist > threshold    */
+		    int   start_diag, /* input- recalculate mat @@ this column*/
+		    int  *last_diag,  /* output- last diag calc. before abort*/
+		    int  *dist )      /* output- resultant distance          */
+   {
+    int  eta = 0;      /* Minimum edit distance changes.                     */
+    int  min;          /* The lowest calculated value at one position        */
+    int  r, c;         /* row and column counters                            */
+ 
+    int  rows = min_seq_length;  /* number of rows in the matrix             */
+    int  cols = min_seq_length;  /* number of columns                        */
+    int  diag;         /* Variable that analyzes only the revelant diagonals.*/
+
+    /*************************************************************************/
+    /* Begin filling the matrix ed_dist[r][c] in subsquares, starting        */
+    /* in the upper right corner, or actually at the specified start position*/
+    /*************************************************************************/
+
+    for ( diag = start_diag; ((diag <= rows) && (eta <= threshold)); diag++ )
+       {
+        eta = ed_dist[0][diag];
+        for (  r = 1;  r < diag;  r++  )         /* do the column */
+	   {
+	    update_min( r, diag, seq1, seq2, &min );
+	    if ( min < eta )
+	        eta = min;
+           }
+
+        for (  c = 1;  c <= diag;  c++  )        /* now do the row */
+	   {
+	    update_min( diag, c, seq1, seq2, &min );
+            if ( min < eta )
+               eta = min;
+           }
+       }
+ 
+    if ( eta > threshold )
+        *dist = threshold + 1;    
+    else
+        *dist = ed_dist[rows][cols];
+
+    *last_diag = diag;
+   }
+
+
+/****************************************************************************/
+/* first_diff( a, b ) returns the index of the first position where         */
+/* strings a & b differ.  (Note: we assume both strings are the same length */
+/* - is this always going to be true?                                       */
+/****************************************************************************/
+
+int  first_diff( char *a, char *b )
+   {
+    int i = 0; 
+
+    while ( ( i < min_seq_length ) && ( a[i] == b[i] ) )  
+        i++;
+    return i;
+   }
+
+
+void  cross_compare( int      edit_thresh,
+                     TAGREC  *tags, 
+                     int      n_tags, 
+                     TAGREC  *db,
+                     int      n_db
+                   )
+   {
+    int             t;             /* database sequence index                */
+    int             d;             /* counter for the database.              */
+    int             ed;            /* edit distance between the sequences.   */
+    int             same;          /* difference between the two sequences.  */
+    int             last = LARGE;  /* last col position calculated in matrix.*/
+    int             best_ed;
+    char           *spacer;
+
+    spacer = repeat_char( '-', min_seq_length );
+    for ( t = 0; t < n_tags; t++ ) /* Checks the tags to the database. */
+       {
+        best_ed = edit_thresh + 1;
+        for ( d = 0; d < n_db; d++ )
+           { 
+            if ( d == 0 )
+                same = 0;
+            else
+                same = first_diff( db[d - 1].seq, db[d].seq ); 
+
+            /***************************************************************/
+            /* if we aborted early the previous time, and this sequence    */
+            /* is the same BEYOND that point, then there's no need to      */
+            /* to bother - this one doesn't match in the threshold either. */
+            /***************************************************************/
+
+            if ( same < last )
+               {
+                edit_distance( tags[t].seq, db[d].seq, edit_thresh, same, 
+                               &last, &ed );
+                if ( ed <= edit_thresh )
+                   {
+                    printf( "%s %s %d %s%c%s\n", tags[t].seq, db[d].seq, ed,
+                               tags[t].descrip, field_sep, db[d].descrip );
+                    best_ed = ed;
+                   }
+               }
+           }
+        if ( misses && ( best_ed > edit_thresh ) )  /* no hits, print miss */
+            printf( "%s %s X %s\n", tags[t].seq, spacer, tags[t].descrip );
+
+       }   
+   }
+
+
+void  self_compare( int      edit_thresh,
+                    TAGREC  *tags,
+                    int      n_tags )
+   {
+    int             i, j;
+    int             same;          /* difference between the two sequences.  */
+    int             last = LARGE;  /* last col position calculated in matrix.*/
+    int             ed;
+    int             best_ed;
+    char           *spacer;
+
+    spacer = repeat_char( '-', min_seq_length );
+    if ( verbosity > 1 )
+        printf( "self compare\n" );
+
+    for ( i = 0; i < n_tags; i++ )
+       {
+        best_ed = edit_thresh + 1;
+        for ( j = i+1; j < n_tags; j++ )
+           {
+            if ( j == i + 1 )
+                same = 0;
+            else
+                same = first_diff( tags[j - 1].seq, tags[j].seq ); 
+
+            /***************************************************************/
+            /* if we aborted early the previous time, and this sequence    */
+            /* is the same BEYOND that point, then there's no need to      */
+            /* to bother - this one doesn't match in the threshold either. */
+            /***************************************************************/
+
+            if ( same < last )
+               {
+                edit_distance( tags[i].seq, tags[j].seq, edit_thresh, same, 
+                               &last, &ed );
+                if ( ed <= edit_thresh )
+                   {
+                    printf( "%s %s %d %s%c%s\n", tags[i].seq, tags[j].seq, ed,
+                               tags[i].descrip, field_sep, tags[j].descrip );
+                    best_ed = ed;
+                   }
+               }
+           }
+        if ( misses && ( best_ed > edit_thresh ) )  /* no hits, print miss */
+            printf( "%s %s X %s\n", tags[i].seq, spacer, tags[i].descrip );
+       }
+   }
+
+
+void  dump_tags( TAGREC *tags, int n )
+   {
+    int  i;
+    for ( i = 0; i < n; i++ )
+        printf( "%8d %s %s\n", i, tags[i].seq, tags[i].descrip );
+   }
+
+int  tagseq_cmp( const void *a, const void *b )
+   { 
+    return( strcmp( ((TAGREC *)a)->seq, ((TAGREC *)b)->seq ) );
+   }
+
+void  sort( TAGREC *tags, int n )
+   {
+    if ( verbosity > 0 )
+       {
+        printf( "sorting %d tags...\n", n );
+        if ( verbosity > 1 )  dump_tags ( tags, n );
+       }
+
+    qsort( (void *) tags, n, sizeof( TAGREC ), tagseq_cmp );
+
+    if ( verbosity > 0 )
+       {
+        printf( "...done\n" );
+        if ( verbosity > 1 )  dump_tags ( tags, n );
+       }
+   }
+
+                           /****************/
+                           /* Main Program */
+                           /****************/
+
+
+int  main( int argc, char *argv[] )
+  
+   {
+    static char   tag_file[MAX_FILENAME+1]; /* tag file name                 */
+    static TAGREC tags[MAX_NUM_SEQS];       /* array of tags to be checked   */
+    int           n_tags;                   /* number of tags in array       */
+
+    static char   db_file[MAX_FILENAME+1];  /* optional tag database filename*/
+    static TAGREC db[MAX_NUM_SEQS];         /* array of database tags        */
+    int           n_db;                     /* number tags in database array */
+
+    int           edit_thresh;     /* How much of an edit distance you want. */
+
+    get_args( argc, argv, &edit_thresh, tag_file, db_file );
+
+    initialize_matrix();
+
+    load_sequences( tag_file, tags, &n_tags ); /* read data tags*/
+    min_seq_length = min_length( tags, n_tags, LARGE );
+    if ( *db_file != '\0' )                    /* read optional database tags*/
+       {
+        load_sequences( db_file, db, &n_db ); 
+        min_seq_length = min_length( db, n_db, min_seq_length );
+        trunc_lengths( tags, n_tags, min_seq_length );        
+        trunc_lengths( db, n_db, min_seq_length );        
+        sort( db, n_db );                      /* sort alphabetically */
+        cross_compare( edit_thresh, tags, n_tags, db, n_db );
+       }
+    else
+       {
+        trunc_lengths( tags, n_tags, min_seq_length );        
+        sort( tags, n_tags );
+        self_compare( edit_thresh, tags, n_tags );
+       }
+
+   }
+
+
+
+@
+
+
+1.4
+log
+@whoops - forgot what language I was using.  Changed # to /* */
+@
+text
+@d16 1
+d18 1
+d23 1
+a23 1
+/* $Id: lossc.c,v 1.3 2003/01/18 22:36:25 mccorkle Exp mccorkle $ */
+d37 2
+a38 2
+    "$Id: lossc.c,v 1.3 2003/01/18 22:36:25 mccorkle Exp mccorkle $";
+static char rcsvers[] = "$Revision: 1.3 $";
+d45 1
+a45 1
+#define   MAX_NUM_SEQS    200000     /* maximum number of sequences */
+d55 4
+a58 3
+int         misses;                   /* set by -m option in GetArgs */
+int         verbosity;                /* set by -v option in GetArgs */
+
+d70 1
+a70 1
+    printf( "Usage:  lossc [-hmV] [-f<c>] [-v<n>] <thresh> <seqfile> [<seqfile2>]\n" );
+d138 1
+a138 1
+    while ( (c = getopt( argc, argv, "f:hmv:V")) != -1 )
+d143 2
+d147 2
+d324 2
+a325 2
+    else                                     /* Checks for substituitons. */
+        b = 1;
+d330 1
+a330 1
+        *final = ed_dist[row - 1][col] + 1;
+d332 1
+a332 1
+        *final  = ed_dist[row][col - 1] + 1; 
+@
+
+
+1.3
+log
+@fixed a bug that showed up on the SGI Origin - strndup() doesn't
+terminate with 0 if n is reached.
+@
+text
+@d21 1
+a21 1
+/* $Id: lossc.c,v 1.2 2002/05/06 04:02:52 mccorkle Exp mccorkle $ */
+d35 2
+a36 2
+    "$Id: lossc.c,v 1.2 2002/05/06 04:02:52 mccorkle Exp mccorkle $";
+static char rcsvers[] = "$Revision: 1.2 $";
+d96 1
+a96 1
+    t[n] = '\0';            # need to terminate strncpy()
+d159 1
+a159 1
+    strncpy( file1, argv[1], MAX_FILENAME );  # note: add termination here
+@
+
+
+1.2
+log
+@cosmetic changes.
+@
+text
+@d21 1
+a21 1
+/* $Id: lossc.c,v 1.1 2002/05/06 04:00:22 mccorkle Exp mccorkle $ */
+d35 2
+a36 2
+    "$Id: lossc.c,v 1.1 2002/05/06 04:00:22 mccorkle Exp mccorkle $";
+static char rcsvers[] = "$Revision: 1.1 $";
+d43 1
+a43 1
+#define   MAX_NUM_SEQS     40000     /* maximum number of sequences */
+d96 1
+d159 1
+a159 1
+    strncpy( file1, argv[1], MAX_FILENAME );
+@
+
+
+1.1
+log
+@added -f option for changing field seperator.  other cosmetic changes.
+@
+text
+@d15 1
+d21 1
+a21 1
+/* $Id: lossc.c,v 1.0 2002/05/06 03:16:57 mccorkle Exp mccorkle $ */
+d35 2
+a36 2
+    "$Id: lossc.c,v 1.0 2002/05/06 03:16:57 mccorkle Exp mccorkle $";
+static char rcsvers[] = "$Revision$";
+d67 1
+a67 1
+    printf( "Usage:  lossc [-hmV] [-v<n>] <thresh> <seqfile> [<seqfile2>]\n" );
+@
+
+
+1.0
+log
+@Major revision:  Conversion to C from C++
+@
+text
+@d20 1
+a20 1
+/* $Id$ */
+d34 2
+a35 1
+    "$Id$";
+d51 1
+d133 1
+a133 1
+    while ( (c = getopt( argc, argv, "hmv:V")) != -1 )
+d136 2
+d142 4
+a145 2
+            case 'V':  printf( "lossc, $Revision: 0.5 $\n" );
+                       break;
+d440 2
+a441 2
+                    printf( "%s %s %d %s|%s\n", tags[t].seq, db[d].seq, ed,
+                               tags[t].descrip, db[d].descrip );
+d490 2
+a491 2
+                    printf( "%s %s %d %s|%s\n", tags[i].seq, tags[j].seq, ed,
+                               tags[i].descrip, tags[j].descrip );
+@
+
+
+0.5
+log
+@fixed the problem with null descriptions.
+@
+text
+@d1 25
+a25 26
+// Program:      lossc
+// Programmers:  Lawrence Brenner, initial development Aug, 2001.
+//               updated by Sean McCorkle, Mar 2002
+// Language:     C++, with STL
+//
+// Description:  Lots of short sequence comparisons.
+//
+// Usage:        lossc [-hmV] [-v<n>] <thresh> <data seqs> [<db seqs>]
+//  
+//               <thresh> is an integer indicated the maximum edit distance
+//                        considered for a match 
+//               <data seqs> is a file of short sequences and descriptions
+//               <db seqs>  is a file of short sequences and descriptions
+//
+//                 -m  show misses as well as hits
+//                 -v<n>  verbosity level n (1, 2, ...) higher means more mess.
+//                 -h     print usage message, then exit
+//                 -V     print version, then exit
+//
+// $Id: lossc.c++,v 0.4 2002/04/11 21:30:05 mccorkle Exp mccorkle $
+//
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <stl.h>
+d27 1
+d33 2
+a34 1
+static char const rcsid[] = "$Id: lossc.c++,v 0.4 2002/04/11 21:30:05 mccorkle Exp mccorkle $";
+a35 1
+#define  LARGE 1000000
+d37 7
+a43 6
+const int  max_num_seqs = 100000;    // maximum number of sequences
+const int  max_seq_size  = 100;      // max length of the sequences is maxtrix
+                                     // size.
+int        min_seq_length;           // set by main()
+int        misses;                   // set by -m option in GetArgs
+int        verbosity;                // set by -v option in GetArgs
+d45 3
+a47 1
+static  int   EdDist[max_seq_size][max_seq_size]; //The Smith-Waterman matrix
+d49 14
+a62 4
+//
+// usage() - print usage message and bomb out
+//
+void usage( void )
+d64 1
+a64 1
+    cout << "Usage:  lossc [-hmV] [-v<n>] <thresh> <seqfile> [<seqfile2>]\n";
+d68 54
+a121 19
+//
+// spacer( c, n ) - return a string of n c's
+//
+string spacer( char c, int n )
+   {
+    string b( n, c );
+    return( b );
+   }
+
+//
+// GetArgs() - parse args for options and set global values accordingly,
+// and then extract edit_threshold and filenames and return them.
+//
+
+void GetArgs( int     argc,         // input- argc from main( argc, argv )
+              char   *argv[],       // input- argv from main( argc, argv )
+              int    &edit_thresh,  // output- edit distance threshold
+              string &file1,        // output- mandatory filename
+              string &file2         // output- optional 2nd file or "" if none
+d128 1
+a130 1
+
+d138 1
+a138 1
+            case 'V':  cout << "lossc, $Revision: 0.4 $\n";
+d150 2
+a151 2
+    edit_thresh = atoi(argv[0]);
+    file1 = argv[1];
+d153 1
+a153 1
+        file2 = argv[2];
+d155 4
+a158 1
+        file2 = "";
+d162 2
+a163 2
+// note to self: put in lots of input checks, including max seq length
+// check.
+d165 3
+a167 4
+void  Load_Sequences(  string         filename,   // input- short seq filename
+                       vector<string> &sequences,  // output- array of seqs
+                       vector<string> &descrip,    // output- corres. descrips
+                       int            &count       // 
+d170 7
+a176 4
+  ifstream           in; 
+  string             line;
+  int                i = 0;
+  int                k;
+d178 2
+a179 2
+  in.open( filename.c_str() );
+  if ( ! in )
+d181 2
+a182 2
+      cerr << "Can not open "<< filename.c_str() << "\n";
+      exit;
+d185 2
+a186 1
+  while ( ! in.eof() )
+d188 6
+a193 2
+      getline(in, line);
+      k = line.find( ' ' );
+d195 7
+a201 2
+          cout << "k " << k << " line: [" << line << "] " 
+               << line.length() << "\n";
+d204 2
+a205 2
+         sequences[i] = line.substr( 0, k );
+         descrip[i] = line.substr( k+1, line.length() );
+d207 2
+a208 3
+             cout << "input: [" << sequences[i] << "] [" << descrip[i] 
+                  << "]\n";
+         i++;
+d210 1
+a210 1
+      else if ( line.length() > 0 )
+d212 2
+a213 2
+         sequences[i] = line;
+         descrip[i] = ' ';
+d215 2
+a216 3
+             cout << "input: [" << sequences[i] << "] [" << descrip[i] 
+                  << "]\n";
+         i++;
+d219 10
+a228 4
+    in.close();
+    count = i; //i - 1; - why was this here?
+    if ( verbosity == 1 )
+        cout << count << " sequences in file " << filename << "\n";
+d230 8
+a237 3
+    sequences.resize( count );
+    descrip.resize( count );
+} 
+d239 6
+a244 11
+//
+// min_length() returns the minium length of the seqs in the vector
+//
+int   min_length( vector<string> seqs )
+   {
+    vector<string>::iterator s;
+    int                      min = max_seq_size + 1;
+
+    for ( s = seqs.begin();  s != seqs.end();  s++ )
+        if ( (*s).length() < min )
+            min = (*s).length();
+d246 1
+a246 1
+        cout << "Min length " << min << "\n";
+d250 12
+a261 9
+//
+// trunc_lengths() truncates all seqs down to size len
+//
+void  trunc_lengths( vector<string> &seqs,  int len )
+   {
+    vector<string>::iterator s;
+    
+    for ( s = seqs.begin();  s != seqs.end();  s++ )
+        if ( (*s).length() > len )
+d263 3
+a265 5
+            if ( verbosity > 1 )
+                cout << "    truncating " << *s;
+	    (*s).erase( ((*s).begin() + len), (*s).end() );
+            if ( verbosity > 1 )
+                cout << " to " << *s << "\n";
+d267 1
+d270 9
+a278 7
+               ///////////////////////////////
+               // Edit distance calculation //
+               ///////////////////////////////
+//
+// Fills the very top row and left column with increasing scores
+//
+void  Initialize_Matrix( void )
+d283 2
+a284 2
+    for ( row = 0; row < max_seq_size; row++ ) //Sets the values of r,0 
+        EdDist[row][0] = row;
+d286 2
+a287 2
+    for ( col = 1; col < max_seq_size; col++ ) //Sets the values of 0,c 
+        EdDist[0][col] = col;
+d291 12
+a302 11
+//
+// UpdateMin() - selects the minimum score at EdDist[row,col], which may 
+// necessitate checking seq1[row-1] and seq2[col-1].  Returns the minimum
+// value in final
+//
+void  UpdateMin( int     row,   // input- row number for evaluation
+                 int     col,   // input- col number for evaluation
+                 string  seq1,  // input- 1st short sequence
+                 string  seq2,  // input- 2nd short sequence
+                 int    &final    // output- minimum value
+               )
+d304 1
+a304 1
+    int           b = 0;          //Used in the substitution, match function.
+d307 1
+a307 1
+    if ( seq1[row - 1] == seq2[col - 1] ) //Checks for matches.
+d309 1
+a309 1
+    else                                     // Checks for substituitons.
+d312 1
+a312 1
+    final = EdDist[row - 1][col - 1] + b;    // - 1;
+d314 29
+a342 27
+    if ( EdDist[row - 1][col] + 1 < final )  // Checks for insertions.
+        final = EdDist[row - 1][col] + 1;
+    if ( EdDist[row][col - 1]  + 1 < final ) // Checks for deletions.
+        final  = EdDist[row][col - 1] + 1; 
+
+    EdDist[row][col] = final; //++final;
+   }
+
+// This version of Edit_Distance counts on the previous values of
+// EdDist[r][c] from the previous sequence comparsion to be present,
+// up to the subsquare determined by start_diag.  
+
+// returns:  dist - edit distance (or threshold + 1 if aborted)
+//           last_diag - matrix diag indicates where calculation stopped 
+//                       (< seq.length() if aborted early because threshold
+//                        exceeded)
+
+void Edit_Distance( string seq1,        // input- first short sequence 
+		    string seq2,        // input- 2nd short sequence 
+		    int    threshold,   // input- abort if dist > threshold
+		    int    start_diag,  // input- recalculate mat @@ this column
+		    int    &last_diag,  // output- last diag calc. before abort
+		    int    &dist )      // output- resultant distance
+   {
+    int  eta = 0;                // Minimum edit distance changes.
+    int  min;                    // The lowest calculated value at one position
+    int  r, c;                   // row and column counters
+d344 8
+a351 6
+    int  rows = seq1.length();   // number of rows in the matrix
+    int  cols = seq2.length();   // number of columns
+    int  diag;                   // Variable that analyzes only the revelant diagonals.
+
+    // Begin filling the matrix EdDist[r][c] in subsquares, starting
+    // in the upper right corner, or actually at the specified start position
+d355 2
+a356 2
+        eta = EdDist[0][diag];
+        for (  r = 1;  r < diag;  r++  )         // do the column
+d358 1
+a358 1
+	    UpdateMin( r, diag, seq1, seq2, min );
+d363 1
+a363 1
+        for (  c = 1;  c <= diag;  c++  )        // now do the row
+d365 1
+a365 1
+	    UpdateMin( diag, c, seq1, seq2, min );
+d372 1
+a372 1
+        dist = threshold + 1;    
+d374 1
+a374 1
+        dist = EdDist[rows][cols];
+d376 1
+a376 1
+    last_diag = diag;
+d380 7
+a386 6
+//
+// first_diff( a, b ) returns the index of the first position where
+// strings a & b differ.  (Note: we assume both strings are the same length 
+// - is this always going to be true?
+//
+int  first_diff( string a, string b )
+d390 1
+a390 1
+    while ( ( i < a.length() ) && ( a[i] == b[i] ) )  
+d396 5
+a400 7
+void  Cross_Compare( int             edit_thresh,
+                     vector <string> tags, 
+                     vector <string> tag_descrip, 
+                     int             tcount, 
+                     vector <string> database, 
+                     vector <string> db_descrip, 
+                     int             dcount
+d403 5
+a407 5
+    int             t;              // database sequence index
+    int             d;              // counter for the database.
+    int             ed;             // edit distance between the sequences.
+    int             same;           // difference between the two sequences.
+    int             last = LARGE;  // last col position calculated in matrix.
+d409 1
+d411 2
+a412 1
+    for ( t = 0; t < tcount; t++ ) //Checks the tags to the database.
+d415 1
+a415 1
+        for ( d = 0; d < dcount; d++ )
+d420 1
+a420 1
+                same = first_diff( database[d - 1], database[d] ); 
+d422 5
+a426 3
+            // if we aborted early the previous time, and this sequence
+            // is the same BEYOND that point, then there's no need to 
+            // to bother - this one doesn't match in the threshold either.
+d430 2
+a431 2
+                Edit_Distance( tags[t], database[d], edit_thresh, same, 
+                               last, ed );
+d434 2
+a435 2
+                    cout << tags[t] << " " << database[d] << " " << ed <<
+                         " " << tag_descrip[t] << "|" << db_descrip[d] << "\n";
+d440 2
+a441 3
+        if ( misses && ( best_ed > edit_thresh ) )  // no hits, print miss output
+            cout << tags[t] << " " << spacer( '-', min_seq_length )
+                 << " X " <<tag_descrip[t]<<"\n";
+d447 3
+a449 4
+void  Self_Compare( int             edit_thresh,
+                    vector <string> tags, 
+                    vector <string> tag_descrip, 
+                    int             tcount )
+d452 2
+a453 2
+    int             same;           // difference between the two sequences.
+    int             last = LARGE;  // last col position calculated in matrix.
+d456 1
+d458 1
+d460 1
+a460 1
+        cout << "Self check\n";
+d462 1
+a462 1
+    for ( i = 0; i < tcount; i++ )
+d465 1
+a465 1
+        for ( j = i+1; j < tcount; j++ )
+d470 1
+a470 1
+                same = first_diff( tags[j - 1], tags[j] ); 
+d472 5
+a476 3
+            // if we aborted early the previous time, and this sequence
+            // is the same BEYOND that point, then there's no need to 
+            // to bother - this one doesn't match in the threshold either.
+d480 2
+a481 2
+                Edit_Distance( tags[i], tags[j], edit_thresh, same, 
+                               last, ed );
+d484 2
+a485 2
+                    cout << tags[i] << " " << tags[j] << " " << ed << " " <<
+                         tag_descrip[i] << "|" << tag_descrip[j] << "\n";
+d490 2
+a491 3
+        if ( misses && ( best_ed > edit_thresh ) )  // no hits, print miss output
+            cout << tags[i] << " " << spacer( '-', min_seq_length ) 
+                 << " X " <<tag_descrip[i]<<"\n";
+d495 33
+a527 3
+                           //////////////////
+                           // Main Program //
+                           //////////////////
+d533 24
+a556 28
+    int             dcount; //The counter for the database.
+    int             tcount; //The counter for the tags.
+    int             edit_thresh; //How much of an edit distance you want.
+    int             minl2;
+    vector <string> tags(max_num_seqs); //The vector of tags that are to be checked against the databse.
+    vector <string> database(max_num_seqs); //The vector of sequences that are in the databse.
+    vector <string> tag_descrip(max_num_seqs);
+    vector <string> db_descrip(max_num_seqs);
+    string          file1;
+    string          file2;
+
+    GetArgs( argc, argv, edit_thresh, file1, file2 );
+
+    Initialize_Matrix();
+
+    Load_Sequences( file1, tags, tag_descrip, tcount );    // read data tags
+    min_seq_length = min_length( tags );
+    if ( file2 != "" ) // read database tags
+       {
+        Load_Sequences( file2, database, db_descrip, dcount ); 
+        minl2 = min_length( database );
+        if ( minl2 < min_seq_length ) 
+            min_seq_length = minl2;
+        trunc_lengths( tags, min_seq_length );        
+        trunc_lengths( database, min_seq_length );        
+        sort( database.begin(), database.end() );  // sort alphabetically
+        Cross_Compare( edit_thresh, tags, tag_descrip, tcount, 
+                     database, db_descrip, dcount );
+d560 3
+a562 3
+        trunc_lengths( tags, min_seq_length );        
+        sort( tags.begin(), tags.end() );
+        Self_Compare( edit_thresh, tags, tag_descrip, tcount );
+@
+
+
+0.4
+log
+@cleaning up a bit, commenting.
+@
+text
+@d20 1
+a20 1
+// $Id: lossc.c++,v 0.3 2002/04/11 19:04:11 mccorkle Exp mccorkle $
+d33 1
+a33 1
+static char const rcsid[] = "$Id: lossc.c++,v 0.3 2002/04/11 19:04:11 mccorkle Exp mccorkle $";
+d90 1
+a90 1
+            case 'V':  cout << "lossc, $Revision: 0.3 $\n";
+d137 2
+a138 1
+          cout << "k " << k << " line: [" << line << "]\n";
+d148 9
+@
+
+
+0.3
+log
+@okay - got string truncation working, and added in options and an optional 2nd file name.
+@
+text
+@d20 1
+a20 1
+// $Id: lossc.c++,v 0.1 2002/04/10 18:43:59 mccorkle Exp mccorkle $
+d33 1
+a33 1
+static char const rcsid[] = "$Id: lossc.c++,v 0.1 2002/04/10 18:43:59 mccorkle Exp mccorkle $";
+d90 1
+a90 1
+            case 'V':  cout << "lossc, $Revision$\n";
+d157 3
+a159 2
+// returns the minium length of the seqs in the vector
+
+d173 3
+d190 7
+a196 1
+ 
+d210 13
+a222 8
+void  Position_Evaluation( int    row,   // input- row number for evaluation
+                           int    col,   // input- col number for evaluation
+                           string seq1,  // input- 1st short sequence
+                           string seq2,  // input- 2nd short sequence
+                           int &final    // output- minimum value
+                         )
+{
+   int           b = 0;                      //Used in the substitution, match function.
+a223 1
+   //cout << "Pos Eval for [" << row << "][" << col << "] of seqs [" << seq1 << "] and [" << seq2 << "]\n";     
+d225 4
+a228 9
+  if ( seq1[row - 1] == seq2[col - 1] ) //Checks for matches.
+    {    
+      b = 0;
+    }    
+  else //Checks for substituitons.
+    {
+      b = 1;
+    }
+  final = EdDist[row - 1][col - 1] + b; // - 1;
+d230 1
+a230 15
+  //cout << "b is: " << b << " and final is: " << final << "\n";
+
+	 
+  if ( EdDist[row - 1][col] + 1 < final ) //Checks for insertions.
+    {    
+      final = EdDist[row - 1][col] + 1;
+      // cout << "Final for the insertion at EdDist[" << row << "][" << col << "] is: " << final << "\n";
+    }
+  if ( EdDist[row][col - 1]  + 1 < final ) //Checks for deletions.
+    {    
+      final  = EdDist[row][col - 1] + 1; 
+      //      cout << "Final for the deletion  at EdDist[" << row << "][" << col << "] is: " << final << "\n";
+      
+    }
+  EdDist[row][col] = final; //++final;
+d232 4
+d237 2
+a238 1
+}
+d241 2
+a242 1
+// EdDist[r][c].
+d245 3
+a247 1
+//           last_col - matrix column where calculation stopped 
+d252 3
+a254 3
+		    int    start_col,   // input- recalculate mat @@ this column
+		    int    &last_col,   // output- last col calc. before abort
+		    int    &dist )      // output-resultant distance
+d267 1
+a267 1
+    for ( diag = start_col; ((diag <= rows) && (eta <= threshold)); diag++ )
+d272 1
+a272 1
+	    Position_Evaluation( r, diag, seq1, seq2, min );
+d279 1
+a279 1
+	    Position_Evaluation( diag, c, seq1, seq2, min );
+d283 1
+a283 1
+    }
+d290 2
+a291 3
+  last_col = diag;
+}
+
+d294 1
+d298 1
+a298 1
+
+d318 1
+a318 1
+    int             t;       // database sequence index
+d322 1
+a322 1
+    int             lastp = LARGE;  // last col position calculated in matrix.
+d339 1
+a339 1
+            if ( same < lastp )
+d342 1
+a342 1
+                               lastp, ed );
+d366 1
+a366 1
+    int             lastp = LARGE;  // last col position calculated in matrix.
+d387 1
+a387 1
+            if ( same < lastp )
+d390 1
+a390 1
+                               lastp, ed );
+@
+
+
+0.2
+log
+@looking pretty good.  saving and then adding in min length trimming.
+@
+text
+@d5 1
+d7 2
+a8 1
+// Usage:        lossc <thresh> <data seqs> [<db seqs>]
+d15 5
+d28 3
+d37 1
+a37 1
+const int max_num_seqs = 100000;     // maximum number of sequences
+d40 39
+d80 2
+a81 2
+int  misses   = 0;  
+int  verbosity = 0;
+d83 18
+a100 1
+static  int   EdDist[max_seq_size][max_seq_size]; //The Smith-Waterman matrix
+d102 7
+a108 1
+string          blanks( "-----------------" ); // make this variable
+d114 1
+a114 1
+void  Load_Sequences(  char           *filename,   // input- short seq filename
+d125 1
+a125 1
+  in.open(filename);
+d128 1
+a128 1
+      cerr << "Can not open "<< filename << "\n";
+d164 1
+a164 1
+    for ( s = seqs.begin();  s != seqs.end;  s++ )
+d167 2
+d172 15
+d349 2
+a350 1
+            cout << tags[t] << " " << blanks << " X " <<tag_descrip[t]<<"\n";
+d397 2
+a398 1
+            cout << tags[i] << " " << blanks << " X " <<tag_descrip[i]<<"\n";
+d413 1
+d418 2
+d421 1
+a421 2
+
+    edit_thresh = atoi(argv[1]);
+d425 3
+a427 3
+    Load_Sequences(argv[2], tags, tag_descrip, tcount);    // read data tags
+
+    if ( argc > 3 ) // read database tags
+d429 6
+a434 1
+        Load_Sequences(argv[3], database, db_descrip, dcount); 
+d441 1
+@
+
+
+0.1
+log
+@So far so good - I'm about to insert the last version of Edit_Distance
+to take advantage of sorted lists.
+@
+text
+@d7 5
+d13 1
+a13 1
+// $Id$
+d23 3
+a25 1
+static char const rcsid[] = "$Id$";
+d31 2
+a32 1
+int  verbosity = 1;
+d39 59
+d111 6
+a116 3
+
+
+void Position_Evaluation(int row, int col, string seq1, string seq2, int &final )
+d151 2
+d154 2
+d157 6
+a162 6
+
+
+int  Edit_Distance( string seq1,   // input- first short sequence
+                    string seq2,   // input- 2nd short sequence
+                    int threshold  // input- abort if dist > threshold
+                  )
+d165 2
+a166 3
+    int  min;                    // The lowest calculated value.
+    int  r = 0;                  // row counter
+    int  c = 0;                  // column counter
+d172 4
+a175 1
+    for ( diag = 1;  diag <= rows && eta <= threshold; diag++ )
+d178 10
+a187 3
+        for ( r = 1; r < diag; r++ )
+           {
+            Position_Evaluation( r, diag, seq1, seq2, min );
+d189 1
+a189 7
+                eta = min;
+           } 
+        for ( c = 1; c <= diag; c++ )
+           {
+            Position_Evaluation( diag, c, seq1, seq2, min );
+            if ( min < eta )
+                eta = min;
+d191 4
+a194 3
+       }
+    if ( eta > threshold)
+        return threshold + 1;    
+d196 3
+a198 1
+        return EdDist[rows][cols];
+a202 46
+// note to self: put in lots of input checks, including max seq length
+// check.
+
+void  Load_Sequences(  char           *filename,   // input- short seq filename
+                       vector<string> &sequences,  // output- array of seqs
+                       vector<string> &descrip,    // output- corres. descrips
+                       int            &count       // 
+                    )
+ {
+  ifstream           in; 
+  string             line;
+  int                i = 0;
+  int                k;
+
+  in.open(filename);
+  if ( ! in )
+    {
+      cerr << "Can not open "<< filename << "\n";
+      exit;
+    }
+
+  while ( ! in.eof() )
+    {
+      getline(in, line);
+      k = line.find( ' ' );
+      if ( verbosity > 1 )
+          cout << "k " << k << " line: [" << line << "]\n";
+      if ( k > 0 )
+        {
+         sequences[i] = line.substr( 0, k );
+         descrip[i] = line.substr( k+1, line.length() );
+         if ( verbosity > 1 )
+             cout << "input: [" << sequences[i] << "] [" << descrip[i] 
+                  << "]\n";
+         i++;
+	}
+    }
+    in.close();
+    count = 1; //i - 1; - why was this here?
+    if ( verbosity == 1 )
+        cout << count << " sequences in file " << filename << "\n";
+
+    sequences.resize( count );
+    descrip.resize( count );
+} 
+
+d216 9
+a224 8
+void  Cross_Check( int             edit_thresh,
+                   vector <string> tags, 
+                   vector <string> tag_descrip, 
+                   int             tcount, 
+                   vector <string> database, 
+                   vector <string> db_descrip, 
+                   int             dcount
+                 )
+d227 4
+a230 3
+    int             data;    // The counter for the database.
+    int             ed;    // The edit distance between the sequences.
+    int             seqdiff; // The difference between the two sequences.
+d236 1
+a236 1
+        for ( data = 0; data < dcount; data++ )
+d238 2
+a239 2
+            if ( data == 0 )
+                seqdiff = 0;
+d241 1
+a241 1
+                seqdiff = first_diff( database[data - 1], database[data] ); 
+d243 15
+a257 7
+            ed = Edit_Distance(tags[t], database[data], edit_thresh);
+            if ( ed <= edit_thresh )
+    	       {
+                cout << tags[t] << " " << database[data] << " " << ed <<
+		     " " << tag_descrip[t] << "|" << db_descrip[data] << "\n";
+                best_ed = ed;
+	       }
+d259 1
+a259 1
+        if ( best_ed > edit_thresh )  // no hits, print miss output
+d266 4
+a269 4
+void  Self_Check( int             edit_thresh,
+                  vector <string> tags, 
+                  vector <string> tags_descrip, 
+                  int             tcount )
+d272 3
+a274 1
+    int             seqdiff; // The difference between the two sequences.
+d277 2
+a278 1
+    cout << "Self check\n";
+d285 2
+a286 2
+            if ( data == 0 )
+                seqdiff = 0;
+d288 1
+a288 1
+                seqdiff = first_diff( database[data - 1], database[data] ); 
+d290 15
+d306 2
+d338 1
+a338 1
+        Cross_Check( edit_thresh, tags, tag_descrip, tcount, 
+d344 1
+a344 1
+        Self_Check( edit_thresh, tags, tag_descrip, tcount );
+@

@@ -1,0 +1,37 @@
+head	1.1;
+access;
+symbols;
+locks
+	seanmccorkle:1.1; strict;
+comment	@# @;
+
+
+1.1
+date	2010.12.21.16.25.40;	author seanmccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@got tired of greping ^> and then wc -l.
+@
+
+
+1.1
+log
+@Initial revision
+@
+text
+@#!/usr/bin/perl
+# Program:      numseqs
+# Programmer:   Sean R. McCorkle
+# Language:     perl
+# Description:  counts fasta headers from given files or stdin
+#
+# $Id$
+#
+while ( <> )
+   { $n++ if ( /^>/ ); }
+
+print "$n\n";
+@

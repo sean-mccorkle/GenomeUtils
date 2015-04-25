@@ -1,0 +1,125 @@
+head	1.0;
+access;
+symbols;
+locks
+	mccorkle:1.0; strict;
+comment	@# @;
+
+
+1.0
+date	2003.06.23.20.02.37;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@read input DNA sequences, print out all start and stop codon signals,
+all reading frames.
+@
+
+
+1.0
+log
+@Initial revision
+@
+text
+@#!/usr/bin/perl
+# Program:      signals
+# Programmer:   Sean R. McCorkle, Biology Dept. Brookhaven National Laboratory
+# Language:     perl
+#
+# Description:  reads in sequence(s) (FASTA format) and outputs start and
+#               stop signals in this format:  
+#
+#                  <signal> <dir> <rdg frame> <pos> <seq> <seqhdr>
+#
+#               Where 
+#                  <signal>    is "start" or "stop"
+#                  <dir>       is "f" or "r" for forward or reverse strand
+#                  <rdg frame> is 1, 2, or 3
+#                  <pos>       is the nt position, always given from the 5'
+#                              end of the input sequence even for reverse 
+#                              direction signals
+#                  <seq>       is the signal sequence (i.e "ATG")
+#                  <seqhdr>    is the input (FASTA) sequence header
+#
+# Notes to self: 1) may want an option to print out reverse position for
+#                   reverse direction signals.
+#                2) is -1,-2,-3 inherently better than R1,R2,R3? ponder this.
+#                   
+#
+# $Id$
+#
+
+%is_start  = ( "ATG" => 1, "GTG" => 1, "TTG" => 1 );  # recognized coding 
+%is_stop   = ( "TAA" => 1, "TGA" => 1, "TAG" => 1 );  # signals
+
+%is_rstart = ( "CAT" => 1, "CAC" => 1, "CAA" => 1 );  # reverse complements of
+%is_rstop  = ( "TTA" => 1, "TCA" => 1, "CTA" => 1 );  # above
+
+%comp = ( "CAT" => "ATG", "CAC" => "GTG", "CAA" => "TTG",   # for output
+          "TTA" => "TAA", "TCA" => "TGA", "CTA" => "TAG" );
+
+while ( <> )
+   { 
+    chomp;
+    if ( />(.*)/ )
+       {
+        $new_hdr = $1;
+        signals( $hdr, $seq ) if ( defined( $hdr ) );
+        $hdr = $new_hdr;
+        $seq = "";
+       }
+    else
+       {
+        s/\s//g;
+        $seq .= uc( $_ );
+       } 
+   }
+
+signals( $hdr, $seq ) if ( defined( $hdr ) );
+
+
+sub  signals 
+   {
+    my ( $hdr, $seq ) = @@_;
+ 
+    my $i, $j;  # positions from left and right ends
+
+    #
+    #  Forward signals first
+    #
+    my $n = length( $seq ) - 2;                 # stopping point
+    #
+    #  move from left to right, check both forward and rc codons at each
+    #  position
+    #
+    for ( $i = 0, $j = length( $seq ) - 3;  $i < $n;  $i++, $j-- )
+       {
+        die "Bad $j $i\n" unless( $j == length( $seq ) - ($i + 3) );
+        my $s = substr($seq,$i,3);
+        my $fr = ($i % 3) + 1;
+        my $rfr = ($j % 3) + 1;
+        printf "start f %10d $fr %s $hdr\n", $i, $s  if ( $is_start{$s} );
+        printf "stop  f %10d $fr %s $hdr\n", $i, $s  if ( $is_stop{$s} );
+        printf "start r %10d $rfr %s $hdr\n", $i, $comp{$s} 
+                                                     if ( $is_rstart{$s} );
+        printf "stop  r %10d $rfr %s $hdr\n", $i, $comp{$s} 
+                                                     if ( $is_rstop{$s} );
+       }    
+   }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+@

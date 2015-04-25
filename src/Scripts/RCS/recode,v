@@ -1,0 +1,127 @@
+head	0.2;
+access;
+symbols;
+locks
+	mccorkle:0.2; strict;
+comment	@# @;
+
+
+0.2
+date	2003.06.26.13.52.29;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	2003.06.26.13.27.21;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@reads amino acid sequences, outputs a DNA coding sequencing
+according to a "most favored codon" table.  (Defaults to
+e. coli now).  Written for John Shanklin to try to increase
+protein yield in E. coli.
+@
+
+
+0.2
+log
+@fixed idiot bug with defined($hdr) again.
+@
+text
+@#!/usr/bin/perl
+# Program:      recode
+# Programmer:   Sean R. McCorkle, Biology Dept Brookhaven National Laboratory
+# Language:     perl
+#
+# Description:  reads protein sequences (FASTA format) and outputs reverse
+#               DNA translations (FASTA format) according to a specific
+#               coding scheme.  Default scheme is most favorable for E. coli
+#
+# Usage:        recode  [<protein sequence file> ... ]
+#
+#               if no files are specified, STDIN is scanned
+#
+# $Id: recode,v 0.1 2003/06/26 13:27:21 mccorkle Exp mccorkle $
+#
+
+#
+#  Default reverse translation table, E. coli K12
+# 
+%revtrans = (
+            'F' => 'TTT',   'S' => 'AGC',   'Y' => 'TAT',  'C' => 'TGC',
+            'L' => 'CTG',   'P' => 'CCG',   'H' => 'CAT',  'W' => 'TGG',
+            'I' => 'ATT',   'T' => 'ACC',   'Q' => 'CAG',  'R' => 'CGC',
+            'M' => 'ATG',   'A' => 'GCG',   'N' => 'AAC',  'G' => 'GGC',
+            'V' => 'GTG',                   'K' => 'AAA',
+                                            'D' => 'GAT',
+                                            'E' => 'GAA',
+           );
+
+
+
+                                ################
+                                # Main Program #
+                                ################
+
+while ( <> )
+   {
+    if ( /^>(.*)/ )
+       {
+        $new_hdr = $1;
+        recode( $hdr, $prot ) if ( defined( $hdr ) );
+        ($hdr,$prot) = ($new_hdr,"");
+       }
+    else
+       {
+        chomp;
+        s/\s//g;
+        $prot .= uc( $_ );
+       }
+   }
+
+recode( $hdr, $prot ) if ( defined( $hdr ) );
+
+
+                                 ###############
+                                 # Subroutines #
+                                 ###############
+
+sub  recode
+   {
+    ($hdr,$prot) = @@_;
+
+    print ">DNA recode: $hdr\n";
+    for ( $i = 0; $i < length( $prot ); $i++ )
+       {
+        print( code( substr( $prot,$i,1) ) );
+        print "\n" if ( (($i+1) % 20 ) == 0 );
+       }
+    print "\n" unless( ( $i % 20 ) == 0 );
+   }
+
+
+sub  code
+   {
+    my $aa = shift;
+    return(  defined( $revtrans{$aa} ) ? $revtrans{$aa} : '???' );
+   }
+@
+
+
+0.1
+log
+@going public.
+@
+text
+@d14 1
+a14 1
+# $Id$
+d41 1
+a41 1
+        recode( $hdr, $prot ) if ( $hdr );
+d52 1
+a52 1
+recode( $hdr, $prot ) if ( $hdr );
+@

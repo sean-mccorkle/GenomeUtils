@@ -1,0 +1,8 @@
+#!/usr/bin/perl
+
+while ( <> )
+   {
+    /^(\S+)\s+(.*): length (\d+)/ || die "Bad $_";
+    ($gene,$what,$size) = ($1,$2,$3);
+    printf "$gene %6d  $what\n", $size;
+   }

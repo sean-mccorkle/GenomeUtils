@@ -1,0 +1,202 @@
+# Program:      pp
+# Programmer:   Sean R. McCorkle
+# Language:     Icon
+# Description:  Sequence pretty-printer.  This reads DNA or amino acid
+#               sequence files (fasta format), and prints them out with
+#               position numbers and spacing for easy reading.
+#
+#               see "help" procedure below for embedded documentation
+#
+# $Id: pp.icn,v 0.8 2001/03/26 18:25:22 mccorkle Exp mccorkle $
+#
+
+link  io
+link  doc
+link  options
+
+
+                      ###############################
+                      # Output Control globals,     #
+                      # set by command line options #
+                      ###############################
+
+global show_pos              # flag: show or not show pos numbers       -n
+global chars_per_line        # line grouping size (default 50)          -l
+global subgr_size            # sub grouping size (default 10)           -s
+global start_pos             # start position (default 1)               -p
+global end_pos               # end position (default 0)
+
+
+procedure  help( fmt )
+
+    version()
+    write_doc( fmt, "\
+__Name      pp - sequence pretty-printer                                     \
+                                                                             \
+__Usage     pp [options] [<seq> [<seq> ... ] ]                               \
+                                                                             \
+            where <seq> is a file that contains one or more fasta format DNA \
+            or amino acid sequences. A single hyphen (-) can be used as      \
+            a file name to specify stdin.  If no files are given,            \
+            stdin is scanned.                                                \
+                                                                             \
+__Options                                                                    \
+_.             -a <str> append <str> to header title                         \
+_.             -B <n>   begin at position n                                  \
+_.             -L <n>   print <n> characters                                 \
+_.             -l <n>   print <n> characters per line (default 50)           \
+_.             -n       don't print position numbers on left                 \
+_.             -s <n>   insert a space every <n> characters (default 10),    \
+                        if 0 or <0, no subgrouping is done                   \
+_.             -t <str> use <str> as header title (overrides -a)             \
+                                                                             \
+_.             -h       print help then exit                                 \
+_.             -help    print help then exit                                 \
+_.             -html    print html man page then exit                        \
+_.             -man     print unix man page then exit                        \
+_.             -v       print version then exit                              \
+                                                                             \
+__Note                                                                       \
+             -B, -L and -t are applied to each sequence (they really         \
+             only make sense for input which is a single sequence            \
+      " )
+    exit()
+
+end
+
+                             ################
+                             # Main Program #
+                             ################
+
+
+procedure main( args )
+
+
+    local opts, f, s, title
+
+    opts := options( args, "-a: -B+ -L+ -l+ -n -s+ -t: -h -help! -man! -html! -v", 
+                     opt_err )
+    handle_opts( opts )
+
+    if ( *args = 0 ) then push( args, "-" )   # use  stdin if no filenames
+    every f := open_file( !args ) do
+       {
+        while s := read_fasta( f ) do
+	   {
+            if member( opts, "t" )
+              then
+                   title := opts["t"]
+              else
+		  {
+                   title := s.heading
+                   if member( opts, "a" )
+                       then title ||:= opts["a"]
+                  }
+            pretty_output( &output, s.seq, title )
+           }
+        close_file( f )
+       }
+
+end
+
+#
+# look at opts table, set output control globals as appropriate
+#
+procedure handle_opts( opts )
+
+    if member( opts, ("h" | "help") )  then help( "text" )
+    if member( opts, "man" )  then help( "man" )
+    if member( opts, "html" )  then help( "html" )
+
+    if member( opts, "v" )  then { version(); exit() }
+    if member( opts, "n" )  
+      then show_pos := 0 
+      else show_pos := 1
+
+    chars_per_line := ( \opts["l"] | 50 )
+    subgr_size := ( \opts["s"] | 10 )
+    start_pos := ( \opts["B"] | 1 )
+    end_pos := ( ( start_pos + \opts["L"] ) | 0 )
+
+    if subgr_size < 1 then subgr_size := chars_per_line
+
+end
+
+#
+# print one sequence
+#
+procedure  pretty_output( outfile, s, title )
+
+    local i, real_end, l
+
+    i := start_pos
+    l := *s + 1
+    if end_pos <= 0
+      then 
+        real_end := end_pos + l
+      else
+        if end_pos <= l
+           then real_end := end_pos
+           else real_end := l
+    write( outfile, ">" || title )
+    while i + chars_per_line < real_end do
+       {
+        pretty_line_out( outfile, i, s[ i +: chars_per_line ] )
+        i +:= chars_per_line
+       }
+    if ( i < real_end )
+        then pretty_line_out( outfile, i, s[ i : real_end ] )
+end
+
+#
+# print one line
+#
+procedure  pretty_line_out( outfile, n, s )
+
+    local l, i
+
+    l := ""
+    if show_pos = 1
+       then l ||:= right( n, 9 ) || " "
+    i := 1
+    while i + subgr_size <= *s do
+       {
+        l ||:= s[i+:subgr_size] || " "
+        i +:= subgr_size
+       }
+    if i <= *s 
+        then l ||:= s[i:0]
+    if l[0] == " "              # removing the last blank helps out with
+        then l := l[1:-1]       # "diff" checks
+    write( outfile, l )
+
+end
+
+
+#
+# print version number & help
+#
+
+
+#
+# print version number
+#
+procedure  version()
+
+    "$Revision: 0.8 $" ? { tab( upto( ' ' ) )
+                           write( "pp", tab( many( &digits ++ ' .' ) ),
+                                  "  Sequence pretty-printer" )
+		         }
+end
+
+#
+# slightly more informative option error message
+#
+procedure opt_err( msg )
+
+   write( &errout, "pp: ", msg, "  (type pp -h for help)" )
+   exit( 1 )
+end
+
+
+

@@ -1,0 +1,89 @@
+#!/usr/bin/perl
+
+use Bio::Tools::Blast;
+
+$incr = 300;
+$bl = "";
+
+foreach $file ( @ARGV )
+   {
+    #print "\n$file:\n";
+    #
+    # Unfortunately, Blast->new() will BOMB the program on failure,
+    # which includes an attempt to parse a non-blast file, or worse:
+    # a perfectly good but empty blast report.  We are therefore forced
+    # to eval and then check $@.
+    #
+    eval { $bl = Bio::Tools::Blast->new( -file   => $file,
+                                         -parse  => 1,  
+                                         # -signif => '1e-10',
+                                       ); 
+         };
+
+    if ( $@  )
+       {
+        print STDERR "**** $file is bad ****\n";
+        print STDERR "$@\n";
+        next;
+       }
+
+    #print $b->num_hits, " hits\n";
+
+    $h = $bl->hit( 'best' );
+    #print "Lowest hit is ", $h->expect(), "\n";
+    $gi = "";
+    $d = $h->desc();
+    $d =~ s/\>gi\|(\w*).*$//;
+    $gi = $1;
+
+    #print "Name: ", $h->name(),   " gi: ", $gi, "\n";\
+    #print "Desc: ", $d, "\n";
+    
+    $frame = $h->frame();
+    $frame =~ s/^\+//;
+    $file =~ /^.*\.(\d+)\./;
+    $x1 = $1;
+    $x2 = $x1 + $incr;
+    #($y1,$y2) = (0.10,0.48);
+    $m = ( $x1 - 1.0 ) / (1.0 * $incr);
+    if ( $m - int( $m ) > 0.0 )  
+        { ($y1,$y2) = (-0.5,-0.3);  }
+    else
+        { ($y1,$y2) = (-0.3,-0.1);  }
+    
+    $color = &get_color( $h->expect() );
+    if ( $color ne "black" )
+       {
+        ($a,$b) = $h->range( 'query' );
+        #$a *= 3;
+        #$b *= 3;
+        $a += $x1;
+        $b += $x1;
+        $d =~ s/\s+/_/g;
+        print "# $file\n";
+        print "t_rect $frame $a $b $y1 $y2 $color\n";
+        print "lpress $frame $a $b $y1 $y2 display ",
+              join( "_", $h->expect(), $d, ), "\n";
+        #print $frame, " ", $x, " ", $y, "  ",
+        #      $h->expect(), " ", join( " - ", $h->range( 'query' ) ), "  ",
+        #                         join( " - ", $h->range( 'sbjct' ) ), "  ",
+        #      $h->name(), "\n";
+       }
+     $bl->destroy();
+  }
+
+
+sub  get_color
+   {
+    my $e = shift;
+    return( "white" ) if $e < 1.0e-30;
+    return( "red" ) if $e < 1.0e-20;
+    return( "orange" ) if $e < 1.0e-10;
+    return( "yellow"   )  if $e < 1.0e-6;
+    return( "green" )     if $e < 1.0e-3;
+    return( "blue" )      if $e <0.1;
+    return( "black" )
+   }
+
+
+

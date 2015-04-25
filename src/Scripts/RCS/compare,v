@@ -1,0 +1,590 @@
+head	1.4;
+access;
+symbols;
+locks
+	mccorkle:1.4; strict;
+comment	@# @;
+
+
+1.4
+date	2000.11.02.17.35.54;	author mccorkle;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2000.11.02.04.04.45;	author mccorkle;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	97.06.23.15.30.58;	author mccorkle;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	97.04.30.15.27.39;	author mccorkle;	state Exp;
+branches;
+next	1.0;
+
+1.0
+date	97.02.14.22.47.54;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@Description:  This analyzes the differences and similarities between the mats
+of two "getlocs" format output files from the program "splice",
+and prints out equivalences, fusions, fissions, disappearances,
+appearances, and complexes, based on sequence members alone.
+@
+
+
+1.4
+log
+@whoops fixed bug in read_simplef
+@
+text
+@#!/usr/bin/perl
+# Program:      compare
+# Programmer:   Sean R. McCorkle
+# Language:     perl
+#
+# Description:  This analyzes the differences and similarities between the 
+#               contigs (splice: mats) of two sequence assemblies.  It can 
+#               read contig/lane data from .fasta.screen.ace files (phrap
+#               output), simple format (described below, or output from
+#               the BNL splice assembler (getlocs).
+#
+#               Specifically this was implemented to compile before & after
+#               differences between subsequent assemblies.
+#
+#               It prints out equivalences, fusions, fissions, disappearances,
+#               appearances, and complexes, based on sequence members alone.
+#               It does not perform any sequence comparisions or alignments.  
+#               For that you should use a sequence comparison tool such as 
+#               MUMmer or FASTA.
+#
+#               Simple format file:    
+#
+#                             Contig:  <name>
+#                                  lane1
+#                                  lane2
+#                             Contig:  <name>
+#                                  lane3
+#                                  lane4
+#                                  ...
+#
+# Usage:        compare <old contig file> <new contig file>
+#
+# $Id: compare,v 1.3 2000/11/02 04:04:45 mccorkle Exp mccorkle $
+#
+($file1,$file2) = @@ARGV;
+'$Revision: 1.3 $ ' =~ /(\d+)\.(\d+)/;
+printf "Compare v$1.$2\n";
+
+#
+# Read in old file
+#
+&read_contigs( $file1 );
+%old_contig = %contig;
+@@old_contigs = @@contigs;
+#
+# Read in new file
+#
+&read_contigs( $file2 );
+%new_contig = %contig;
+@@new_contigs = @@contigs;
+
+#
+# scan through sequence keys, and establish old-new contig connection
+# lists.
+#
+foreach $b ( keys( %old_contig ) )
+   {
+    $old_m = $old_contig{$b};
+    $new_m = $new_contig{$b};
+    #printf "$b: ($old_m) [$new_m]\n" if ( $old_m eq block43 );
+
+    $o = $old_conn{$old_m};
+    $n = $new_conn{$new_m};
+    $old_conn{$old_m} .= " $new_m " if ( $new_m && ($o !~ /\ $new_m /) );
+    $new_conn{$new_m} .= " $old_m " if ( $old_m && ($n !~ /\ $old_m /) );
+   }
+
+
+printf "\n\nMappings for $file1 with respect to $file2\n\n";
+
+foreach $o ( @@old_contigs )
+   {
+    if ( (! $old_conn{$o}) || $old_conn{$o} =~ /^\s*$/ )
+       {
+        printf "$o vanishes\n";
+       }
+    else
+       {
+        @@plist = &mklist( $old_conn{$o} );
+        if ( $#plist == 0 )                 # either equiv, or fusion
+	   {
+            $n = $plist[0];
+            @@nlist = &mklist( $new_conn{$n} );
+            if ( $#nlist == 0 )
+               {
+                die "Fatal @@nlist <-> $o\n" if $nlist[0] ne $o;
+                printf "$o is equivalent to $n\n";
+	       }
+            else
+               {
+                if ( &back_check( $n, @@nlist ) )
+                   { printf "$o fuses into $n\n"; }
+                else
+                   { printf 
+		     "$o is completely contained by $n (not a clean fusion)\n";
+                   }
+	       }
+           }
+        else
+           {
+            if ( &forward_check( $o, @@plist ) )
+               { printf "$o fissions into %s\n", join( ', ', @@plist ); }
+            else
+               { printf 
+                    "$o splits into %s (not a clean fusion)\n", 
+                    join( ', ', @@plist );
+               }
+	   }
+       }
+   }
+
+printf "\n\nMappings for $file2 with respect to $file1\n\n";
+
+foreach $n ( @@new_contigs )
+   {
+    if ( (! $new_conn{$n}) || $new_conn{$n} =~ /^\s*$/ )
+       {
+        printf "$n appears\n";
+       }
+    else
+       {
+        @@nlist = &mklist( $new_conn{$n} );
+        if ( $#nlist == 0 )                 # either equiv, or fusion
+	   {
+            $o = $nlist[0];
+            @@olist = &mklist( $old_conn{$o} );
+            if ( $#olist == 0 )
+               {
+                die "Fatal @@olist <-> $n\n" if $olist[0] ne $n;
+                printf "$n is equivalent to $o\n";
+	       }
+            else
+               {
+                if ( &forward_check( $o, @@olist ) )
+                   { printf "$n is a fission product of $o\n"; }
+                else
+                   { printf 
+		    "$n is a complete subset of $o (not a clean fission)\n";
+                   }
+	       }
+           }
+        else
+           {
+            if ( &back_check( $n, @@nlist ) )
+               { printf "$n is a fusion of %s\n", join( ', ', @@nlist ); }
+            else
+               { printf 
+                    "$n is a join of %s (not a clean fusion)\n", 
+                    join( ', ', @@nlist );
+               }
+	   }
+       }
+   }
+
+
+
+                              ###############
+                              # Subroutines #
+                              ###############
+
+
+sub back_check
+   {
+    my ( $n, @@nlist ) = @@_;
+
+    my $okay = 1;
+    foreach $o ( @@nlist )
+      {
+       my @@olist = &mklist( $old_conn{$o} );
+       if ( $#olist != 0 )
+          { 
+           $okay = 0;
+           last;
+          }
+       die "back_check: fatal $n <-> $olist[0]\n" if ( $olist[0] ne $n );
+      }
+    $okay;
+   }
+
+
+sub forward_check
+   {
+    my ( $o, @@olist ) = @@_;
+
+    my $okay = 1;
+    foreach $n ( @@olist )
+      {
+       my @@nlist = &mklist( $new_conn{$n} );
+       if ( $#nlist != 0 )
+          { 
+           $okay = 0;
+           last;
+          }
+       die "back_check: fatal $o <-> $nlist[0]\n" if ( $nlist[0] ne $o );
+      }
+    $okay;
+   }
+
+#
+# read_contigs( $file ) 
+#
+sub read_contigs
+   {
+    my $file  = $_[0];
+
+    #
+    # open the file and peek at the first two lines
+    #
+    open( INPUT, "$file" ) || die "Can't open $file\n";
+    my $line1 = <INPUT>;
+    my $line2 = <INPUT>;
+    close( INPUT );
+
+    #
+    # Now, using these two lines, try to identify the file type
+    #
+    if ( ( $line1 =~ /^\>block\d+:/ ) && 
+         ( $line2 =~ /^\s+\;[^\:]+\:/ ) )
+        { read_splicef( $file ); }           # splice format
+    elsif( ( $line1 =~ /^AS\s+\d+\s+\d+/ ) &&
+           ( $line2 =~ /^\s*$/ ) )
+        { read_acef( $file ); }              # ace format
+    elsif( $line1 =~ /^Contig:/ )
+        { read_simplef( $file ); }           # simple format
+    else 
+        { die "Can't identify file type: \"$file\"\n"; }
+   }
+
+#
+# read_splicef( $file ) - read contigs from splice format (getlocs) file
+# and set globals @@contigs and %contig
+#
+sub read_splicef
+   {
+    my $file  = shift;
+
+    open( INPUT, "$file" ) || die "Can't reopen $file\n";
+   
+    @@contigs = ();                                       # reset globals
+    %contig = ();
+
+    while ( $_ = <INPUT> )
+       {
+	next if ( /^\s*$/ );                             # skip blank lines
+        if ( /^\>(block\d+):/ )                          # new contig
+           {
+            $current_contig = $1;
+            push( @@contigs, $current_contig );
+           }
+        elsif ( /^\s+\;([^\:]+)\:/ )                     # lane
+           {
+            my ( $id, $name, $dir ) = parse_splice_lane( $1 );
+            die "non unique id $id ($name) in $file!\n" if ( $contig{$id} );
+            $contig{$id} = $current_contig;
+           }
+        else
+           {
+            die "Bad line: $_";
+           }
+       }
+    close( INPUT );
+    printf "$file loaded (splice format)\n";
+   }
+
+
+sub parse_splice_lane
+   {
+    my $s = shift;
+
+    my ( $dir, $id ) = ("","");
+    $dir = "r" if ( $s =~ s/\.r$// );
+    if ( $s =~ /\-(\d+[ab]?)\-(\d+[abcdef]?)((\-[^\-]+)|(\-J.*))?$/i )
+       { ($gel,$ln) = ($1,$2);
+         $ln =~ /^(\d+)([abcdef]?)/;
+         $id = sprintf "$gel%d%s", $1, $2; }
+    elsif ( $s =~ /^ctg/i )
+       { $id = "$s"; }
+    else
+       { die "bad member: [$s]\n"; }
+    return( ( $id, $s, $dir ) );
+   }
+
+#
+# read_acef( $file ) - read contigs from ace format (phrap) file
+# and set globals @@contigs and %contig
+#
+sub read_acef
+   {
+    my $file  = shift;
+
+    open( INPUT, "$file" ) || die "Can't reopen $file\n";
+   
+    @@contigs = ();                                       # reset globals
+    %contig = ();
+
+    $_ = <INPUT>;                                        # get AS line
+    /^AS\s+(\d+)\s+(\d+)/;
+    my ( $num_contigs, $total_reads ) = ( $1, $2 );
+    #
+    # Note: put in a check against what we get below!!!!
+    #
+
+    while ( $_ = <INPUT> )
+       {
+        if ( /^CO\s+(\S+)\s/ )
+           { 
+            $current_contig = $1;
+            push( @@contigs, $current_contig );
+           }
+        elsif ( /^AF\s+(\S+)\s/ )
+           { 
+            my $id = $1;
+            die "non unique id $id ($name) in $file!\n" if ( $contig{$id} );
+            $contig{$id} = $current_contig;
+           }
+    
+       }
+
+    close( INPUT );
+    printf "$file loaded (ace format)\n";
+   }
+
+#
+# read_simplef( $file ) - read contigs from simple format file
+# and set globals @@contigs and %contig
+#
+sub read_simplef
+   {
+    my $file  = shift;
+
+    open( INPUT, "$file" ) || die "Can't reopen $file\n";
+   
+    @@contigs = ();                                       # reset globals
+    %contig = ();
+
+    while ( $_ = <INPUT> )
+       {
+	next if ( /^\s*$/ );                             # skip blank lines
+        if ( /^Contig:\s+(\S+)/ )                          # new contig
+           {
+            $current_contig = $1;
+            push( @@contigs, $current_contig );
+           }
+        elsif ( /^\s*(\S+)/ )                     # lane
+           {
+            my $id = $1;
+            die "non unique id $id ($name) in $file!\n" if ( $contig{$id} );
+            $contig{$id} = $current_contig;
+           }
+        else
+           {
+            die "Bad line: $_";
+           }
+       }
+    close( INPUT );
+    printf "$file loaded (simple format)\n";
+   }
+
+sub mklist
+
+   {
+    my $l = shift;
+    $l =~ s/^\s*//;
+    $l =~ s/\s*$//;
+    split( /\s+/, $l );
+   }
+
+
+
+@
+
+
+1.3
+log
+@Added automatic file type sensing for .ace files and a new simple
+format.  Converting to perl5 (slowly).
+@
+text
+@d33 1
+a33 1
+# $Id: compare,v 1.2 1997/06/23 15:30:58 mccorkle Exp mccorkle $
+d36 1
+a36 1
+'$Revision: 1.2 $ ' =~ /(\d+)\.(\d+)/;
+d346 1
+a346 1
+            my $id = 1;
+@
+
+
+1.2
+log
+@Hacked the parse routine to take some non-J ending file names.
+(only temporary).
+@
+text
+@d1 1
+a1 1
+#!/usr/local/bin/perl
+d4 12
+a15 4
+# Language:     perl4
+# Description:  This analyzes the differences and similarities between the mats
+#               of two "getlocs" format output files from the program "splice",
+#               and prints out equivalences, fusions, fissions, disappearances,
+d17 5
+a21 1
+# Usage:        compare <old getlocs> <new getlocs>
+d23 11
+a33 1
+# $Id: compare,v 1.1 1997/04/30 15:27:39 mccorkle Exp mccorkle $
+d36 1
+a36 1
+'$Revision: 1.1 $ ' =~ /(\d+)\.(\d+)/;
+d42 3
+a44 3
+&read_mats( $file1 );
+%old_mat = %mat;
+@@old_mats = @@mats;
+d48 3
+a50 3
+&read_mats( $file2 );
+%new_mat = %mat;
+@@new_mats = @@mats;
+d53 1
+a53 1
+# scan through sequence keys, and establish old-new mat connection
+d56 1
+a56 1
+foreach $b ( keys( %old_mat ) )
+d58 2
+a59 2
+    $old_m = $old_mat{$b};
+    $new_m = $new_mat{$b};
+d71 1
+a71 1
+foreach $o ( @@old_mats )
+d114 1
+a114 1
+foreach $n ( @@new_mats )
+d164 1
+a164 1
+    local( $n, @@nlist ) = @@_;
+d166 1
+a166 1
+    local($okay) = 1;
+d169 1
+a169 1
+       local(@@olist) = &mklist( $old_conn{$o} );
+d183 1
+a183 1
+    local( $o, @@olist ) = @@_;
+d185 1
+a185 1
+    local($okay) = 1;
+d188 1
+a188 1
+       local(@@nlist) = &mklist( $new_conn{$n} );
+d199 4
+a202 2
+# read_mats( $file ) 
+sub read_mats
+d204 5
+a208 1
+    local($file) = $_[0];
+d210 28
+d239 3
+a241 2
+    @@mats = ();
+    %mat = ();
+d244 2
+a245 2
+	next if ( /^\s*$/ );           # skip blank lines
+        if ( /^\>(block\d+):/ )
+d247 2
+a248 2
+            $current_mat = $1;
+            push( @@mats, $current_mat );
+d250 1
+a250 1
+        elsif ( /^\s+\;([^\:]+)\:/ )
+d252 3
+a254 3
+            ($id,$name,$dir) = &parse( $1 );
+            die "non unique id $id ($name) in $file!\n" if ( $mat{$id} );
+            $mat{$id} = $current_mat;
+d262 1
+a262 1
+    printf "$file loaded\n";
+d266 1
+a266 1
+sub parse
+d268 1
+a268 1
+    local( $s ) = $_[0];
+d270 1
+a270 1
+    local($dir,$id) = ("","");
+d280 1
+a280 1
+    ( $id, $s, $dir);
+d283 7
+d291 67
+d362 1
+a362 1
+    local($l) = $_[0];
+d367 1
+@
+
+
+1.1
+log
+@Relaxed the name pattern matching restrictions to allow anything
+after the option -J on the end.
+@
+text
+@d11 1
+a11 1
+# $Id: compare,v 1.0 1997/02/14 22:47:54 mccorkle Exp mccorkle $
+d14 1
+a14 1
+'$Revision: 1.0 $ ' =~ /(\d+)\.(\d+)/;
+d215 1
+a215 1
+    if ( $s =~ /\-(\d+[ab]?)\-(\d+[abcdef]?)(\-J.*)?$/i )
+@
+
+
+1.0
+log
+@Initial revision
+@
+text
+@d11 1
+a11 1
+# $Id$
+d14 1
+a14 1
+'$Revision: 1.3 $' =~ /(\d+)\.(\d+)/;
+d215 1
+a215 1
+    if ( $s =~ /\-(\d+[ab]?)\-(\d+[abcdef]?)(\-J([a-z]|alpha|omega)?)?$/i )
+@

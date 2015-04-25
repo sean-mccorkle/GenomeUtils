@@ -1,0 +1,213 @@
+head	0.6;
+access;
+symbols;
+locks
+	mccorkle:0.6; strict;
+comment	@# @;
+
+
+0.6
+date	2005.06.28.17.56.29;	author mccorkle;	state Exp;
+branches;
+next	0.5;
+
+0.5
+date	2005.06.27.19.32.39;	author mccorkle;	state Exp;
+branches;
+next	0.4;
+
+0.4
+date	2005.06.27.19.30.35;	author mccorkle;	state Exp;
+branches;
+next	0.3;
+
+0.3
+date	2004.10.17.04.10.49;	author mccorkle;	state Exp;
+branches;
+next	0.2;
+
+0.2
+date	2004.09.29.15.14.42;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	2004.09.29.15.09.27;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@regular expression finder in sequences.
+@
+
+
+0.6
+log
+@fixed a bug in the offset calculation for -a
+@
+text
+@#!/usr/bin/perl
+# Program:      re
+# Programmer:   Sean R. McCorkle
+# Language:     Perl
+# Description:  search strings for regexps
+# 
+#                 -a all matches
+#                 -n total number of matches only
+#
+# $Id: re,v 0.5 2005/06/27 19:32:39 mccorkle Exp mccorkle $
+#
+
+
+                                     ########
+                                     # Main #
+                                     ########
+
+use  Getopt::Std;
+
+die "Bad options\n" unless ( getopts( 'anN' ) );
+
+$re = shift;
+
+while ( <> )
+   {
+    if ( /^>(.*)/ )
+       {
+        $new_hdr = $1;
+        scan() if ( defined( $hdr ) );
+        $hdr = $new_hdr;
+        $seq = "";
+       }
+    else 
+       {
+        chomp;
+        s/\s//g;
+        s/^\d+//;
+        $seq .= uc $_;
+       }
+   }
+
+scan() if ( defined( $hdr ) );
+
+
+                                 ###############
+                                 # Subroutines #
+                                 ###############
+
+
+sub scan
+   {
+    my $s = $seq;
+    my $count = 0;
+    my $offset = 0;
+    while ( $s =~ /$re/i )
+       {
+        ($fivep,$matp,$threep) = ( $`, $&, $' ); #'
+        $count++;
+        $offset += length( $fivep );
+        printf "%10d %10d $matp $hdr\n", $offset, length( $matp ) unless( $opt_n );
+        #printf "%10d %10d %-60.60s\n", 
+        #       length( $fivep ), length( $threep ), $hdr unless ( $opt_n );
+        last unless( $opt_a || $opt_n ); 
+        # $offset += length( $matp );      # WRONG!
+        $offset += 1;
+        $s = substr( $s, (length( $fivep ) + 1) );
+       }
+    printf "%10d %s\n", $count, $hdr if ( $opt_n );
+   }
+
+
+@
+
+
+0.5
+log
+@added header to -n output
+@
+text
+@d10 1
+a10 1
+# $Id: re,v 0.4 2005/06/27 19:30:35 mccorkle Exp mccorkle $
+d57 1
+a58 1
+        ($fivep,$matp,$threep) = ( $`, $&, $' ); #'
+d63 3
+a65 2
+        last unless( $opt_a || $opt_n );
+        $offset += length( $matp );
+@
+
+
+0.4
+log
+@made -n option exclusive.
+@
+text
+@d10 1
+a10 1
+# $Id: re,v 0.3 2004/10/17 04:10:49 mccorkle Exp mccorkle $
+d67 1
+a67 2
+    print "$count\n" if ( $opt_n );
+    
+@
+
+
+0.3
+log
+@added sequence > header info in output.
+@
+text
+@d8 1
+a8 1
+#                 -n total number of matches
+d10 1
+a10 1
+# $Id: re,v 0.2 2004/09/29 15:14:42 mccorkle Exp mccorkle $
+d20 1
+a20 1
+die "Bad options\n" unless ( getopts( 'an' ) );
+d60 1
+a60 1
+        printf "%10d %10d $matp $hdr\n", $offset, length( $matp );
+@
+
+
+0.2
+log
+@changed the interation from right of the entire last pattern to just one
+past the first matched char in the pattern.  This will allow catching
+subsequent matches which overlap (it can happen!)
+@
+text
+@d10 1
+a10 1
+# $Id: re,v 0.1 2004/09/29 15:09:27 mccorkle Exp mccorkle $
+d29 1
+a29 1
+        scan() if ( $hdr );
+d42 1
+a42 1
+scan() if ( $hdr );
+d60 1
+a60 1
+        printf "%10d %10d $matp\n", $offset, length( $matp );
+@
+
+
+0.1
+log
+@about to make a change, saving this one.
+@
+text
+@d10 1
+a10 1
+# $Id$
+d58 1
+a58 1
+        ($fivep,$matp,$threep) = ( $`, $&, $' );
+d65 1
+a65 1
+        $s = $threep;
+@

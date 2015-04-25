@@ -1,0 +1,97 @@
+#!/usr/bin/perl
+# Program:      Extract genes from Genbank (and other) files
+# Programmer:   Sean R. McCorkle, Brookhaven National Laboratory
+# Language:     perl, with bioperl
+#
+# Description:  Uses bioperl SeqIO object to convert between any of the
+#               common DNA/Protein sequence formats (fasta, genbank, embl,...)
+#
+# Usage:        seqconv [-f] <seqfile>
+# 
+#               ext1 determines format of input sequence file, ext2 determines
+#               format.
+# 
+#                  Format   Extensions
+#
+#                  fasta    fasta|fast|seq|fa|fsa|nt|aa
+#                  genbank  gb|gbank|genbank
+#                  scf      scf
+#                  pir      pir
+#                  embl     embl|ebl|emb|dat
+#                  raw      txt
+#                  gcg      gcg
+#                  ace      ace
+#                  bsml     bsm|bsml
+#                  swiss    swiss|sp
+#                  phd      phd|phred
+#
+#                if -f option used, translation sequences are output in
+#                FASTA format
+#
+use  Getopt::Std;
+use  Bio::SeqIO;
+
+%strand = ( -1 => "r", 0 => "b", 1 => "f" );  # rev, both or forward
+$linelen = 50;                                # width for FASTA output
+
+select( ( select(STDOUT), $| = 1 )[0] );
+select( ( select(STDERR), $| = 1 )[0] );
+
+die "bad option\n" unless ( getopts( 'f' ) );
+
+$file = shift;
+$fopen_args{'-file'} = "$file";
+$fopen_args{'-format'} = 'GenBank' if  ( $file =~ /\.gbk$/ );
+
+$in  = Bio::SeqIO->new( %fopen_args );
+
+while ( my $seq = $in->next_seq() ) 
+   {
+    print "accession_number: ", $seq->accession_number, "\n";
+    @feats = $seq->all_SeqFeatures();
+
+
+    foreach $feat ( $seq->all_SeqFeatures() ) 
+       {
+        ($prot_id, $trans, $tagstr) = ( "___________", "", "" );
+        foreach $tag ( $feat->all_tags() )
+           {
+            #next if grep( $_ eq $tag,("transl_table","codon_start","product"));
+            next if grep( $_ eq $tag,("transl_table","codon_start"));
+            if ( $tag eq "translation" )
+                { $trans = join(' ',$feat->each_tag_value($tag)); } 
+            elsif ( $tag eq "protein_id" )
+                { $prot_id = join(' ',$feat->each_tag_value($tag)); }
+            else
+                { $tagstr .= $tag . ":" . 
+                             join(' ',$feat->each_tag_value($tag)) . "|"; }
+           } 
+        $tagstr =~ s/\|$//;
+ 
+        print ">" if ( $opt_f );
+          
+        printf "%s %s %9d %9d %s %7s %s\n",  
+                    $prot_id,
+                    $seq->accession_number,  
+                    $feat->start,
+                    $feat->end, 
+                    $strand{$feat->strand},
+                    $feat->primary_tag,
+                    $tagstr;
+
+        if ( $opt_f && $trans )
+           {
+            for ( $i = 0; $i < length( $trans ); $i++ ) # for each character in
+               {                                      #    the sequence:
+                print substr( $trans, $i, 1 );        # print it out
+                if ( (($i+1) % $linelen) == 0 )       # and print out a newline
+                   { print "\n"; }                    # every $linelen chars
+               }
+            if ( ($i % $linelen) != 0 )
+               { print "\n"; }
+          }
+ 
+       }
+   }
+
+

@@ -1,0 +1,17 @@
+
+link io
+
+procedure main( args )
+
+    fh := open_file( args[1] )
+
+    while fseq := read_fasta( fh ) do
+       {
+        write( "heading: [", fseq.heading, "]" )
+        write( "sequence: [", fseq.seq, "]" )
+        write( "sequence length: ", *(fseq.seq), "\n" )
+        write_fasta( &output, fseq.seq, fseq.heading )
+       }
+    close_file( fh )
+
+end

@@ -1,0 +1,55 @@
+
+link  io
+
+global bases
+global starts
+global stops
+global triplets
+global codons
+
+procedure main()
+
+    init_globals()
+
+    s := read_fasta()
+    write( s )
+    write( *s )
+
+    s ? {
+         while write( "skip: ", triplets_upto( starts ) ) do
+	    {
+             write( "start: ", move( 3 ) ) 
+             write( "orf: ", triplets_upto( stops ) )
+             write( "stop: ", move( 3 ) )
+	    }
+        }
+
+
+end
+
+
+procedure  init_globals()
+
+    bases  := set( ["A", "C", "G", "T" ] )
+    starts := set( [ "ATG" ] )
+    stops  := set( [ "TAA", "TGA", "TAG" ] ) 
+    triplets := set()
+    every insert( triplets, !bases || !bases || !bases )
+    codons := triplets -- stops    
+
+end
+
+
+procedure  triplets_upto( s )
+
+    acceptable := triplets -- s
+    t := ""
+    while ( t ||:= tab( match( !acceptable ) ) )
+    if t == "" 
+       then fail
+       else return( t )
+end
+
+
+
+

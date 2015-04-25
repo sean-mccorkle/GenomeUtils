@@ -1,0 +1,13 @@
+
+procedure main()
+
+    write( "[", squeeze_space( " acg  def\t f g   h \t i    " ), "]" )
+end
+
+procedure squeeze_space( s )
+    local t, i
+    t := map( s, "\t", " " )
+    while t[ i:=find(" ",t) : many( " ", t, i ) ] := ""
+    return( t )
+end
+

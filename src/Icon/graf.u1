@@ -1,0 +1,3346 @@
+proc open_window
+	filen	graf.icn
+	local	0,001000,w
+	local	1,001000,h
+	local	2,001000,opt_args
+	local	3,000020,title
+	local	4,000020,opts
+	local	5,000000,window_width
+	local	6,000000,window_height
+	local	7,000000,type
+	local	8,000000,stop
+	local	9,000000,table
+	local	10,000000,fg_color
+	local	11,000000,bg_color
+	local	12,000000,left_margin
+	local	13,000000,right_margin
+	local	14,000000,y_margin
+	local	15,000000,scale_height
+	local	16,000000,ticlen
+	local	17,000000,subticlen
+	local	18,000000,symmetric
+	local	19,000000,Window
+	local	20,000000,font_height
+	local	21,000000,WAttrib
+	con	0,010000,0
+	con	1,002000,1,1
+	con	2,002000,1,0
+	con	3,010000,5,164,141,142,154,145
+	con	4,010000,35,157,160,145,156,137,167,151,156,144,157,167,040,157,160,164,151,157,156,163,040,141,162,145,040,156,157,164,040,141,040,164,141,142,154,145
+	con	5,010000,8,146,147,137,143,157,154,157,162
+	con	6,010000,5,167,150,151,164,145
+	con	7,010000,8,142,147,137,143,157,154,157,162
+	con	8,010000,5,142,154,141,143,153
+	con	9,010000,5,164,151,164,154,145
+	con	10,010000,1,137
+	con	11,002000,2,20
+	con	12,002000,1,3
+	con	13,002000,1,8
+	con	14,002000,1,4
+	con	15,010000,5,163,151,172,145,075
+	con	16,010000,1,054
+	con	17,010000,3,142,147,075
+	con	18,010000,3,146,147,075
+	con	19,010000,6,154,141,142,145,154,075
+	con	20,010000,7,146,150,145,151,147,150,164
+	declend
+	line	61
+	colm	12
+	mark	L1
+	pnull
+	var	5
+	var	0
+	line	65
+	colm	18
+	asgn
+	unmark
+lab L1
+	mark	L2
+	pnull
+	var	6
+	var	1
+	line	66
+	colm	19
+	asgn
+	unmark
+lab L2
+	mark	L3
+	pnull
+	var	3
+	str	0
+	line	67
+	colm	11
+	asgn
+	unmark
+lab L3
+	mark	L4
+	pnull
+	var	3
+	pnull
+	var	2
+	int	1
+	line	68
+	colm	22
+	subsc
+	line	68
+	colm	11
+	asgn
+	unmark
+lab L4
+	mark	L5
+	mark	L6
+	pnull
+	pnull
+	var	2
+	line	69
+	colm	9
+	size
+	int	2
+	line	69
+	colm	19
+	numgt
+	unmark
+	mark	L8
+	pnull
+	var	4
+	pnull
+	var	2
+	int	1
+	line	71
+	colm	29
+	subsc
+	line	71
+	colm	18
+	asgn
+	unmark
+lab L8
+	mark	L9
+	pnull
+	var	7
+	var	4
+	line	72
+	colm	18
+	invoke	1
+	str	3
+	line	72
+	colm	25
+	lexeq
+	esusp
+	goto	L10
+lab L9
+	var	8
+	str	4
+	line	73
+	colm	22
+	invoke	1
+lab L10
+	goto	L7
+lab L6
+	pnull
+	var	4
+	var	9
+	line	75
+	colm	26
+	invoke	0
+	line	75
+	colm	18
+	asgn
+lab L7
+	unmark
+lab L5
+	mark	L11
+	pnull
+	var	10
+	mark	L12
+	pnull
+	pnull
+	var	4
+	str	5
+	line	77
+	colm	24
+	subsc
+	line	77
+	colm	19
+	nonnull
+	esusp
+	goto	L13
+lab L12
+	str	6
+lab L13
+	line	77
+	colm	14
+	asgn
+	unmark
+lab L11
+	mark	L14
+	pnull
+	var	11
+	mark	L15
+	pnull
+	pnull
+	var	4
+	str	7
+	line	78
+	colm	24
+	subsc
+	line	78
+	colm	19
+	nonnull
+	esusp
+	goto	L16
+lab L15
+	str	8
+lab L16
+	line	78
+	colm	14
+	asgn
+	unmark
+lab L14
+	mark	L17
+	pnull
+	var	3
+	mark	L18
+	pnull
+	pnull
+	var	4
+	str	9
+	line	79
+	colm	21
+	subsc
+	line	79
+	colm	16
+	nonnull
+	esusp
+	goto	L19
+lab L18
+	str	10
+lab L19
+	line	79
+	colm	11
+	asgn
+	unmark
+lab L17
+	mark	L20
+	pnull
+	var	12
+	int	11
+	line	81
+	colm	17
+	asgn
+	unmark
+lab L20
+	mark	L21
+	pnull
+	var	13
+	int	11
+	line	82
+	colm	18
+	asgn
+	unmark
+lab L21
+	mark	L22
+	pnull
+	var	14
+	int	11
+	line	83
+	colm	14
+	asgn
+	unmark
+lab L22
+	mark	L23
+	pnull
+	var	15
+	int	12
+	line	84
+	colm	18
+	asgn
+	unmark
+lab L23
+	mark	L24
+	pnull
+	var	16
+	int	13
+	line	85
+	colm	12
+	asgn
+	unmark
+lab L24
+	mark	L25
+	pnull
+	var	17
+	int	14
+	line	86
+	colm	15
+	asgn
+	unmark
+lab L25
+	mark	L26
+	pnull
+	var	18
+	int	1
+	line	87
+	colm	15
+	asgn
+	unmark
+lab L26
+	mark	L27
+	var	19
+	pnull
+	pnull
+	pnull
+	str	15
+	var	5
+	line	88
+	colm	21
+	cat
+	str	16
+	line	88
+	colm	37
+	cat
+	var	6
+	line	88
+	colm	44
+	cat
+	pnull
+	str	17
+	var	11
+	line	89
+	colm	19
+	cat
+	pnull
+	str	18
+	var	10
+	line	89
+	colm	38
+	cat
+	pnull
+	str	19
+	var	3
+	line	89
+	colm	59
+	cat
+	line	88
+	colm	11
+	invoke	4
+	unmark
+lab L27
+	mark	L28
+	pnull
+	var	20
+	var	21
+	str	20
+	line	90
+	colm	27
+	invoke	1
+	line	90
+	colm	17
+	asgn
+	unmark
+lab L28
+	pnull
+	line	92
+	colm	1
+	pfail
+	end
+proc set_horiz_margins
+	local	0,001000,left
+	local	1,001000,right
+	local	2,000000,right_margin
+	local	3,000000,left_margin
+	declend
+	line	94
+	colm	11
+	mark	L1
+	pnull
+	var	2
+	var	1
+	line	95
+	colm	18
+	asgn
+	unmark
+lab L1
+	mark	L2
+	pnull
+	var	3
+	var	0
+	line	96
+	colm	17
+	asgn
+	unmark
+lab L2
+	pnull
+	line	97
+	colm	1
+	pfail
+	end
+proc set_scale
+	local	0,001000,a
+	local	1,001000,b
+	local	2,000020,linfo
+	local	3,000020,l
+	local	4,000000,figure_label_info
+	local	5,000000,delta_tics
+	local	6,000000,delta_subtics
+	local	7,000000,x_min
+	local	8,000000,floor
+	local	9,000000,x_max
+	local	10,000000,ceil
+	local	11,000000,a_x
+	local	12,000000,window_width
+	local	13,000000,left_margin
+	local	14,000000,right_margin
+	local	15,000000,b_x
+	local	16,000000,scale_length
+	con	0,002000,1,1
+	con	1,002000,1,2
+	con	2,004000,1.0
+	declend
+	line	105
+	colm	12
+	mark	L1
+	pnull
+	var	3
+	pnull
+	var	1
+	var	0
+	line	109
+	colm	12
+	minus
+	line	109
+	colm	7
+	asgn
+	unmark
+lab L1
+	mark	L2
+	pnull
+	var	2
+	var	4
+	var	3
+	line	110
+	colm	31
+	invoke	1
+	line	110
+	colm	11
+	asgn
+	unmark
+lab L2
+	mark	L3
+	pnull
+	var	5
+	pnull
+	var	2
+	int	0
+	line	111
+	colm	24
+	subsc
+	line	111
+	colm	16
+	asgn
+	unmark
+lab L3
+	mark	L4
+	pnull
+	var	6
+	pnull
+	var	2
+	int	1
+	line	112
+	colm	27
+	subsc
+	line	112
+	colm	19
+	asgn
+	unmark
+lab L4
+	mark	L5
+	pnull
+	var	7
+	pnull
+	var	8
+	pnull
+	pnull
+	real	2
+	var	0
+	line	114
+	colm	26
+	mult
+	pnull
+	real	2
+	var	6
+	line	114
+	colm	38
+	mult
+	line	114
+	colm	31
+	div
+	line	114
+	colm	19
+	invoke	1
+	var	6
+	line	114
+	colm	57
+	mult
+	line	114
+	colm	11
+	asgn
+	unmark
+lab L5
+	mark	L6
+	pnull
+	var	9
+	pnull
+	var	10
+	pnull
+	pnull
+	real	2
+	var	1
+	line	115
+	colm	25
+	mult
+	pnull
+	real	2
+	var	6
+	line	115
+	colm	37
+	mult
+	line	115
+	colm	30
+	div
+	line	115
+	colm	18
+	invoke	1
+	var	6
+	line	115
+	colm	56
+	mult
+	line	115
+	colm	11
+	asgn
+	unmark
+lab L6
+	mark	L7
+	pnull
+	var	11
+	pnull
+	pnull
+	real	2
+	pnull
+	var	12
+	pnull
+	var	13
+	var	14
+	line	116
+	colm	49
+	plus
+	line	116
+	colm	34
+	minus
+	line	116
+	colm	17
+	mult
+	pnull
+	real	2
+	pnull
+	var	9
+	var	7
+	line	117
+	colm	26
+	minus
+	line	117
+	colm	18
+	mult
+	line	116
+	colm	68
+	div
+	line	116
+	colm	9
+	asgn
+	unmark
+lab L7
+	mark	L8
+	pnull
+	var	15
+	pnull
+	var	13
+	pnull
+	var	11
+	var	7
+	line	118
+	colm	30
+	mult
+	line	118
+	colm	24
+	minus
+	line	118
+	colm	9
+	asgn
+	unmark
+lab L8
+	mark	L9
+	pnull
+	var	16
+	pnull
+	var	9
+	var	7
+	line	120
+	colm	27
+	minus
+	line	120
+	colm	18
+	asgn
+	unmark
+lab L9
+	pnull
+	line	122
+	colm	1
+	pfail
+	end
+proc figure_label_info
+	local	0,001000,len
+	con	0,002000,4,1000
+	con	1,002000,3,100
+	con	2,002000,2,20
+	con	3,002000,4,5000
+	con	4,002000,3,500
+	con	5,002000,5,10000
+	con	6,002000,3,200
+	con	7,002000,5,50000
+	con	8,002000,6,100000
+	con	9,002000,4,2000
+	con	10,002000,6,500000
+	con	11,002000,5,20000
+	declend
+	line	127
+	colm	11
+	mark	L1
+	mark	L2
+	pnull
+	var	0
+	int	0
+	line	129
+	colm	17
+	numle
+	unmark
+	mark	L4
+	pnull
+	int	1
+	int	2
+	line	130
+	colm	23
+	llist	2
+	line	130
+	colm	15
+	pret
+lab L4
+	pfail
+	goto	L3
+lab L2
+	mark	L5
+	pnull
+	var	0
+	int	3
+	line	131
+	colm	17
+	numle
+	unmark
+	mark	L7
+	pnull
+	int	4
+	int	1
+	line	132
+	colm	23
+	llist	2
+	line	132
+	colm	15
+	pret
+lab L7
+	pfail
+	goto	L6
+lab L5
+	mark	L8
+	pnull
+	var	0
+	int	5
+	line	133
+	colm	17
+	numle
+	unmark
+	mark	L10
+	pnull
+	int	0
+	int	6
+	line	134
+	colm	23
+	llist	2
+	line	134
+	colm	15
+	pret
+lab L10
+	pfail
+	goto	L9
+lab L8
+	mark	L11
+	pnull
+	var	0
+	int	7
+	line	135
+	colm	17
+	numle
+	unmark
+	mark	L13
+	pnull
+	int	3
+	int	0
+	line	136
+	colm	23
+	llist	2
+	line	136
+	colm	15
+	pret
+lab L13
+	pfail
+	goto	L12
+lab L11
+	mark	L14
+	pnull
+	var	0
+	int	8
+	line	137
+	colm	17
+	numle
+	unmark
+	mark	L16
+	pnull
+	int	5
+	int	9
+	line	138
+	colm	23
+	llist	2
+	line	138
+	colm	15
+	pret
+lab L16
+	pfail
+	goto	L15
+lab L14
+	mark	L17
+	pnull
+	var	0
+	int	10
+	line	139
+	colm	17
+	numle
+	unmark
+	mark	L19
+	pnull
+	int	7
+	int	5
+	line	140
+	colm	23
+	llist	2
+	line	140
+	colm	15
+	pret
+lab L19
+	pfail
+	goto	L18
+lab L17
+	mark	L20
+	pnull
+	int	8
+	int	11
+	line	142
+	colm	23
+	llist	2
+	line	142
+	colm	15
+	pret
+lab L20
+	pfail
+lab L18
+lab L15
+lab L12
+lab L9
+lab L6
+lab L3
+	unmark
+lab L1
+	pnull
+	line	144
+	colm	1
+	pfail
+	end
+proc draw_scale
+	local	0,001000,scale_color
+	local	1,000000,Fg
+	local	2,000000,fill_rectangle
+	local	3,000000,x_min
+	local	4,000000,x_max
+	local	5,000000,scale_height
+	local	6,000000,FillRectangle
+	local	7,000000,map_x
+	local	8,000000,zero_y
+	local	9,000000,scale_length
+	local	10,000000,a_x
+	local	11,000000,fg_color
+	local	12,000000,draw_tic_mark
+	local	13,000000,delta_tics
+	local	14,000000,ticlen
+	local	15,000000,delta_subtics
+	local	16,000000,subticlen
+	local	17,000000,draw_tic_label
+	con	0,002000,1,0
+	declend
+	line	150
+	colm	12
+	mark	L1
+	var	1
+	var	0
+	line	155
+	colm	7
+	invoke	1
+	unmark
+lab L1
+	mark	L2
+	var	2
+	var	3
+	int	0
+	var	4
+	var	5
+	line	156
+	colm	19
+	invoke	4
+	unmark
+lab L2
+	mark	L3
+	var	6
+	var	7
+	var	3
+	line	158
+	colm	25
+	invoke	1
+	var	8
+	pnull
+	var	9
+	var	10
+	line	158
+	colm	57
+	mult
+	pnull
+	var	5
+	line	158
+	colm	64
+	neg
+	line	158
+	colm	18
+	invoke	4
+	unmark
+lab L3
+	mark	L4
+	var	1
+	var	11
+	line	159
+	colm	7
+	invoke	1
+	unmark
+lab L4
+	mark	L5
+	mark0
+	var	12
+	pnull
+	var	3
+	var	4
+	var	13
+	line	161
+	colm	33
+	toby
+	var	14
+	line	161
+	colm	24
+	invoke	2
+	pop
+lab L6
+	efail
+lab L7
+	unmark
+lab L5
+	mark	L8
+	mark0
+	var	12
+	pnull
+	var	3
+	var	4
+	var	15
+	line	162
+	colm	33
+	toby
+	var	16
+	line	162
+	colm	24
+	invoke	2
+	pop
+lab L9
+	efail
+lab L10
+	unmark
+lab L8
+	mark	L11
+	mark0
+	var	17
+	pnull
+	var	3
+	var	4
+	var	13
+	line	164
+	colm	34
+	toby
+	line	164
+	colm	25
+	invoke	1
+	pop
+lab L12
+	efail
+lab L13
+	unmark
+lab L11
+	pnull
+	line	166
+	colm	1
+	pfail
+	end
+proc draw_tic_mark
+	local	0,001000,p
+	local	1,001000,l
+	local	2,000000,DrawLine
+	local	3,000000,map_x
+	local	4,000000,map_y
+	con	0,002000,1,0
+	declend
+	line	169
+	colm	11
+	mark	L1
+	var	2
+	var	3
+	var	0
+	line	171
+	colm	20
+	invoke	1
+	var	4
+	int	0
+	line	171
+	colm	32
+	invoke	1
+	var	3
+	var	0
+	line	171
+	colm	44
+	invoke	1
+	var	4
+	pnull
+	var	1
+	line	171
+	colm	58
+	neg
+	line	171
+	colm	56
+	invoke	1
+	line	171
+	colm	13
+	invoke	4
+	unmark
+lab L1
+	pnull
+	line	173
+	colm	1
+	pfail
+	end
+proc draw_tic_label
+	local	0,001000,p
+	local	1,000020,n
+	local	2,000000,string
+	local	3,000000,DrawString
+	local	4,000000,map_x
+	local	5,000000,TextWidth
+	local	6,000000,map_y
+	local	7,000000,ticlen
+	local	8,000000,font_height
+	con	0,002000,1,2
+	declend
+	line	175
+	colm	11
+	mark	L1
+	pnull
+	var	1
+	var	2
+	var	0
+	line	178
+	colm	16
+	invoke	1
+	line	178
+	colm	7
+	asgn
+	unmark
+lab L1
+	mark	L2
+	var	3
+	pnull
+	var	4
+	var	0
+	line	179
+	colm	22
+	invoke	1
+	pnull
+	var	5
+	var	1
+	line	179
+	colm	39
+	invoke	1
+	int	0
+	line	179
+	colm	45
+	div
+	line	179
+	colm	28
+	minus
+	pnull
+	var	6
+	pnull
+	var	7
+	line	180
+	colm	24
+	neg
+	line	180
+	colm	22
+	invoke	1
+	var	8
+	line	180
+	colm	34
+	plus
+	var	1
+	line	179
+	colm	15
+	invoke	3
+	unmark
+lab L2
+	pnull
+	line	183
+	colm	1
+	pfail
+	end
+proc set_tiers
+	local	0,001000,n_above
+	local	1,001000,n_below
+	local	2,001000,height
+	local	3,001000,spacing
+	local	4,000000,tier_height
+	local	5,000000,tier_spacing
+	local	6,000000,num_tiers_above
+	local	7,000000,num_tiers_below
+	local	8,000000,a_y
+	local	9,000000,y_margin
+	local	10,000000,window_height
+	local	11,000000,b_y
+	local	12,000000,zero_y
+	local	13,000000,map_y
+	con	0,004000,2.0
+	con	1,002000,1,0
+	declend
+	line	189
+	colm	11
+	mark	L1
+	pnull
+	var	4
+	var	2
+	line	191
+	colm	17
+	asgn
+	unmark
+lab L1
+	mark	L2
+	pnull
+	var	5
+	var	3
+	line	192
+	colm	18
+	asgn
+	unmark
+lab L2
+	mark	L3
+	pnull
+	var	6
+	var	0
+	line	193
+	colm	21
+	asgn
+	unmark
+lab L3
+	mark	L4
+	pnull
+	var	7
+	var	1
+	line	194
+	colm	21
+	asgn
+	unmark
+lab L4
+	mark	L5
+	pnull
+	var	8
+	pnull
+	pnull
+	pnull
+	real	0
+	var	9
+	line	196
+	colm	17
+	mult
+	var	10
+	line	196
+	colm	28
+	minus
+	var	10
+	line	196
+	colm	46
+	div
+	line	196
+	colm	9
+	asgn
+	unmark
+lab L5
+	mark	L6
+	pnull
+	var	11
+	pnull
+	pnull
+	var	10
+	var	9
+	line	198
+	colm	27
+	minus
+	pnull
+	var	7
+	pnull
+	var	4
+	var	5
+	line	199
+	colm	35
+	plus
+	line	198
+	colm	58
+	mult
+	line	198
+	colm	39
+	minus
+	line	198
+	colm	9
+	asgn
+	unmark
+lab L6
+	mark	L7
+	pnull
+	var	12
+	var	13
+	int	1
+	line	200
+	colm	20
+	invoke	1
+	line	200
+	colm	12
+	asgn
+	unmark
+lab L7
+	pnull
+	line	202
+	colm	1
+	pfail
+	end
+proc set_symmetric
+	local	0,000000,symmetric
+	con	0,002000,1,1
+	declend
+	line	204
+	colm	11
+	mark	L1
+	pnull
+	var	0
+	int	0
+	line	205
+	colm	15
+	asgn
+	unmark
+lab L1
+	pnull
+	line	206
+	colm	1
+	pfail
+	end
+proc set_asymmetric
+	local	0,000000,symmetric
+	con	0,002000,1,0
+	declend
+	line	208
+	colm	11
+	mark	L1
+	pnull
+	var	0
+	int	0
+	line	209
+	colm	15
+	asgn
+	unmark
+lab L1
+	pnull
+	line	210
+	colm	1
+	pfail
+	end
+proc tier_line_vert
+	local	0,001000,tier
+	local	1,001000,pos
+	local	2,001000,y1
+	local	3,001000,y2
+	local	4,001000,color
+	local	5,000020,xp
+	local	6,000000,x_max
+	local	7,000000,x_min
+	local	8,000000,map_x
+	local	9,000000,Fg
+	local	10,000000,DrawLine
+	local	11,000000,map_y_tier
+	declend
+	line	227
+	colm	11
+	mark	L1
+	mark0
+	mark	L2
+	pnull
+	var	1
+	var	6
+	line	233
+	colm	14
+	numgt
+	esusp
+	goto	L3
+lab L2
+	pnull
+	var	1
+	var	7
+	line	233
+	colm	28
+	numlt
+lab L3
+	unmark
+	mark	L4
+	pnull
+	line	234
+	colm	14
+	pret
+lab L4
+	pfail
+	unmark
+lab L1
+	mark	L5
+	pnull
+	var	5
+	var	8
+	var	1
+	line	235
+	colm	16
+	invoke	1
+	line	235
+	colm	8
+	asgn
+	unmark
+lab L5
+	mark	L6
+	var	9
+	var	4
+	line	236
+	colm	7
+	invoke	1
+	unmark
+lab L6
+	mark	L7
+	var	10
+	var	5
+	var	11
+	var	0
+	var	2
+	line	237
+	colm	29
+	invoke	2
+	var	5
+	var	11
+	var	0
+	var	3
+	line	237
+	colm	57
+	invoke	2
+	line	237
+	colm	13
+	invoke	4
+	unmark
+lab L7
+	pnull
+	line	239
+	colm	1
+	pfail
+	end
+proc tier_line_horiz
+	local	0,001000,tier
+	local	1,001000,a
+	local	2,001000,b
+	local	3,001000,y
+	local	4,001000,color
+	local	5,000020,xp1
+	local	6,000020,xp2
+	local	7,000020,yp
+	local	8,000000,x_min
+	local	9,000000,x_max
+	local	10,000000,map_y_tier
+	local	11,000000,map_x
+	local	12,000000,Fg
+	local	13,000000,DrawLine
+	declend
+	line	245
+	colm	11
+	mark	L1
+	mark0
+	pnull
+	var	1
+	var	2
+	line	249
+	colm	10
+	numgt
+	unmark
+	pnull
+	var	1
+	var	2
+	line	250
+	colm	15
+	swap
+	unmark
+lab L1
+	mark	L2
+	mark0
+	mark	L3
+	pnull
+	var	2
+	var	8
+	line	252
+	colm	12
+	numlt
+	esusp
+	goto	L4
+lab L3
+	pnull
+	var	1
+	var	9
+	line	252
+	colm	24
+	numgt
+lab L4
+	unmark
+	mark	L5
+	pnull
+	line	253
+	colm	14
+	pret
+lab L5
+	pfail
+	unmark
+lab L2
+	mark	L6
+	mark0
+	pnull
+	var	1
+	var	8
+	line	254
+	colm	12
+	numlt
+	unmark
+	pnull
+	var	1
+	var	8
+	line	255
+	colm	16
+	asgn
+	unmark
+lab L6
+	mark	L7
+	mark0
+	pnull
+	var	2
+	var	9
+	line	256
+	colm	12
+	numgt
+	unmark
+	pnull
+	var	2
+	var	9
+	line	257
+	colm	16
+	asgn
+	unmark
+lab L7
+	mark	L8
+	pnull
+	var	7
+	var	10
+	var	0
+	var	3
+	line	258
+	colm	21
+	invoke	2
+	line	258
+	colm	8
+	asgn
+	unmark
+lab L8
+	mark	L9
+	pnull
+	var	5
+	var	11
+	var	1
+	line	259
+	colm	17
+	invoke	1
+	line	259
+	colm	9
+	asgn
+	unmark
+lab L9
+	mark	L10
+	pnull
+	var	6
+	var	11
+	var	2
+	line	260
+	colm	17
+	invoke	1
+	line	260
+	colm	9
+	asgn
+	unmark
+lab L10
+	mark	L11
+	var	12
+	var	4
+	line	261
+	colm	7
+	invoke	1
+	unmark
+lab L11
+	mark	L12
+	var	13
+	var	5
+	var	7
+	var	6
+	var	7
+	line	262
+	colm	13
+	invoke	4
+	unmark
+lab L12
+	pnull
+	line	264
+	colm	1
+	pfail
+	end
+proc tier_line
+	local	0,001000,tier
+	local	1,001000,x1
+	local	2,001000,y1
+	local	3,001000,x2
+	local	4,001000,y2
+	local	5,001000,color
+	local	6,000020,dx
+	local	7,000020,m
+	local	8,000000,x_min
+	local	9,000000,x_max
+	local	10,000000,Fg
+	local	11,000000,DrawLine
+	local	12,000000,map_x
+	local	13,000000,map_y_tier
+	con	0,002000,1,0
+	declend
+	line	267
+	colm	11
+	mark	L1
+	mark0
+	pnull
+	var	1
+	var	3
+	line	274
+	colm	11
+	numgt
+	unmark
+	mark	L2
+	pnull
+	var	1
+	var	3
+	line	275
+	colm	18
+	swap
+	unmark
+lab L2
+	pnull
+	var	2
+	var	4
+	line	275
+	colm	29
+	swap
+	unmark
+lab L1
+	mark	L3
+	mark0
+	mark	L4
+	pnull
+	var	3
+	var	8
+	line	278
+	colm	13
+	numlt
+	esusp
+	goto	L5
+lab L4
+	pnull
+	var	1
+	var	9
+	line	278
+	colm	26
+	numgt
+lab L5
+	unmark
+	mark	L6
+	pnull
+	line	279
+	colm	13
+	pret
+lab L6
+	pfail
+	unmark
+lab L3
+	mark	L7
+	pnull
+	var	6
+	pnull
+	var	3
+	var	1
+	line	281
+	colm	14
+	minus
+	line	281
+	colm	8
+	asgn
+	unmark
+lab L7
+	mark	L8
+	mark0
+	pnull
+	var	6
+	int	0
+	line	282
+	colm	13
+	numgt
+	unmark
+	mark	L9
+	pnull
+	var	7
+	pnull
+	pnull
+	var	4
+	var	2
+	line	284
+	colm	24
+	minus
+	var	6
+	line	284
+	colm	31
+	div
+	line	284
+	colm	16
+	asgn
+	unmark
+lab L9
+	mark	L10
+	mark0
+	pnull
+	var	1
+	var	8
+	line	285
+	colm	22
+	numlt
+	unmark
+	mark	L11
+	pnull
+	var	2
+	dup
+	pnull
+	pnull
+	var	8
+	var	1
+	line	287
+	colm	37
+	minus
+	var	7
+	line	287
+	colm	44
+	mult
+	line	287
+	colm	25
+	plus
+	asgn
+	unmark
+lab L11
+	pnull
+	var	1
+	var	8
+	line	288
+	colm	25
+	asgn
+	unmark
+lab L10
+	mark0
+	pnull
+	var	3
+	var	9
+	line	290
+	colm	22
+	numgt
+	unmark
+	mark	L12
+	pnull
+	var	4
+	dup
+	pnull
+	pnull
+	var	3
+	var	9
+	line	292
+	colm	34
+	minus
+	var	7
+	line	292
+	colm	44
+	mult
+	line	292
+	colm	25
+	minus
+	asgn
+	unmark
+lab L12
+	pnull
+	var	3
+	var	9
+	line	293
+	colm	25
+	asgn
+	unmark
+lab L8
+	mark	L13
+	var	10
+	var	5
+	line	297
+	colm	7
+	invoke	1
+	unmark
+lab L13
+	mark	L14
+	var	11
+	var	12
+	var	1
+	line	298
+	colm	20
+	invoke	1
+	var	13
+	var	0
+	var	2
+	line	298
+	colm	38
+	invoke	2
+	var	12
+	var	3
+	line	299
+	colm	20
+	invoke	1
+	var	13
+	var	0
+	var	4
+	line	299
+	colm	38
+	invoke	2
+	line	298
+	colm	13
+	invoke	4
+	unmark
+lab L14
+	pnull
+	line	301
+	colm	1
+	pfail
+	end
+proc tier_rect
+	local	0,001000,tier
+	local	1,001000,a
+	local	2,001000,b
+	local	3,001000,y1
+	local	4,001000,y2
+	local	5,001000,color
+	local	6,000020,xp1
+	local	7,000020,xp2
+	local	8,000020,yp1
+	local	9,000020,yp2
+	local	10,000000,x_min
+	local	11,000000,x_max
+	local	12,000000,map_y_tier
+	local	13,000000,abs
+	local	14,000000,map_x
+	local	15,000000,Fg
+	local	16,000000,FillRectangle
+	con	0,002000,1,1
+	declend
+	line	308
+	colm	11
+	mark	L1
+	mark0
+	pnull
+	var	1
+	var	2
+	line	312
+	colm	10
+	numgt
+	unmark
+	pnull
+	var	1
+	var	2
+	line	313
+	colm	15
+	swap
+	unmark
+lab L1
+	mark	L2
+	mark0
+	mark	L3
+	pnull
+	var	2
+	var	10
+	line	315
+	colm	12
+	numlt
+	esusp
+	goto	L4
+lab L3
+	pnull
+	var	1
+	var	11
+	line	315
+	colm	24
+	numgt
+lab L4
+	unmark
+	mark	L5
+	pnull
+	line	316
+	colm	14
+	pret
+lab L5
+	pfail
+	unmark
+lab L2
+	mark	L6
+	mark0
+	pnull
+	var	1
+	var	10
+	line	317
+	colm	12
+	numlt
+	unmark
+	pnull
+	var	1
+	var	10
+	line	318
+	colm	16
+	asgn
+	unmark
+lab L6
+	mark	L7
+	mark0
+	pnull
+	var	2
+	var	11
+	line	319
+	colm	12
+	numgt
+	unmark
+	pnull
+	var	2
+	var	11
+	line	320
+	colm	16
+	asgn
+	unmark
+lab L7
+	mark	L8
+	pnull
+	var	8
+	var	12
+	var	0
+	var	3
+	line	322
+	colm	22
+	invoke	2
+	line	322
+	colm	9
+	asgn
+	unmark
+lab L8
+	mark	L9
+	pnull
+	var	9
+	var	12
+	var	0
+	var	4
+	line	323
+	colm	22
+	invoke	2
+	line	323
+	colm	9
+	asgn
+	unmark
+lab L9
+	mark	L10
+	mark0
+	pnull
+	var	13
+	pnull
+	var	9
+	var	8
+	line	324
+	colm	17
+	minus
+	line	324
+	colm	13
+	invoke	1
+	int	0
+	line	324
+	colm	23
+	numlt
+	unmark
+	pnull
+	var	9
+	pnull
+	var	8
+	int	0
+	line	325
+	colm	25
+	plus
+	line	325
+	colm	18
+	asgn
+	unmark
+lab L10
+	mark	L11
+	pnull
+	var	6
+	var	14
+	var	1
+	line	327
+	colm	17
+	invoke	1
+	line	327
+	colm	9
+	asgn
+	unmark
+lab L11
+	mark	L12
+	pnull
+	var	7
+	var	14
+	var	2
+	line	328
+	colm	17
+	invoke	1
+	line	328
+	colm	9
+	asgn
+	unmark
+lab L12
+	mark	L13
+	mark0
+	pnull
+	var	13
+	pnull
+	var	7
+	var	6
+	line	329
+	colm	17
+	minus
+	line	329
+	colm	13
+	invoke	1
+	int	0
+	line	329
+	colm	23
+	numlt
+	unmark
+	pnull
+	var	7
+	pnull
+	var	6
+	int	0
+	line	330
+	colm	25
+	plus
+	line	330
+	colm	18
+	asgn
+	unmark
+lab L13
+	mark	L14
+	var	15
+	var	5
+	line	331
+	colm	7
+	invoke	1
+	unmark
+lab L14
+	mark	L15
+	var	16
+	var	6
+	var	8
+	pnull
+	var	7
+	var	6
+	line	332
+	colm	33
+	minus
+	pnull
+	var	9
+	var	8
+	line	332
+	colm	42
+	minus
+	line	332
+	colm	18
+	invoke	4
+	unmark
+lab L15
+	pnull
+	line	334
+	colm	1
+	pfail
+	end
+proc tier_triang
+	local	0,001000,tier
+	local	1,001000,a
+	local	2,001000,b
+	local	3,001000,y1
+	local	4,001000,y2
+	local	5,001000,y3
+	local	6,001000,color
+	local	7,000020,xp1
+	local	8,000020,xp2
+	local	9,000020,yp1
+	local	10,000020,yp2
+	local	11,000020,yp3
+	local	12,000020,rev
+	local	13,000000,x_min
+	local	14,000000,x_max
+	local	15,000000,map_y_tier
+	local	16,000000,abs
+	local	17,000000,map_x
+	local	18,000000,Fg
+	local	19,000000,FillPolygon
+	con	0,002000,1,1
+	con	1,002000,1,0
+	declend
+	line	341
+	colm	11
+	mark	L1
+	mark	L2
+	pnull
+	var	1
+	var	2
+	line	345
+	colm	10
+	numgt
+	unmark
+	mark	L4
+	pnull
+	var	1
+	var	2
+	line	346
+	colm	17
+	swap
+	unmark
+lab L4
+	pnull
+	var	12
+	int	0
+	line	347
+	colm	19
+	asgn
+	goto	L3
+lab L2
+	pnull
+	var	12
+	int	1
+	line	349
+	colm	19
+	asgn
+lab L3
+	unmark
+lab L1
+	mark	L5
+	mark0
+	mark	L6
+	pnull
+	var	2
+	var	13
+	line	353
+	colm	12
+	numlt
+	esusp
+	goto	L7
+lab L6
+	pnull
+	var	1
+	var	14
+	line	353
+	colm	24
+	numgt
+lab L7
+	unmark
+	mark	L8
+	pnull
+	line	354
+	colm	14
+	pret
+lab L8
+	pfail
+	unmark
+lab L5
+	mark	L9
+	mark0
+	pnull
+	var	1
+	var	13
+	line	355
+	colm	12
+	numlt
+	unmark
+	pnull
+	var	1
+	var	13
+	line	356
+	colm	16
+	asgn
+	unmark
+lab L9
+	mark	L10
+	mark0
+	pnull
+	var	2
+	var	14
+	line	357
+	colm	12
+	numgt
+	unmark
+	pnull
+	var	2
+	var	14
+	line	358
+	colm	16
+	asgn
+	unmark
+lab L10
+	mark	L11
+	mark0
+	pnull
+	var	12
+	int	0
+	line	360
+	colm	12
+	numeq
+	unmark
+	pnull
+	var	1
+	var	2
+	line	361
+	colm	15
+	swap
+	unmark
+lab L11
+	mark	L12
+	pnull
+	var	9
+	var	15
+	var	0
+	var	3
+	line	363
+	colm	22
+	invoke	2
+	line	363
+	colm	9
+	asgn
+	unmark
+lab L12
+	mark	L13
+	pnull
+	var	10
+	var	15
+	var	0
+	var	4
+	line	364
+	colm	22
+	invoke	2
+	line	364
+	colm	9
+	asgn
+	unmark
+lab L13
+	mark	L14
+	pnull
+	var	11
+	var	15
+	var	0
+	var	5
+	line	365
+	colm	22
+	invoke	2
+	line	365
+	colm	9
+	asgn
+	unmark
+lab L14
+	mark	L15
+	mark0
+	pnull
+	var	16
+	pnull
+	var	10
+	var	9
+	line	366
+	colm	17
+	minus
+	line	366
+	colm	13
+	invoke	1
+	int	0
+	line	366
+	colm	23
+	numlt
+	unmark
+	pnull
+	var	10
+	pnull
+	var	9
+	int	0
+	line	367
+	colm	25
+	plus
+	line	367
+	colm	18
+	asgn
+	unmark
+lab L15
+	mark	L16
+	pnull
+	var	7
+	var	17
+	var	1
+	line	369
+	colm	17
+	invoke	1
+	line	369
+	colm	9
+	asgn
+	unmark
+lab L16
+	mark	L17
+	pnull
+	var	8
+	var	17
+	var	2
+	line	370
+	colm	17
+	invoke	1
+	line	370
+	colm	9
+	asgn
+	unmark
+lab L17
+	mark	L18
+	mark0
+	pnull
+	var	16
+	pnull
+	var	8
+	var	7
+	line	371
+	colm	17
+	minus
+	line	371
+	colm	13
+	invoke	1
+	int	0
+	line	371
+	colm	23
+	numlt
+	unmark
+	pnull
+	var	8
+	pnull
+	var	7
+	int	0
+	line	372
+	colm	25
+	plus
+	line	372
+	colm	18
+	asgn
+	unmark
+lab L18
+	mark	L19
+	var	18
+	var	6
+	line	373
+	colm	7
+	invoke	1
+	unmark
+lab L19
+	mark	L20
+	var	19
+	var	7
+	var	9
+	var	7
+	var	10
+	var	8
+	var	11
+	line	374
+	colm	16
+	invoke	6
+	unmark
+lab L20
+	pnull
+	line	376
+	colm	1
+	pfail
+	end
+proc tier_varrow
+	local	0,001000,tier
+	local	1,001000,pos
+	local	2,001000,y1
+	local	3,001000,y2
+	local	4,001000,color
+	local	5,000020,xp
+	local	6,000020,yp1
+	local	7,000020,yp2
+	local	8,000020,ypm
+	local	9,000020,w
+	local	10,000000,x_max
+	local	11,000000,x_min
+	local	12,000000,map_x
+	local	13,000000,map_y_tier
+	local	14,000000,Fg
+	local	15,000000,DrawLine
+	local	16,000000,FillPolygon
+	con	0,002000,1,4
+	con	1,004000,2.0
+	declend
+	line	379
+	colm	11
+	mark	L1
+	pnull
+	var	9
+	int	0
+	line	386
+	colm	7
+	asgn
+	unmark
+lab L1
+	mark	L2
+	mark0
+	mark	L3
+	pnull
+	var	1
+	var	10
+	line	387
+	colm	14
+	numgt
+	esusp
+	goto	L4
+lab L3
+	pnull
+	var	1
+	var	11
+	line	387
+	colm	28
+	numlt
+lab L4
+	unmark
+	mark	L5
+	pnull
+	line	388
+	colm	14
+	pret
+lab L5
+	pfail
+	unmark
+lab L2
+	mark	L6
+	pnull
+	var	5
+	var	12
+	var	1
+	line	389
+	colm	16
+	invoke	1
+	line	389
+	colm	8
+	asgn
+	unmark
+lab L6
+	mark	L7
+	pnull
+	var	6
+	var	13
+	var	0
+	var	2
+	line	390
+	colm	22
+	invoke	2
+	line	390
+	colm	9
+	asgn
+	unmark
+lab L7
+	mark	L8
+	pnull
+	var	7
+	var	13
+	var	0
+	var	3
+	line	391
+	colm	22
+	invoke	2
+	line	391
+	colm	9
+	asgn
+	unmark
+lab L8
+	mark	L9
+	pnull
+	var	8
+	var	13
+	var	0
+	pnull
+	pnull
+	var	2
+	var	3
+	line	392
+	colm	34
+	plus
+	real	1
+	line	392
+	colm	40
+	div
+	line	392
+	colm	22
+	invoke	2
+	line	392
+	colm	9
+	asgn
+	unmark
+lab L9
+	mark	L10
+	var	14
+	var	4
+	line	393
+	colm	7
+	invoke	1
+	unmark
+lab L10
+	mark	L11
+	var	15
+	var	5
+	var	6
+	var	5
+	var	7
+	line	394
+	colm	13
+	invoke	4
+	unmark
+lab L11
+	mark	L12
+	var	16
+	pnull
+	var	5
+	var	9
+	line	395
+	colm	21
+	minus
+	var	8
+	var	5
+	var	7
+	pnull
+	var	5
+	var	9
+	line	395
+	colm	43
+	plus
+	var	8
+	line	395
+	colm	16
+	invoke	6
+	unmark
+lab L12
+	pnull
+	line	397
+	colm	1
+	pfail
+	end
+proc tier_text
+	local	0,001000,tier
+	local	1,001000,x
+	local	2,001000,y
+	local	3,001000,str
+	local	4,001000,color
+	local	5,000000,Fg
+	local	6,000000,DrawString
+	local	7,000000,map_x
+	local	8,000000,map_y_tier_text
+	declend
+	line	399
+	colm	11
+	mark	L1
+	var	5
+	var	4
+	line	401
+	colm	7
+	invoke	1
+	unmark
+lab L1
+	mark	L2
+	var	6
+	var	7
+	var	1
+	line	402
+	colm	22
+	invoke	1
+	var	8
+	var	0
+	var	2
+	line	402
+	colm	44
+	invoke	2
+	var	3
+	line	402
+	colm	15
+	invoke	3
+	unmark
+lab L2
+	pnull
+	line	404
+	colm	1
+	pfail
+	end
+proc tier_llabel
+	local	0,001000,tier
+	local	1,001000,y
+	local	2,001000,str
+	local	3,001000,color
+	local	4,000000,Fg
+	local	5,000000,DrawString
+	local	6,000000,map_y_tier_text
+	con	0,002000,2,10
+	declend
+	line	406
+	colm	11
+	mark	L1
+	var	4
+	var	3
+	line	408
+	colm	7
+	invoke	1
+	unmark
+lab L1
+	mark	L2
+	var	5
+	int	0
+	var	6
+	var	0
+	var	1
+	line	409
+	colm	36
+	invoke	2
+	var	2
+	line	409
+	colm	15
+	invoke	3
+	unmark
+lab L2
+	pnull
+	line	411
+	colm	1
+	pfail
+	end
+proc tier_rlabel
+	local	0,001000,tier
+	local	1,001000,y
+	local	2,001000,str
+	local	3,001000,color
+	local	4,000000,Fg
+	local	5,000000,DrawString
+	local	6,000000,window_width
+	local	7,000000,right_margin
+	local	8,000000,map_y_tier_text
+	con	0,002000,1,5
+	declend
+	line	413
+	colm	11
+	mark	L1
+	var	4
+	var	3
+	line	415
+	colm	7
+	invoke	1
+	unmark
+lab L1
+	mark	L2
+	var	5
+	pnull
+	pnull
+	var	6
+	int	0
+	line	416
+	colm	30
+	plus
+	var	7
+	line	416
+	colm	34
+	minus
+	var	8
+	var	0
+	var	1
+	line	417
+	colm	32
+	invoke	2
+	var	2
+	line	416
+	colm	15
+	invoke	3
+	unmark
+lab L2
+	pnull
+	line	419
+	colm	1
+	pfail
+	end
+proc cross_tier_line
+	local	0,001000,tier1
+	local	1,001000,x1
+	local	2,001000,y1
+	local	3,001000,tier2
+	local	4,001000,x2
+	local	5,001000,y2
+	local	6,001000,color
+	local	7,000020,dxp
+	local	8,000020,xp1
+	local	9,000020,yp1
+	local	10,000020,xp2
+	local	11,000020,yp2
+	local	12,000020,xminp
+	local	13,000020,xmaxp
+	local	14,000020,mp
+	local	15,000000,x_min
+	local	16,000000,x_max
+	local	17,000000,map_x
+	local	18,000000,map_y_tier
+	local	19,000000,maxp
+	local	20,000000,Fg
+	local	21,000000,DrawLine
+	con	0,002000,1,0
+	declend
+	line	424
+	colm	11
+	mark	L1
+	mark0
+	pnull
+	var	1
+	var	4
+	line	428
+	colm	11
+	numgt
+	unmark
+	mark	L2
+	pnull
+	var	1
+	var	4
+	line	429
+	colm	18
+	swap
+	unmark
+lab L2
+	mark	L3
+	pnull
+	var	2
+	var	5
+	line	429
+	colm	29
+	swap
+	unmark
+lab L3
+	pnull
+	var	0
+	var	3
+	line	429
+	colm	43
+	swap
+	unmark
+lab L1
+	mark	L4
+	mark0
+	mark	L5
+	pnull
+	var	4
+	var	15
+	line	432
+	colm	13
+	numlt
+	esusp
+	goto	L6
+lab L5
+	pnull
+	var	1
+	var	16
+	line	432
+	colm	26
+	numgt
+lab L6
+	unmark
+	mark	L7
+	pnull
+	line	433
+	colm	14
+	pret
+lab L7
+	pfail
+	unmark
+lab L4
+	mark	L8
+	pnull
+	var	8
+	var	17
+	var	1
+	line	435
+	colm	18
+	invoke	1
+	line	435
+	colm	9
+	asgn
+	unmark
+lab L8
+	mark	L9
+	pnull
+	var	9
+	var	18
+	var	0
+	var	2
+	line	436
+	colm	22
+	invoke	2
+	line	436
+	colm	9
+	asgn
+	unmark
+lab L9
+	mark	L10
+	pnull
+	var	10
+	var	17
+	var	4
+	line	437
+	colm	18
+	invoke	1
+	line	437
+	colm	9
+	asgn
+	unmark
+lab L10
+	mark	L11
+	pnull
+	var	11
+	var	18
+	var	3
+	var	5
+	line	438
+	colm	22
+	invoke	2
+	line	438
+	colm	9
+	asgn
+	unmark
+lab L11
+	mark	L12
+	pnull
+	var	12
+	var	15
+	line	439
+	colm	11
+	asgn
+	unmark
+lab L12
+	mark	L13
+	pnull
+	var	13
+	var	16
+	line	440
+	colm	11
+	asgn
+	unmark
+lab L13
+	mark	L14
+	pnull
+	var	7
+	pnull
+	var	10
+	var	8
+	line	442
+	colm	16
+	minus
+	line	442
+	colm	9
+	asgn
+	unmark
+lab L14
+	mark	L15
+	mark0
+	pnull
+	var	7
+	int	0
+	line	443
+	colm	14
+	numgt
+	unmark
+	mark	L16
+	pnull
+	var	14
+	pnull
+	pnull
+	var	11
+	var	9
+	line	445
+	colm	26
+	minus
+	var	7
+	line	445
+	colm	34
+	div
+	line	445
+	colm	17
+	asgn
+	unmark
+lab L16
+	mark	L17
+	mark0
+	pnull
+	var	8
+	var	12
+	line	446
+	colm	23
+	numlt
+	unmark
+	mark	L18
+	pnull
+	var	9
+	dup
+	pnull
+	pnull
+	var	12
+	var	8
+	line	448
+	colm	38
+	minus
+	var	14
+	line	448
+	colm	46
+	mult
+	line	448
+	colm	26
+	plus
+	asgn
+	unmark
+lab L18
+	pnull
+	var	8
+	var	12
+	line	449
+	colm	26
+	asgn
+	unmark
+lab L17
+	mark0
+	pnull
+	var	10
+	var	13
+	line	451
+	colm	23
+	numgt
+	unmark
+	mark	L19
+	pnull
+	var	11
+	dup
+	pnull
+	pnull
+	var	10
+	var	13
+	line	453
+	colm	36
+	minus
+	var	14
+	line	453
+	colm	46
+	mult
+	line	453
+	colm	26
+	minus
+	asgn
+	unmark
+lab L19
+	pnull
+	var	10
+	var	19
+	line	454
+	colm	26
+	asgn
+	unmark
+lab L15
+	mark	L20
+	var	20
+	var	6
+	line	458
+	colm	7
+	invoke	1
+	unmark
+lab L20
+	mark	L21
+	var	21
+	var	17
+	var	1
+	line	459
+	colm	20
+	invoke	1
+	var	18
+	var	0
+	var	2
+	line	459
+	colm	38
+	invoke	2
+	var	17
+	var	4
+	line	460
+	colm	20
+	invoke	1
+	var	18
+	var	3
+	var	5
+	line	460
+	colm	38
+	invoke	2
+	line	459
+	colm	13
+	invoke	4
+	unmark
+lab L21
+	pnull
+	line	462
+	colm	1
+	pfail
+	end
+proc map_y_tier_text
+	local	0,001000,tier
+	local	1,001000,y
+	local	2,000000,symmetric
+	local	3,000000,map_y_tier
+	con	0,002000,1,0
+	con	1,004000,1.0
+	declend
+	line	465
+	colm	11
+	mark	L1
+	mark	L2
+	mark	L4
+	pnull
+	var	0
+	int	0
+	line	467
+	colm	15
+	numgt
+	esusp
+	goto	L5
+lab L4
+	pnull
+	var	2
+	int	0
+	line	467
+	colm	31
+	numeq
+lab L5
+	unmark
+	mark	L6
+	var	3
+	var	0
+	var	1
+	line	468
+	colm	30
+	invoke	2
+	line	468
+	colm	12
+	pret
+lab L6
+	pfail
+	goto	L3
+lab L2
+	mark	L7
+	var	3
+	var	0
+	pnull
+	real	1
+	var	1
+	line	469
+	colm	42
+	minus
+	line	469
+	colm	30
+	invoke	2
+	line	469
+	colm	12
+	pret
+lab L7
+	pfail
+lab L3
+	unmark
+lab L1
+	pnull
+	line	470
+	colm	1
+	pfail
+	end
+proc map_y_tier
+	local	0,001000,tier
+	local	1,001000,y
+	local	2,000020,yp
+	local	3,000000,b_y
+	local	4,000000,a_y
+	local	5,000000,tier_height
+	local	6,000000,tier_spacing
+	local	7,000000,scale_height
+	local	8,000000,symmetric
+	local	9,000000,ticlen
+	con	0,002000,1,0
+	con	1,002000,1,1
+	con	2,004000,1.0
+	declend
+	line	478
+	colm	11
+	mark	L1
+	mark0
+	pnull
+	var	0
+	int	0
+	line	482
+	colm	15
+	numgt
+	unmark
+	mark	L2
+	pnull
+	pnull
+	var	3
+	pnull
+	pnull
+	var	1
+	var	4
+	line	484
+	colm	25
+	mult
+	var	5
+	line	484
+	colm	31
+	mult
+	line	484
+	colm	21
+	plus
+	pnull
+	pnull
+	pnull
+	pnull
+	var	0
+	int	1
+	line	485
+	colm	26
+	minus
+	pnull
+	var	6
+	var	5
+	line	485
+	colm	49
+	plus
+	line	485
+	colm	32
+	mult
+	var	6
+	line	485
+	colm	65
+	plus
+	var	7
+	line	486
+	colm	30
+	plus
+	line	484
+	colm	45
+	minus
+	line	484
+	colm	9
+	pret
+lab L2
+	pfail
+	unmark
+lab L1
+	mark	L3
+	mark	L4
+	pnull
+	var	8
+	int	1
+	line	490
+	colm	20
+	numeq
+	unmark
+	pnull
+	var	2
+	pnull
+	pnull
+	pnull
+	var	1
+	line	491
+	colm	19
+	neg
+	var	4
+	line	491
+	colm	22
+	mult
+	var	5
+	line	491
+	colm	28
+	mult
+	line	491
+	colm	16
+	asgn
+	goto	L5
+lab L4
+	pnull
+	var	2
+	pnull
+	pnull
+	pnull
+	pnull
+	real	2
+	var	1
+	line	492
+	colm	25
+	minus
+	line	492
+	colm	19
+	neg
+	var	4
+	line	492
+	colm	30
+	mult
+	var	5
+	line	492
+	colm	36
+	mult
+	line	492
+	colm	16
+	asgn
+lab L5
+	unmark
+lab L3
+	mark	L6
+	mark	L7
+	pnull
+	var	3
+	pnull
+	pnull
+	pnull
+	var	0
+	int	1
+	line	494
+	colm	28
+	plus
+	pnull
+	var	6
+	var	5
+	line	494
+	colm	51
+	plus
+	line	494
+	colm	34
+	mult
+	pnull
+	pnull
+	var	6
+	var	9
+	line	495
+	colm	29
+	plus
+	var	2
+	line	495
+	colm	38
+	plus
+	line	494
+	colm	67
+	minus
+	line	494
+	colm	18
+	minus
+	line	494
+	colm	5
+	pret
+lab L7
+	pfail
+	unmark
+lab L6
+	pnull
+	line	498
+	colm	1
+	pfail
+	end
+proc fill_rectangle
+	local	0,001000,x1
+	local	1,001000,y1
+	local	2,001000,x2
+	local	3,001000,y2
+	local	4,000000,FillRectangle
+	local	5,000000,map_x
+	local	6,000000,map_y
+	local	7,000000,a_x
+	local	8,000000,a_y
+	declend
+	line	505
+	colm	11
+	mark	L1
+	var	4
+	var	5
+	var	0
+	line	507
+	colm	24
+	invoke	1
+	var	6
+	var	1
+	line	507
+	colm	37
+	invoke	1
+	pnull
+	pnull
+	var	2
+	var	0
+	line	508
+	colm	23
+	minus
+	var	7
+	line	508
+	colm	29
+	mult
+	pnull
+	pnull
+	var	3
+	var	1
+	line	508
+	colm	41
+	minus
+	var	8
+	line	508
+	colm	48
+	mult
+	line	507
+	colm	17
+	invoke	4
+	unmark
+lab L1
+	pnull
+	line	510
+	colm	1
+	pfail
+	end
+proc highlight_scale
+	local	0,001000,x
+	local	1,001000,l
+	local	2,000000,Fg
+	local	3,000000,FillRectangle
+	local	4,000000,zero_y
+	local	5,000000,scale_height
+	con	0,010000,5,147,162,145,145,156
+	declend
+	line	512
+	colm	12
+	mark	L1
+	var	2
+	str	0
+	line	514
+	colm	7
+	invoke	1
+	unmark
+lab L1
+	mark	L2
+	var	3
+	var	0
+	var	4
+	var	1
+	pnull
+	var	5
+	line	515
+	colm	34
+	neg
+	line	515
+	colm	18
+	invoke	4
+	unmark
+lab L2
+	pnull
+	line	517
+	colm	1
+	pfail
+	end
+proc map_x
+	local	0,001000,x
+	local	1,000000,a_x
+	local	2,000000,b_x
+	declend
+	line	520
+	colm	12
+	mark	L1
+	mark	L2
+	pnull
+	pnull
+	var	1
+	var	0
+	line	521
+	colm	16
+	mult
+	var	2
+	line	521
+	colm	20
+	plus
+	line	521
+	colm	4
+	pret
+lab L2
+	pfail
+	unmark
+lab L1
+	pnull
+	line	522
+	colm	1
+	pfail
+	end
+proc map_y
+	local	0,001000,y
+	local	1,000000,a_y
+	local	2,000000,b_y
+	declend
+	line	524
+	colm	12
+	mark	L1
+	mark	L2
+	pnull
+	pnull
+	var	1
+	var	0
+	line	525
+	colm	16
+	mult
+	var	2
+	line	525
+	colm	20
+	plus
+	line	525
+	colm	4
+	pret
+lab L2
+	pfail
+	unmark
+lab L1
+	pnull
+	line	526
+	colm	1
+	pfail
+	end
+proc unmap_x
+	local	0,001000,x
+	local	1,000000,b_x
+	local	2,000000,a_x
+	declend
+	line	528
+	colm	12
+	mark	L1
+	mark	L2
+	pnull
+	pnull
+	var	0
+	var	1
+	line	529
+	colm	16
+	minus
+	var	2
+	line	529
+	colm	24
+	div
+	line	529
+	colm	4
+	pret
+lab L2
+	pfail
+	unmark
+lab L1
+	pnull
+	line	530
+	colm	1
+	pfail
+	end
+proc unmap_y
+	local	0,001000,y
+	local	1,000000,b_y
+	local	2,000000,a_y
+	declend
+	line	532
+	colm	12
+	mark	L1
+	mark	L2
+	pnull
+	pnull
+	var	0
+	var	1
+	line	533
+	colm	16
+	minus
+	var	2
+	line	533
+	colm	24
+	div
+	line	533
+	colm	4
+	pret
+lab L2
+	pfail
+	unmark
+lab L1
+	pnull
+	line	534
+	colm	1
+	pfail
+	end

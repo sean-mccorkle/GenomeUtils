@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+#
+# listhits *.blast
+# read a bunch of blast reports and list hits.
+
+use Bio::Tools::Blast;
+
+$bl = "";
+
+foreach $file ( @ARGV )
+   {
+    #print "\n$file:\n";
+    #
+    # Unfortunately, Blast->new() will BOMB the program on failure,
+    # which includes an attempt to parse a non-blast file, or worse:
+    # a perfectly good but empty blast report.  We are therefore forced
+    # to eval and then check $@.
+    #
+    eval { $bl = Bio::Tools::Blast->new( -file   => $file,
+                                  -parse  => 1,  
+                                 # -signif => '1e-10',
+                               ); 
+         };
+
+    if ( $@  )
+       {
+        #print STDERR "**** $file is bad ****\n";
+        #print STDERR "$@\n";
+        next;
+       }
+    $file =~ /^.*\.(\d+)\./;
+    $frag = $1;
+
+    foreach $h ( $bl->hits ) 
+       {
+        #printf "%s\t%s\t%.1e\t%d\t%.2f\t%d\n", 
+        printf "%s|%s|%.1e|%d|%.2f|%s\n", 
+                         $frag,
+                         $h->name, $h->expect, $h->num_hsps,
+                         $h->frac_identical,substr( $h->desc, 0, 40 )
+              if $h->expect() < 0.1;
+       }
+    
+    
+
+    $bl->destroy();
+   }
+
+

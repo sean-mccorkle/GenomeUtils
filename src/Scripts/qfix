@@ -1,0 +1,11 @@
+#!/usr/bin/perl
+
+while ( $_ = <> ) 
+   {
+    while ( s/^\s*(\d+)// )
+       {
+        $q = $1;
+        print "$q\n";
+       }
+   }
+

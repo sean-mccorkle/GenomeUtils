@@ -1,0 +1,579 @@
+head	0.8;
+access;
+symbols;
+locks
+	mccorkle:0.8; strict;
+comment	@# @;
+
+
+0.8
+date	2001.03.26.18.25.22;	author mccorkle;	state Exp;
+branches;
+next	0.7;
+
+0.7
+date	2001.03.26.02.58.29;	author mccorkle;	state Exp;
+branches;
+next	0.6;
+
+0.6
+date	2000.04.26.15.51.18;	author mccorkle;	state Exp;
+branches;
+next	0.5;
+
+0.5
+date	2000.03.24.16.40.36;	author mccorkle;	state Exp;
+branches;
+next	0.4;
+
+0.4
+date	2000.01.06.19.39.27;	author mccorkle;	state Exp;
+branches;
+next	0.3;
+
+0.3
+date	99.12.15.15.44.05;	author mccorkle;	state Exp;
+branches;
+next	0.2;
+
+0.2
+date	99.11.05.23.30.50;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	99.11.04.16.13.27;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@Pretty-printer for sequences.  Reads fasta format sequences and
+adds position numbers and spacing to make it easy on the eye.
+@
+
+
+0.8
+log
+@added -a option - append suffix to titles
+@
+text
+@# Program:      pp
+# Programmer:   Sean R. McCorkle
+# Language:     Icon
+# Description:  Sequence pretty-printer.  This reads DNA or amino acid
+#               sequence files (fasta format), and prints them out with
+#               position numbers and spacing for easy reading.
+#
+#               see "help" procedure below for embedded documentation
+#
+# $Id: pp.icn,v 0.6 2000/04/26 15:51:18 mccorkle Exp mccorkle $
+#
+
+link  io
+link  doc
+link  options
+
+
+                      ###############################
+                      # Output Control globals,     #
+                      # set by command line options #
+                      ###############################
+
+global show_pos              # flag: show or not show pos numbers       -n
+global chars_per_line        # line grouping size (default 50)          -l
+global subgr_size            # sub grouping size (default 10)           -s
+global start_pos             # start position (default 1)               -p
+global end_pos               # end position (default 0)
+
+
+procedure  help( fmt )
+
+    version()
+    write_doc( fmt, "\
+__Name      pp - sequence pretty-printer                                     \
+                                                                             \
+__Usage     pp [options] [<seq> [<seq> ... ] ]                               \
+                                                                             \
+            where <seq> is a file that contains one or more fasta format DNA \
+            or amino acid sequences. A single hyphen (-) can be used as      \
+            a file name to specify stdin.  If no files are given,            \
+            stdin is scanned.                                                \
+                                                                             \
+__Options                                                                    \
+_.             -a <str> append <str> to header title                         \
+_.             -B <n>   begin at position n                                  \
+_.             -L <n>   print <n> characters                                 \
+_.             -l <n>   print <n> characters per line (default 50)           \
+_.             -n       don't print position numbers on left                 \
+_.             -s <n>   insert a space every <n> characters (default 10),    \
+                        if 0 or <0, no subgrouping is done                   \
+_.             -t <str> use <str> as header title (overrides -a)             \
+                                                                             \
+_.             -h       print help then exit                                 \
+_.             -help    print help then exit                                 \
+_.             -html    print html man page then exit                        \
+_.             -man     print unix man page then exit                        \
+_.             -v       print version then exit                              \
+                                                                             \
+__Note                                                                       \
+             -B, -L and -t are applied to each sequence (they really         \
+             only make sense for input which is a single sequence            \
+      " )
+    exit()
+
+end
+
+                             ################
+                             # Main Program #
+                             ################
+
+
+procedure main( args )
+
+
+    local opts, f, s, title
+
+    opts := options( args, "-a: -B+ -L+ -l+ -n -s+ -t: -h -help! -man! -html! -v", 
+                     opt_err )
+    handle_opts( opts )
+
+    if ( *args = 0 ) then push( args, "-" )   # use  stdin if no filenames
+    every f := open_file( !args ) do
+       {
+        while s := read_fasta( f ) do
+	   {
+            if member( opts, "t" )
+              then
+                   title := opts["t"]
+              else
+		  {
+                   title := s.heading
+                   if member( opts, "a" )
+                       then title ||:= opts["a"]
+                  }
+            pretty_output( &output, s.seq, title )
+           }
+        close_file( f )
+       }
+
+end
+
+#
+# look at opts table, set output control globals as appropriate
+#
+procedure handle_opts( opts )
+
+    if member( opts, ("h" | "help") )  then help( "text" )
+    if member( opts, "man" )  then help( "man" )
+    if member( opts, "html" )  then help( "html" )
+
+    if member( opts, "v" )  then { version(); exit() }
+    if member( opts, "n" )  
+      then show_pos := 0 
+      else show_pos := 1
+
+    chars_per_line := ( \opts["l"] | 50 )
+    subgr_size := ( \opts["s"] | 10 )
+    start_pos := ( \opts["B"] | 1 )
+    end_pos := ( ( start_pos + \opts["L"] ) | 0 )
+
+    if subgr_size < 1 then subgr_size := chars_per_line
+
+end
+
+#
+# print one sequence
+#
+procedure  pretty_output( outfile, s, title )
+
+    local i, real_end, l
+
+    i := start_pos
+    l := *s + 1
+    if end_pos <= 0
+      then 
+        real_end := end_pos + l
+      else
+        if end_pos <= l
+           then real_end := end_pos
+           else real_end := l
+    write( outfile, ">" || title )
+    while i + chars_per_line < real_end do
+       {
+        pretty_line_out( outfile, i, s[ i +: chars_per_line ] )
+        i +:= chars_per_line
+       }
+    if ( i < real_end )
+        then pretty_line_out( outfile, i, s[ i : real_end ] )
+end
+
+#
+# print one line
+#
+procedure  pretty_line_out( outfile, n, s )
+
+    local l, i
+
+    l := ""
+    if show_pos = 1
+       then l ||:= right( n, 9 ) || " "
+    i := 1
+    while i + subgr_size <= *s do
+       {
+        l ||:= s[i+:subgr_size] || " "
+        i +:= subgr_size
+       }
+    if i <= *s 
+        then l ||:= s[i:0]
+    if l[0] == " "              # removing the last blank helps out with
+        then l := l[1:-1]       # "diff" checks
+    write( outfile, l )
+
+end
+
+
+#
+# print version number & help
+#
+
+
+#
+# print version number
+#
+procedure  version()
+
+    "$Revision: 0.6 $" ? { tab( upto( ' ' ) )
+                           write( "pp", tab( many( &digits ++ ' .' ) ),
+                                  "  Sequence pretty-printer" )
+		         }
+end
+
+#
+# slightly more informative option error message
+#
+procedure opt_err( msg )
+
+   write( &errout, "pp: ", msg, "  (type pp -h for help)" )
+   exit( 1 )
+end
+
+
+
+@
+
+
+0.7
+log
+@fixed bug - -L option wasn't behaving properly if real length
+was less than specified length cutoff.
+@
+text
+@d44 1
+d51 1
+a51 1
+_.             -t <str> use <str> as header title                            \
+d75 1
+a75 1
+    local opts, f, s
+d77 1
+a77 1
+    opts := options( args, "-B+ -L+ -l+ -n -s+ -t: -h -help! -man! -html! -v", 
+d85 12
+a96 5
+            pretty_output( &output, s.seq, 
+                           if member( opts, "t" )
+                               then opts["t"]
+                               else s.heading
+                         )
+@
+
+
+0.6
+log
+@added new & improved doc functions and options
+@
+text
+@d10 1
+a10 1
+# $Id: pp.icn,v 0.5 2000/03/24 16:40:36 mccorkle Exp mccorkle $
+d122 1
+a122 1
+    local i, real_end
+d125 1
+d127 6
+a132 2
+        then real_end := *s + end_pos + 1
+        else real_end := end_pos
+d140 1
+a140 1
+        then pretty_line_out( outfile, i, s[ i : end_pos ] )
+d178 1
+a178 1
+    "$Revision: 0.5 $" ? { tab( upto( ' ' ) )
+@
+
+
+0.5
+log
+@reworked handling of options to make use of \ operator.
+@
+text
+@d8 1
+a8 1
+# Usage:        pp [options] [<seq file> ...]
+d10 1
+a10 32
+#               where <seq file> contains one or more fasta format DNA or
+#               amino acid sequences. A single hyphen (-) can be used as a 
+#               file name to specify stdin.  If no files are specified, 
+#               stdin is scanned.
+#
+# Options:
+#               
+#               -B <n>   begin at position n  (default 1)
+#               -L <n>   print <n> characters  (default: to end of string)
+#               -h       print version and help and exit.
+#               -l <n>   print <n> characters per line (default 50)
+#               -n       don't print position numbers on left
+#               -s <n>   insert a space every <n> characters (default 10)
+#                        if 0 or <0, no subgrouping is done
+#               -t <str> use <str> as header title
+#               -v       print version and exit
+#
+#
+# Examples:
+#               pp -n -s0 <file>   produces strict fasta format back
+#
+# Under consideration:  
+# 
+#               -E <n> to specify end position, as an alternative to -L<n>
+#                  (but what to do if both specified?)
+#                       
+#
+# Note:
+#               -B, -L and -t are applied to each sequence (they really only 
+#               make sense for input which is a single sequence 
+#
+# $Id: pp.icn,v 0.4 2000/01/06 19:39:27 mccorkle Exp mccorkle $
+d14 1
+d17 1
+d29 37
+d73 1
+d76 2
+a77 1
+    opts := options( args, "-B+ -L+ -h -l+ -n -s+ -t: -v", opt_err )
+d99 4
+a102 1
+    if member( opts, "h" )  then { help(); exit() }
+d110 1
+a110 1
+    start_pos := ( \ opts["B"] | 1 )
+a166 24
+procedure  help()
+
+    version()
+    write( "\nUsage:   pp [options] [<seq file> ...]\n" )
+    write("         where <seq file> contains one or more fasta format DNA or")
+    write( "         amino acid sequences. A single hyphen (-) can be used as")
+    write( "         a file name to specify stdin.  If no files are given,")
+    write( "         stdin is scanned.\n" )
+    write( "Options:" )
+    write( "         -B <n>   begin at position n" )
+    write( "         -L <n>   print <n> characters" ) 
+    write( "         -h       print help then exit" )
+    write( "         -l <n>   print <n> characters per line (default 50)" )
+    write( "         -n       don't print position numbers on left" )
+    write( "         -s <n>   insert a space every <n> characters (default ",
+           "10)" )
+    write( "                  if 0 or <0, no subgrouping is done" )
+    write( "         -t <str> use <str> as header title" )
+    write( "         -v       print version then exit" )
+    write( "\nNote:" )
+    write( "         -B, -L and -t are applied to each sequence (they really" )
+    write( "         only make sense for input which is a single sequence" )
+
+end
+d173 1
+a173 1
+    "$Revision: 0.4 $" ? { tab( upto( ' ' ) )
+@
+
+
+0.4
+log
+@fixed bug in subgrouping for last subgroup.
+made position number 9 places wide to be identical to genbank/BNL
+@
+text
+@d41 1
+a41 1
+# $Id: pp.icn,v 0.3 1999/12/15 15:44:05 mccorkle Exp mccorkle $
+d65 1
+a65 1
+    local opts, f, s, title
+d74 5
+a78 6
+	   {
+            if member( opts, "t" )
+                then title := opts["t"]
+                else title := s.heading
+            pretty_output( &output, s.seq, title )
+   	   }
+a88 5
+    chars_per_line := 50
+    subgr_size := 10
+    start_pos := 1
+    end_pos := 0
+    show_pos := 1
+d91 8
+a98 5
+    if member( opts, "l" )  then chars_per_line := opts["l"]
+    if member( opts, "n" )  then show_pos := 0
+    if member( opts, "s" )  then subgr_size := opts["s"]
+    if member( opts, "B" )  then start_pos := opts["B"]
+    if member( opts, "L" )  then end_pos := start_pos + opts["L"]
+d184 1
+a184 1
+    "$Revision: 0.3 $" ? { tab( upto( ' ' ) )
+@
+
+
+0.3
+log
+@fixed problem with negative end_pos.
+@
+text
+@d41 1
+a41 1
+# $Id: pp.icn,v 0.2 1999/11/05 23:30:50 mccorkle Exp mccorkle $
+d137 1
+a137 1
+       then l ||:= right( n, 8 ) || " "
+d139 1
+a139 1
+    while i + subgr_size < *s do
+d187 1
+a187 1
+    "$Revision: 0.2 $" ? { tab( upto( ' ' ) )
+@
+
+
+0.2
+log
+@Added -B and -L options for fishing out part of a string.
+Added -t option for creating a new title.
+Added opt_err() routine for better error message.
+@
+text
+@d38 2
+a39 1
+#               -B and -L are applied to each sequence
+d41 1
+a41 1
+# $Id: pp.icn,v 0.1 1999/11/04 16:13:27 mccorkle Exp mccorkle $
+d112 1
+a112 1
+    local i
+d115 3
+d119 1
+a119 1
+    while i + chars_per_line < end_pos do
+d124 1
+a124 1
+    if ( i < end_pos )
+d177 2
+a178 1
+    write( "         -B and -L are applied to each sequence" )
+d187 1
+a187 1
+    "$Revision: 0.1 $" ? { tab( upto( ' ' ) )
+d194 1
+a194 1
+#
+d201 1
+@
+
+
+0.1
+log
+@Okay, looking already - lets check it in.
+@
+text
+@d8 1
+a8 8
+# Usage:        pp [-hnv] [-l <n>] [-s <n>] [<seq file> ...]
+#
+#               -h     print version and help and exit.
+#               -l <n> print <n> characters per line (default 50)
+#               -n     don't print position numbers on left
+#               -s <n> insert a space every <n> characters (default 10)
+#                      if 0 or <0, no subgrouping is done
+#               -v     print version and exit
+d15 26
+a40 1
+# $Id$
+d46 6
+d54 2
+d64 1
+a64 2
+    local opts, f, s
+
+d66 1
+a66 1
+    opts := options( args, "-h -l+ -n -s+ -v" )
+d73 6
+a78 1
+            pretty_output( &output, s.seq, s.heading, opts )
+d84 3
+d91 3
+d97 1
+d99 2
+d106 4
+a109 1
+procedure pretty_output( outfile, s, title, opts )
+d113 1
+a113 1
+    i := 1
+d115 1
+a115 1
+    while i + chars_per_line < *s do
+d117 1
+a117 1
+        pretty_line_out( outfile, i, s[ i +: chars_per_line ], opts )
+d120 2
+a121 2
+    if ( i < *s )
+        then pretty_line_out( outfile, i, s[i:0], opts )
+d124 4
+a127 1
+procedure  pretty_line_out( outfile, n, s, opts )
+d132 1
+a132 1
+    if not member( opts, "n" )
+d140 1
+a140 1
+    if i < *s 
+d153 1
+a153 1
+procedure help()
+d156 1
+a156 1
+    write( "Usage:   pp [-hnv] [-l <n>] [-s <n>] [<file> ...]\n" )
+d162 12
+a173 6
+    write( "         -h     print help then exit" )
+    write( "         -l <n> print <n> characters per line (default 50)" )
+    write( "         -n     don't print position numbers on left" )
+    write( "         -s <n> insert a space every <n> characters (default 10)" )
+    write( "                if 0 or <0, no subgrouping is done" )
+    write( "         -v     print version then exit" )
+d180 1
+a180 1
+procedure version()
+d182 3
+a184 2
+    "$Revision: 0.0 $" ? { tab( upto( ' ' ) )
+                           write( "pp", tab( many( &digits ++ ' .' ) ) )
+d186 9
+@

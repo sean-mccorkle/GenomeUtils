@@ -1,0 +1,231 @@
+head	0.4;
+access;
+symbols;
+locks
+	mccorkle:0.4; strict;
+comment	@# @;
+
+
+0.4
+date	99.11.06.04.27.52;	author mccorkle;	state Exp;
+branches;
+next	0.3;
+
+0.3
+date	99.11.06.00.37.57;	author mccorkle;	state Exp;
+branches;
+next	0.2;
+
+0.2
+date	99.11.01.17.00.05;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	99.10.23.22.42.07;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@Reverse complement DNA string (fasta format in and out)
+@
+
+
+0.4
+log
+@Changed the default appended header string to "" instead of " (R)".
+Now you have to explicitly add a string with "-a" if you want one,
+otherwise the old string is carried.
+@
+text
+@# Program:      rc
+# Programmer:   Sean R. McCorkle
+# Language:     Icon
+# Description:  Reads a sequence file (fasta format), prints out the
+#               reverse complement (fasta format)
+#
+# Usage:        rc [-a <str>] [-hv] [-t <str>] [<file> ...]
+#
+#               where <seq file> contains a single DNA sequence (fasta).
+#               a single hyphen (-) can be used as a file name to specify
+#               stdin.  If no files are specified, stdin is scanned.
+#               If not specified, stdin is used.
+#
+# Options:
+#
+#              -a <str> append <str> to each title (default is "")
+#              -h       print help, then exit
+#              -t <str> use <str> as title on FASTA output (overrides -a)
+#              -v       print version, then exit
+#
+# $Id: rc.icn,v 0.3 1999/11/06 00:37:57 mccorkle Exp mccorkle $
+#
+
+link  io
+link  options
+
+                             ################
+                             # Main Program #
+                             ################
+
+
+procedure main( args )
+
+    local opts, f, s, title
+
+    opts := options( args, "a: -h -t: -v", opt_err )
+    if member( opts, "h" )  then { help(); exit() }
+    if member( opts, "v" )  then { version(); exit() }
+
+    if ( *args = 0 ) then push( args, "-" )   # use  stdin if no filenames
+    every f := open_file( !args ) do
+       {
+        while s := read_fasta( f ) do
+	   {
+            title := s.heading
+            if member( opts, "a" )
+                then  title ||:= opts["a"]
+            if member( opts, "t" )
+                then  title := opts["t"]
+            write_fasta( &output, rc( s.seq ), title )
+           }
+        close_file( f )
+       }
+
+end
+
+
+#
+# print version number & help
+#
+
+procedure help()
+
+    version()
+    write( "\nUsage:  rc [-hv] [<file> ...]\n" )
+    write( "        a single hyphen (-) can be used as a file name to specify")
+    write( "        stdin.  If no files are specified, stdin is scanned.\n" )
+    write( "Options:" )
+    write( "        -a <str> append <str> to each title")
+    write( "        -h       print help" )
+    write( "        -t <str> use <str> as title on FASTA output ",
+                    "(overrides -a)" )
+    write( "        -v       print version" )
+
+end
+
+#
+# print version number
+#
+procedure version()
+
+    "$Revision: 0.3 $" ? { tab( upto( ' ' ) )
+                           write( "rc", tab( many( &digits ++ ' .' ) ),
+                                  " Reverse-complement sequence(s)"
+                                )
+		         }
+end
+
+#
+# slightly more informative option error message
+#
+procedure opt_err( msg )
+
+   write( &errout, "rc: ", msg, "  (type rc -h for help)" )
+   exit( 1 )
+end
+
+
+@
+
+
+0.3
+log
+@Added -t and -a options for modifying the title
+Added opt_err for slightly better option error messages.
+@
+text
+@d16 1
+a16 1
+#              -a <str> append <str> to each title (default is " (R)")
+d21 1
+a21 1
+# $Id: rc.icn,v 0.2 1999/11/01 17:00:05 mccorkle Exp mccorkle $
+a47 1
+                else  title ||:= " (R)"
+d69 1
+a69 1
+    write( "        -a <str> append <str> to each title (default is \" (R)\"")
+d82 4
+a85 2
+    "$Revision: 0.2 $" ? { tab( upto( ' ' ) )
+                           write( "rc", tab( many( &digits ++ ' .' ) ) )
+@
+
+
+0.2
+log
+@Handling options and multiple input files and sequences.
+@
+text
+@d7 1
+a7 1
+# Usage:        rc [-hv] [<file> ...]
+d14 8
+a21 1
+# $Id: rc.icn,v 0.1 1999/10/23 22:42:07 mccorkle Exp mccorkle $
+d34 1
+a34 1
+    local opts, f, s
+d36 1
+a36 1
+    opts := options( args, "-h -v" )
+d44 9
+a52 1
+            write_fasta( &output, rc( s.seq ), s.heading || " (R)")
+d66 1
+a66 1
+    write( "Usage:  rc [-hv] [<file> ...]\n" )
+d70 5
+a74 2
+    write( "        -h print help" )
+    write( "        -v print version" )
+d83 1
+a83 1
+    "$Revision: 0.1 $" ? { tab( upto( ' ' ) )
+d87 10
+@
+
+
+0.1
+log
+@Basically working, so here we go...
+@
+text
+@d7 1
+a7 1
+# Usage:        rc <seqfile>
+d10 2
+d14 1
+a14 1
+# $Id$
+d18 6
+d27 14
+a40 3
+    infile := open_f( args )
+    s := read_fasta( infile )
+    write_fasta( &output, rc( s ), args[1] || " (R)")
+a42 1
+procedure  open_f ( args )
+d44 20
+a63 7
+    local filename, infile
+    if filename := args[1]
+      then
+        ( infile := open( filename )  | stop( "can't open ", filename ) )
+      else
+        infile := &input
+    return( infile )
+d65 3
+@

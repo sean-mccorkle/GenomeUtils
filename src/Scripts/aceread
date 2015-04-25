@@ -1,0 +1,220 @@
+#!/usr/bin/perl
+# Globals:
+#  $contig_name     - current contig ident
+#  $contig          - current contig consensus (padded)
+#  @reads           - list of reads for current contig
+#  $read_name       - current read name
+#  $read_length     - current read length
+#  $read            - current read strings
+#  $orient{$r}      - orientation (C,U) for read $r
+#  $pstart{$r}      - padded start for read $r
+#
+#  $quals{$r}       - qualitites for read $r
+#
+
+                                  ################
+                                  # Main Program #
+                                  ################
+
+($ace_file,$qual_file) = @ARGV;
+#
+# read the quals file
+#
+open( QUAL, $qual_file ) || die "Can't open $file_file\n";
+$_ = <QUAL>;
+while ( $_ )
+   {
+    /^>(\S+)\s+/ || die "didn't find header in qual file\n";
+    my $qual_name = $1;
+    #
+    $quals{$qual_name} = [];
+    while ( ($_ = <QUAL>) && ! /^>/ )
+       {
+        /^\s*(\d+\s+)*\d+\s*$/ || die "bad quals: $_\n";
+        s/^\s*//;
+        s/\s*$//;
+        push( @{$quals{$qual_name}}, split( /\s+/ ) );
+       }
+   }
+close( QUAL );
+
+#
+# read the phrap output .ace file
+#
+open( ACE, $ace_file ) || die "Can't open $ace_file\n";
+$_ = <ACE>;
+/^AS\s+(\d+)\s+(\d+)/ 
+     || die "Doesn't appear to be ace(2) file - first line not AS\n";
+($num_contigs,$total_reads) = ($1,$2);
+
+$_ = <ACE>;
+/^\s*$/ || die "2nd line not blank\n";
+
+while ( $_ = <ACE> )
+   {
+    if ( /^CO/ )
+       { new_contig( \*ACE ); }
+    elsif ( /^BQ/ )
+       { get_contig_qual( \*ACE ); }
+    elsif ( /^AF/ )
+       { get_af_record(); }
+    elsif ( /^RD/ )
+       { new_read( \*ACE ); }
+    elsif ( /^QA/ )
+       { get_qual(); }
+   }
+
+close( ACE );
+
+
+                                  ###############
+                                  # Subroutines #
+                                  ###############
+
+sub  new_contig
+   {
+    my $f = shift;
+    &flush_contig_output() if ( $contig_name );
+    #CO <contig name> <# of bases> <# of reads in contig> 
+    #       <# of base segments in contig> <U or C>
+    /^CO\s+(\S+)\s+(\d+)\s+(\d+)\s+(\d+)\s+([UC])/  
+       || die "Bad format of CO line:$_\n";
+    ($contig_name,$num_bases_contig,$num_reads,$num_base_segs,$orient)
+        = ($1,$2,$3,$4,$5);
+    print "Contig name: $contig_name\n";
+    print "$num_bases_contig bases\n";
+    print "$num_reads reads\n";
+    print "$num_base_segs base segments\n";
+    print "orientation:  $orient\n";
+    $contig = &get_string( $f );
+    printf "contig length: %s\n", length( $contig );
+    #print "contig: $contig\n";
+    $c2 = $contig;
+    $c2 =~ s/\*//g;
+    printf "contig2 length: %s\n", length( $c2 );
+   }
+
+sub get_contig_qual
+   {
+    my $f = shift;
+    $qcount = 0;
+    while ( chomp( $_ = <$f> ) && ! /^\s*$/ )
+       {
+        while ( s/\s*(\d+)// )
+           { $qcount++; }
+       }
+    printf "Qcount: %d\n", $qcount;
+   }
+
+sub  get_af_record
+   {
+    # AF <read name> <C or U> <padded start consensus position>
+    /^AF\s+(\S+)\s+([CU])\s+(\-?\d+)/ 
+      || die "Bad format of AF line: $_\n";
+    my ($rname,$dir,$pstart) = ($1,$2,$3);
+    #printf "Assembled from $rname: $dir $pstart\n";
+    push( @reads, $rname );
+    $orient{$rname} = $dir;
+    $pstart{$rname} = $pstart;
+   }
+
+sub  new_read
+   {
+    my $f = shift;
+    #  RD <read name> <# of padded bases> <# of whole read info items> 
+    #           <# of read tag>s
+    /^RD\s+(\S+)\s+(\d+)\s+(\d+)\s+(\d+)/ 
+      || die "Bad format of RD line: $_\n";
+
+    ($read_name,$read_length,$num_info_items,$num_tags) = ($1,$2,$3,$4);
+    $quals{$read_name} || die "No quals, read $read_name\n";
+    $orient{$read_name} || die "Bad bad bad\n";
+    $read = &get_string( $f );
+    $seq{$read_name} = $read;
+    my $l1 = length( $read );
+    my $read2 = $read;
+    $read2 =~ s/\*//g;
+    my $l2 = length( $read2 );
+    my $l3 = $#{$quals{$read_name}} + 1;
+    printf "Read %s, length %d  %d  %d  q: %d  %s\n", 
+            $read_name, $read_length, $l1, $l2, $l3, $orient{$read_name};
+    die "qual length discrepancy $read_name\n" unless ( $l2 == $l3 );
+   }
+
+sub  get_qual
+   {
+    # QA <qual clipping start> <qual clipping end> <align clipping start> 
+    #    <align clipping end>
+    /^QA\s+(\-?\d+)\s+(\-?\d+)\s+(\-?\d+)\s+(\-?\d+)/ 
+      || die "Bad format of QA line: $_\n";
+    ($qstart,$qend,$astart,$aend) = ($1,$2,$3,$4);
+    printf "qual                             $qstart-$qend $astart-$aend\n"; 
+    &print_out_strings();
+   }
+
+
+sub print_out_strings
+   {
+    my $i, j;
+    my $off = 60;
+    my $qstr = "."x$read_length;
+    my $cuts = "."x$read_length;
+
+    for (  $i = 0, $j = 1;  $i < $read_length;  $i++  )
+       {
+        next if ( substr( $read, $i, 1 ) eq '*' );
+
+        substr( $qstr, $i, 1 ) = sprintf( "%d", 
+                                     int( ${$quals{$read_name}}[$j-1] / 10 ) );
+        $in_qual = ( $qstart <= $j ) && ( $j <= $qend );
+        $in_assem = ( $astart <= $j ) && ( $j <= $aend );
+        $j++;
+        if ( $in_qual && $in_assem )
+           { substr( $cuts, $i, 1 ) = "\$"; }
+        elsif ( $in_qual )
+           { substr( $cuts, $i, 1 ) = "q"; }
+        elsif ( $in_assem )
+           { substr( $cuts, $i, 1 ) = "a"; }
+       }
+    
+    for ( $i = 0, $j = $pstart{$read_name} - 1;
+          $i < $read_length; $i += $off, $j += $off )
+       {
+        printf "cont: %6d [%s]\n", $j, substr( $contig, $j, $off );
+        printf "read: %6d [%s]\n", $i, substr( $read, $i, $off );
+        printf "qual: %6d [%s]\n", $i, substr( $qstr, $i, $off );
+        printf "cuts: %6d [%s]\n", $i, substr( $cuts, $i, $off );
+        printf "\n";
+       }
+   }
+
+sub  get_string
+   {
+    my $f = shift;
+    my $s = "";
+    while ( chomp( $_ = <$f> ) && ! /^\s*$/ )
+       {
+        s/\s//g;
+        $s .= $_;
+       }
+    return( $s );
+   }
+#
+# flush_contig_output() prints out and resets all the contig-based 
+# data structures.
+#
+sub  flush_contig_output
+   {
+    my $r;
+
+    print "$contig_name\n";
+    foreach $r ( @reads )
+       {
+        print "$r: ", $orient{$r}, " ", $pstart{$r}, "\n";
+       }
+    undef @reads, %orient, %pstart;
+   }
+
+
+
+

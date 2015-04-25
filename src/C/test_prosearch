@@ -1,0 +1,26 @@
+#!/bin/csh
+#
+set cdir=/Volumes/d1/RattusNorvegicus/UCSC/Chrom
+#set cfile="$cdir/chr20.fa"
+set cfile="$cdir/chr1.fa"
+set chrom=`basename $cfile | sed -e 's/\.fa$//'`
+echo $chrom
+
+set pat="ttcaGCacc.cGGacagc.c"  # RE1
+set mis=4
+
+#prosearch1.5 -S -m $mis $pat $cfile >ptest.orig.$chrom
+#cat ptest.orig.$chrom
+#echo done here
+#exit
+
+prosearch -S -m $mis $pat $cfile >ptest.$chrom
+wc -l ptest.*$chrom
+echo "diffs:"
+diff ptest.$chrom ptest.orig.$chrom
+
+
+
+
+
+

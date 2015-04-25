@@ -1,0 +1,140 @@
+# Program:      sel
+# Programmer:   Sean R. McCorkle
+# Language:     Icon
+# Description:  Selects some subset of input sequences (fasta/BNL) and outputs
+#               them.  Does not alter the sequences which are passed.
+#
+# Usage:        sel [-hv] [-B <n>] [-N <n>] [ <fasta file> ... ]
+#
+#               a single hyphen (-) can be used as a file name to specify
+#               stdin.  If no files are specified, stdin is scanned.
+#
+# Options:
+#               -a <n>  minimum sequence length to pass (defalut 0)
+#               -b <n>  maximum sequence length to pass (infinity)
+#               -B <n>  select sequences beginning with <n>'th input 
+#                       (defaults to 1)
+#               -h      print help, then exit
+#               -N <n>  cut off selection after <n> sequences have been output
+#                       (default is all sequences)
+#               -v      print version, then exit
+#
+# Note:         The order of the cuts is:
+#                 first -B, 
+#                 then (-a, -b), 
+#                 lastly -N
+#
+#
+# $Id: sel.icn,v 0.2 2000/01/17 00:57:04 mccorkle Exp mccorkle $
+#
+
+link io
+link options
+
+                      ###############################
+                      # selection control globals,  #
+                      # set by command line options #
+                      ###############################
+
+global start      # start selection with this sequence number (defaul 1)  -B
+global count      # stop after this number of sequences                   -N
+global min_length # minimum sequence length to pass (default 0)           -a
+global max_length # maximum sequence length to pass (default infinity)    -b
+
+
+                             ################
+                             # Main Program #
+                             ################
+
+
+procedure main( args )
+
+    local opts, f, n_seq, n_out, s
+
+    opts := options( args, "-a+ -b+ -B+ -h -N+ -v", opt_err )
+    handle_opts( opts )
+
+    if ( *args = 0 ) then push( args, "-" )   # use  stdin if no filenames
+    
+    n_out := n_seq := 0
+    every ( f := open_file( !args ) ) & ( n_out < count ) do
+       {
+        while ( s := read_fasta( f ) ) & ( n_out < count ) do
+	   {
+            if ( min_length <= *(s.seq) <= max_length ) then
+               {
+                n_seq +:= 1
+                if  n_seq >= start
+    	          then
+	            {
+                     write_fasta( &output, s.seq, s.heading )
+                     n_out +:= 1
+		    }
+	       }
+           }
+        close_file( f )
+       }
+
+end
+
+
+
+#
+# look at opts table, set output control globals as appropriate
+#
+procedure handle_opts( opts )
+
+    start := 1
+    count := 1000000
+    min_length := 0
+    max_length := 10000000
+    if member( opts, "h" )  then { help(); exit() }
+    if member( opts, "v" )  then { version(); exit() }
+    if member( opts, "B" )  then start := opts["B"]
+    if member( opts, "N" )  then count := opts["N"]
+    if member( opts, "a" )  then min_length := opts["a"]
+    if member( opts, "b" )  then max_length := opts["b"]
+
+end
+
+
+procedure  help()
+
+    version()
+    write( "\nUsage:   sel [options] [<seq file> ...]\n" )
+    write("         where <seq file> contains one or more fasta format DNA or")
+    write( "         amino acid sequences. A single hyphen (-) can be used as")
+    write( "         a file name to specify stdin.  If no files are given,")
+    write( "         stdin is scanned.\n" )
+    write( "Options:" )
+    write( "         -a <n>  minimum sequence length to pass (defalut 0)" )
+    write( "         -b <n>  maximum sequence length to pass (infinity)" )
+    write( "         -B <n>  select sequences beginning with <n>'th input" )
+    write( "                 (defaults to 1)" )
+    write( "         -h      print help, then exit" )
+    write( "         -N <n>  cut off selection after <n> sequences have been",
+                     " output" )
+    write( "                 (default is all sequences)" )
+    write( "         -v      print version, then exit" )
+
+end
+
+#
+# print version number
+#
+procedure  version()
+
+    "$Revision: 0.2 $" ? { tab( upto( ' ' ) )
+                           write( "sel", tab( many( &digits ++ ' .' ) ),
+                                  "  Sequence selector" )
+		         }
+end
+
+#
+# slightly more informative option error message
+#
+procedure opt_err( msg )
+
+   write( &errout, "sel: ", msg, "  (type sel -h for help)" )
+   exit( 1 )
+end

@@ -1,0 +1,103 @@
+head	0.2;
+access;
+symbols;
+locks
+	mccorkle:0.2; strict;
+comment	@# @;
+
+
+0.2
+date	2004.07.26.13.08.42;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	2002.11.05.19.19.10;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@Here's an attempt at a simpler, more portable FASTA formatter.
+@
+
+
+0.2
+log
+@looks like and end-of-sequence bug fix?
+@
+text
+@#!/usr/bin/perl
+# Program:        raw2fasta
+# Programmer:     Sean R. McCorkle
+# Language:       perl
+# Description:    converts one or more raw Mac sequence files (Sequencher 
+#                 text files) into a single output of FASTA format sequences.
+#
+# Usage:          raw2fasta  [<file> ...]
+#
+#                 each file specified on the command line is opened and 
+#                 converted to FASTA format and written to standard output.
+#                 Its assumed that each file contains one sequence only.
+#                 The filenames are used as ">" header titles for each seq.
+#                 If no file is specified, stdin is scanned.
+# 
+# $Id: raw2fasta,v 0.1 2002/11/05 19:19:10 mccorkle Exp mccorkle $
+#
+
+$linelen = 50;    # FASTA format sequence output length - sometimes people 
+                  # prefer this to be a different size.
+
+if (! ( @@ARGV ) )                       # if no files specified, use stdin
+   { unshift( @@ARGV, "-" ); }           # by putting "-" into arg list
+   
+foreach $file ( @@ARGV )
+   {
+    $seqname = ( $file eq "-" ? "input" : $file );  # sequence name is filename
+    $seqname =~ s/\s//g;                            # without blanks, (or 
+                                                    # "input") for stdin
+    #
+    # read raw sequence into sequence buffer
+    #
+    $seq = "";                                      # clear sequence buffer
+    open( RAW, $file ) || die "$0: Can't open $file: $!\n";   # open file
+    while ( $_ = <RAW> )                            # read lines from file
+       { 
+        s/\s//g;                                    # remove all whitespace
+        $seq .= $_;                                 # and append to buffer
+       }
+    close( RAW );                                   # close file when finished 
+
+    # 
+    # write FASTA output version of sequence
+    #
+    print ">$seqname\n";                            # output FASTA header
+
+    my $i = 0;
+    while ( $i < length( $seq ) )                   # for each character in 
+       {                                            #    the sequence:
+        print substr( $seq, $i, 1 );                # print it out
+        if ( (++$i % $linelen) == 0 )               # and print out a newline
+           { print "\n"; }                          # every $linelen chars
+       }
+    if ( ($i % $linelen) != 0 )                     
+       { print "\n"; }
+   }
+@
+
+
+0.1
+log
+@going public
+@
+text
+@d16 1
+a16 1
+# $Id$
+d47 2
+a48 1
+    for ( $i = 0; $i < length( $seq ); $i++ )       # for each character in 
+d51 1
+a51 1
+        if ( (($i+1) % $linelen) == 0 )             # and print out a newline
+@

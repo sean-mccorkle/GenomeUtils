@@ -1,0 +1,1281 @@
+head	1.8;
+access;
+symbols;
+locks
+	mccorkle:1.8; strict;
+comment	@# @;
+
+
+1.8
+date	2005.07.07.02.54.46;	author mccorkle;	state Exp;
+branches;
+next	1.7;
+
+1.7
+date	2003.06.21.15.23.49;	author mccorkle;	state Exp;
+branches;
+next	1.6;
+
+1.6
+date	2003.05.06.19.56.14;	author mccorkle;	state Exp;
+branches;
+next	1.5;
+
+1.5
+date	2003.01.15.21.51.43;	author mccorkle;	state Exp;
+branches;
+next	1.4;
+
+1.4
+date	2000.05.08.11.43.28;	author mccorkle;	state Exp;
+branches;
+next	1.3;
+
+1.3
+date	2000.04.26.15.48.38;	author mccorkle;	state Exp;
+branches;
+next	1.2;
+
+1.2
+date	2000.03.08.16.21.20;	author mccorkle;	state Exp;
+branches;
+next	1.1;
+
+1.1
+date	2000.02.28.17.36.17;	author mccorkle;	state Exp;
+branches;
+next	1.0;
+
+1.0
+date	2000.01.26.20.48.31;	author mccorkle;	state Exp;
+branches;
+next	0.7;
+
+0.7
+date	2000.01.25.01.26.22;	author mccorkle;	state Exp;
+branches;
+next	0.6;
+
+0.6
+date	2000.01.18.18.35.09;	author mccorkle;	state Exp;
+branches;
+next	0.5;
+
+0.5
+date	99.12.15.15.26.36;	author mccorkle;	state Exp;
+branches;
+next	0.4;
+
+0.4
+date	99.11.10.03.38.55;	author mccorkle;	state Exp;
+branches;
+next	0.3;
+
+0.3
+date	99.11.01.15.10.19;	author mccorkle;	state Exp;
+branches;
+next	0.2;
+
+0.2
+date	99.10.29.18.16.49;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	99.10.13.18.22.26;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@General purpose sequence map display program.  Accepts input file
+of graphics instructions which specify where to place marks in different
+tiers on a linear scale.
+@
+
+
+1.8
+log
+@added handling for -b batch mode a long time ago, but forgot
+to check it in.
+@
+text
+@# Program:      tview
+# Programmer:   Sean R. McCorkle
+# Language:     Icon
+# Description:  Plot "tier"-ed gene feature diagrams, from input commands
+#
+# Usage:        tview [-hv] [-t <str>] <instructions file> <file> ...
+#
+#               where <instructions file> contains gmap instructions
+#
+#               -a       use asymmetric vertical coordinates within tiers, 
+#                        that is, 0.0 is the bottom and 1.0 is the top of ALL 
+#                        tiers, including the reverse (negative) tiers
+#               -b       batch mode - draw, save in file, then exit
+#               -B <col> background color, defaults to "black"
+#               -c <n>   inter-tier space (pixels)
+#               -F <col> foreground color, defaults to "white"
+#               -h       print help, then exit
+#               -l <n>   number of lower tiers (default 3)
+#               -s <file> save image in file <file>
+#               -t <n>   tier height (pixels)
+#               -T <str> make <str> title of window
+#               -u <n>   number of upper tiers (default 3)
+#               -v       print version, then exit
+#               -W <n>   window width, pixels (default 800)
+#
+# Instruction File:
+#               . Anything to the right of a "#" is treated as a comment
+#               . One command per line.
+#               . Commands and arguments are whitespace separated
+#               . Command form is:  Command arg1 arg2 ...
+#               . Blank lines are ignored
+# 
+# $Id: tview.icn,v 1.7 2003/06/21 15:23:49 mccorkle Exp mccorkle $
+#
+
+link   options
+link   graf
+
+record syntax( cat, proc, arg_types )
+record instr_rec( proc, args )
+record mouse_rec( f, x1, x2, y1, y2, yp1, yp2, txt )
+
+                           ###########
+                           # Globals #
+                           ###########
+                       
+global syn                   # maps command instruction to icon procedure
+                             # and specifies argument details
+global instr_list            # giant list of instruction records
+global mouse_list
+global min_x, max_x          # track min & max x coord of all input instr.
+global max_tiers_above, max_tiers_below # track max number of tiers too
+global scale_min, scale_max
+
+global save_display_text
+
+global current_file          # open_f() maintains currently read file
+global line_no               # and line number as well (well, process does too)
+global max_llabel, max_rlabel # max label length for margin determination
+
+                    ################################
+                    # Globals which may be set by  #
+                    # command line options         #
+                    ################################
+
+global window_opts           # table containing xwindow options (title, colors)
+global window_width          # pixels
+global window_height         # pixels
+global lower_tiers           # number of tiers below scale (-l; default 3)
+global upper_tiers           # number of tiers above scale (-u; default 3)
+global tier_height           # height of tiers (pixels; default 20)
+global tier_spacing          # height between tiers (pixels; default 20)
+global save_file             # file to save image in
+
+
+                             ################
+                             # Main Program #
+                             ################
+
+
+procedure main( args )
+
+    local  opts, infile, line, title, x
+
+    initialize( args )
+
+    #
+    # save the command-line options, but don't act on them
+    # (except for -h or -v)
+    #
+    opts := options( args, "-a -b -B: -c+ -F: -h -l+ -s: -t+ -T: -u+ -v -W+", opt_err )
+    if member( opts, "h" )  then { help(); exit() }
+    if member( opts, "v" )  then { version(); exit() }
+
+    if ( *args = 0 ) then push( args, "-" )   # use stdin if no filenames
+
+    # Now, read in each instruction from the data stream and process it
+    every infile := open_f( !args ) do
+       {
+        while ( line := read( infile ) ) do
+            process( line )
+        close( infile )
+       }
+    #
+    # NOW we process the remaining command line options so that they
+    # can override input parameter commands
+    #
+    handle_opt_params( opts, args )
+
+    open_window( window_width, window_height, window_opts )
+
+    if member( opts, "a" ) then set_asymmetric()  # fix this!
+    set_horiz_margins( TextWidth( max_llabel ) + 20, 
+                       TextWidth( max_rlabel ) + 20 )
+    set_tiers( upper_tiers, lower_tiers, tier_height, tier_spacing )
+    set_scale( scale_min, scale_max )
+    map_y_mouse_list()
+
+    draw_display()
+    if  member( opts, "b" ) 
+      then
+        WriteImage( save_file )
+      else
+        handle_user_events()
+
+end
+
+
+#
+# initialize global structures (but not option-settings)
+#
+procedure initialize( args )
+
+    local a
+
+    syn := table()
+    syn[ "scale" ]     := syntax( "param", scale, [] )
+    syn[ "symmetric" ] := syntax( "param", set_symmetry, [] )
+    syn[ "tiers"  ]    := syntax( "param", tiers, [] )
+    syn[ "wtitle" ]    := syntax( "param", set_window_title, [] )
+    syn[ "t_vline" ]   := syntax( "draw",  tier_line_vert, 
+                                  ["tier", "x", "y", "y", "str"] )
+    syn[ "t_hline" ]   := syntax( "draw",  tier_line_horiz,
+                                  ["tier", "x", "x", "y", "str"] )
+    syn[ "t_line" ]    := syntax( "draw",  tier_line,
+                                  ["tier", "x", "y", "x", "y", "str"] )
+    syn[ "t_rect" ]    := syntax( "draw",  tier_rect,
+                                  ["tier", "x", "x", "y", "y", "str"] )
+    syn[ "t_text" ]    := syntax( "draw", tier_text,
+                                  [ "tier", "x", "y", "str", "str" ] )
+    syn[ "t_llabel" ]  := syntax( "draw", tier_llabel,
+                                  [ "tier", "y", "str", "str" ] )
+    syn[ "t_rlabel" ]  := syntax( "draw", tier_rlabel,
+                                  [ "tier", "y", "str", "str" ] )
+    syn[ "ct_line" ]   := syntax( "draw",  cross_tier_line,
+                                  ["tier", "x", "y", "tier","x", "y", "str"] )
+    syn[ "t_triang" ]   := syntax( "draw", tier_triang,
+                                  ["tier", "x", "x", "y", "y", "y", "str"] )
+    syn[ "t_varrow" ]    := syntax( "draw", tier_varrow, 
+                                  [ "tier", "x", "y", "y", "str" ] )
+    syn[ "lpress" ]    := syntax( "event", "", [] ) 
+
+    min_x := 100000000
+    max_x := 0
+    max_tiers_above := max_tiers_below := 0
+
+    instr_list := []   
+    mouse_list := [] 
+
+    # 
+    # Setup Xwindow options with defaults 
+    #
+    window_opts := table()
+    window_opts["fg_color"] := "white"
+    window_opts["bg_color"] := "black"
+    window_opts["title"]    := "tview "
+
+    every a := !args do
+        window_opts["title"] ||:= a || " "
+
+    max_llabel := max_rlabel := "  "
+
+end
+
+
+#
+# Handle the options that set parameters
+
+procedure handle_opt_params( opts, args )
+
+    if member( opts, "l" )
+        then lower_tiers := opts["l"]
+        else /lower_tiers := max_tiers_below
+    if member( opts, "u" )  
+        then upper_tiers := opts["u"]
+        else /upper_tiers := max_tiers_above
+
+    if ( / scale_min ) then scale( min_x, max_x )
+
+    tier_height := ( \opts["t"] | 20 )
+    tier_spacing := ( \opts["c"] | 20 )
+        
+    window_height := (upper_tiers + lower_tiers) * 
+                     (tier_height + tier_spacing) + 60 # 300
+    window_width := ( \opts["W"] | 800 )
+
+    save_file := ( \opts["s"] | "tview_out.gif" )
+
+    if member( opts, "T" )
+        then  window_opts["title"] := opts["T"]
+    if member( opts, "B" )
+        then  window_opts["bg_color"] := opts["B"]
+    if member( opts, "F" )
+        then  window_opts["fg_color"] := opts["F"]
+
+end
+
+
+procedure open_f( filename )
+
+    local infile
+
+    if filename == "-"
+      then infile := &input
+      else ( infile := open( filename )  | stop( "can't open ", filename ) )
+    current_file := filename
+    line_no := 0
+    return( infile )
+
+end
+
+
+procedure process( line )
+
+    local tokens, command, l
+
+    line_no +:= 1
+    tokens := parse_line( line )
+    if command := get( tokens )
+      then {
+            if not member( syn, command )               # ensure its legal
+                then cmd_err( command )                    # die otherwise.
+
+            case syn[ command ].cat of
+               {
+                "param":   syn[ command ].proc ! tokens  # invoke right now
+                "draw":   {
+                            update_limits( syn[ command ].arg_types, tokens )
+                            put( instr_list, instr_rec( syn[ command ].proc,
+                                   tokens ) )
+		          }
+                "event":  add_mouse_list( command, tokens )   # save mouse data
+	       }
+            # Got burned on this -these should be put into the draw_rlabel 
+            # routines
+            case command of
+               {
+                "t_llabel": if  *tokens[3] > *max_llabel
+                               then max_llabel := tokens[3]
+                "t_rlabel": if  *tokens[3] > *max_rlabel  
+                               then max_rlabel := tokens[3]
+               }
+           }
+end
+
+
+
+#
+# Break line into a list of white-space separated tokens
+#
+procedure parse_line( line )
+
+    local tokens
+
+    tokens := []
+    line ? every put( tokens, get_word() )
+    return( tokens )
+end
+
+# words are like unix csh words - whitespace separated - and can be 
+# quoted by ""
+
+procedure get_word()
+
+    local w
+
+    repeat
+       {
+        tab( many( ' \t' ) )
+        if ="#" | pos(0) 
+            then fail
+        else if ="\""          # Yikes - this doesn't handle escaped \"s
+            then { w :=  tab( upto( '"' ) )
+                   move( 1 )   
+	         }
+            else  w := tab( many( &letters ++ &digits ++ '._-' ) )
+        suspend w
+       }
+end
+
+# this is invoked on "draw" instructions - the arg_types list tells which
+# are tier, x, and y positions, and x & tier max/mins are updated accordingly
+
+procedure update_limits( arg_type, arg )
+
+    local i
+
+    every i := 1 to *arg_type do
+        case arg_type[i] of
+	   {
+            "x":         { if arg[i] < min_x then min_x := arg[i]
+                           if arg[i] > max_x then max_x := arg[i]
+      	                 }
+            "tier":      { if arg[i] < 0 || abs(arg[i]) > max_tiers_below
+                               then max_tiers_below := abs(arg[i])
+                           if arg[i] > max_tiers_above 
+                               then max_tiers_above := arg[i]
+      	                 }
+	   }
+end
+
+
+                 #########################################
+                 # Routines to handle parameter settings #
+                 #########################################
+
+#
+# save scale in globals (for zoom outs, refreshes),
+#
+procedure scale( a, b )
+
+    scale_min := a
+    scale_max := b
+
+end
+
+#
+# tiers changes global tier settings but does NOT invoke set_tiers
+# (set tiers is invoked by draw_display
+
+procedure tiers( u, l, h, s )
+
+    upper_tiers := u
+    lower_tiers := l
+    tier_height := h
+    tier_spacing := s
+
+end
+
+procedure  set_window_title( t )
+
+    window_opts["title"] := t
+
+end
+
+procedure draw_display()
+
+    local instr
+
+    WAttrib( "drawop=copy" )
+    EraseArea( 0, 0 )
+    draw_scale( "deep red" )
+
+    every instr := !instr_list do
+        instr.proc ! instr.args
+
+    WAttrib( "drawop=reverse" )
+
+    save_display_text := ""
+
+end
+
+procedure add_mouse_list( command, tokens )
+
+    local f,  x1, x2, y1, y2, action, txt
+
+    f := get( tokens )
+    x1 := get( tokens )
+    x2 := get( tokens )
+    if ( x2 < x1 ) then x1 :=: x2
+    y1 := get( tokens )
+    y2 := get( tokens )
+    action := get( tokens )
+    if ( action == "display" )
+      then {
+            txt := get( tokens )
+            put( mouse_list, mouse_rec( f, x1, x2, y1, y2, 0, 0, txt ) )
+           }
+      else
+            write( "******bad action:  ", action , " ****" )
+
+end
+
+procedure  map_y_mouse_list()
+
+    local m
+
+    every m := !mouse_list do
+       {
+        m.yp1 := map_y_tier( m.f, m.y1 )
+        m.yp2 := map_y_tier( m.f, m.y2 )
+        if ( m.yp2 < m.yp1 ) then m.yp1 :=: m.yp2
+       }
+
+end
+
+procedure  search_mouse_list( x, yp )
+
+    local m
+
+    every m := !mouse_list do
+      {
+       if ( x >= m.x1 & x <= m.x2 & yp >= m.yp1 & yp <= m.yp2 )
+          then 
+	     {
+              display_text( m.txt )
+              return
+	     }
+    }
+end
+
+procedure display_text( txt )
+
+    Fg( "yellow" )    
+    DrawString( 10, 10, save_display_text )
+    DrawString( 10, 10, save_display_text := map( txt, "_", " " ) )
+
+end
+
+procedure  handle_user_events()
+
+    local x, z, l, tmp
+
+    repeat
+       {
+        case Event() of
+	   {
+            "q" | "Q": break
+            "o" | "O": {
+                        set_scale( scale_min, scale_max )
+                        draw_display()                        
+	               }
+            "r" | "R":  draw_display()
+            "w" | "W":  WriteImage( save_file )
+
+            &rpress:    highlight_scale( x := &x, l := 0 )
+
+            &rdrag:    {
+                        highlight_scale( x, l )
+                        highlight_scale( x, l := &x - x )
+                       }
+            &rrelease: {
+                        z := x + l   # could be &x? maybe better?
+                        if ( z < x ) 
+                            then { tmp := x;  x := z;  z := tmp }
+                        set_scale( unmap_x( x ), unmap_x( z ) )
+                        draw_display()                        
+                       }
+            &lpress:   {
+                        search_mouse_list( unmap_x( &x ), &y )
+                       }
+	   }
+       }
+end
+
+#
+# print version number & help
+#
+procedure help()
+
+    version()
+    write( "Usage:  tview [-hv] <inst. file> [<inst. file> ...]\n" )
+    write( "        a single hyphen (-) can be used as a file name to specify")
+    write( "        stdin.  If no files are specified, stdin is scanned.\n" )
+    write( "Options:\n" )
+    write("        -a       use asymmetric vertical coordinates within tiers,")
+    write( "                 ie 0.0 isis the bottom and 1.0 is the top of ALL")
+    write( "                 tiers, including the reverse (negative) tiers" )
+    write( "        -b       batch mode - draw, save in file, then exit" )
+    write( "        -h       print help" )
+    write( "        -l <n>   number of lower tiers (default 3)" )
+    write( "        -s <file> save image in file <file>" )
+    write( "        -T <str> make <str> title of window" )
+    write( "        -u <n>   number of upper tiers (default 3)" )
+    write( "        -v       print version" )
+    write( "        -W <n>   window width, pixels (default 800)" )
+
+end
+
+#
+# print version number
+#
+procedure version()
+
+    "$Revision: 1.7 $" ? { tab( upto( ' ' ) )
+                           write( "tview", tab( many( &digits ++ ' .' ) ) )
+		         }
+end
+
+procedure cmd_err( command )
+
+    write( &errout, "tview: illegal command \"", command, "\"" )
+    write( &errout, "      line ", line_no, " of file \"", current_file, "\"")
+    exit( 1 )
+
+end
+
+
+#
+# slightly more informative option error message
+#
+procedure opt_err( msg )
+
+    write( &errout, "tview: ", msg, "  (type tview -h for help)" )
+    exit( 1 )
+
+end
+
+
+
+@
+
+
+1.7
+log
+@added y position for rlabel and llabel
+@
+text
+@d33 1
+a33 1
+# $Id: tview.icn,v 1.6 2003/05/06 19:56:14 mccorkle Exp mccorkle $
+d120 5
+a124 1
+    handle_user_events()
+d495 1
+a495 1
+    "$Revision: 1.6 $" ? { tab( upto( ' ' ) )
+@
+
+
+1.6
+log
+@added t_triang and t_varrow dohickeys.  Added -F and -B foreground and
+background color options.
+@
+text
+@d33 1
+a33 1
+# $Id: tview.icn,v 1.5 2003/01/15 21:51:43 mccorkle Exp mccorkle $
+d148 1
+a148 1
+                                  [ "tier", "str", "str" ] )
+d150 1
+a150 1
+                                  [ "tier", "str", "str" ] )
+d250 2
+d254 4
+a257 4
+                "t_llabel": if  *tokens[2] > *max_llabel
+                               then max_llabel := tokens[2]
+                "t_rlabel": if  *tokens[2] > *max_rlabel  
+                               then max_rlabel := tokens[2]
+d491 1
+a491 1
+    "$Revision: 1.5 $" ? { tab( upto( ' ' ) )
+@
+
+
+1.5
+log
+@more bug fixes, max_tier_below = abs() now, and right drag works
+going from the right to the left now too.
+@
+text
+@d14 1
+d16 1
+d33 1
+a33 1
+# $Id: tview.icn,v 1.4 2000/05/08 11:43:28 mccorkle Exp mccorkle $
+d91 1
+a91 1
+    opts := options( args, "-a -b -c+ -h -l+ -s: -t+ -T: -u+ -v -W+", opt_err )
+d153 4
+d207 4
+d356 1
+a356 1
+    draw_scale( "red" )
+d489 1
+a489 1
+    "$Revision: 1.4 $" ? { tab( upto( ' ' ) )
+@
+
+
+1.4
+log
+@fixed bug with automatic determination of # tier below scale.
+added -t and -c options for setting tier spacing.
+added t_rlable and t_llabel for tier labels.
+@
+text
+@d31 1
+a31 1
+# $Id: tview.icn,v 1.3 2000/04/26 15:48:38 mccorkle Exp mccorkle $
+a95 1
+    
+a110 2
+    write( max_llabel, ": ", TextWidth( max_llabel ) )
+    write( max_rlabel, ": ", TextWidth( max_rlabel ) )
+d156 1
+a159 1
+    
+d299 1
+a299 1
+                               then max_tiers_below := arg[i]
+d416 1
+a416 1
+    local x, l
+d437 4
+a440 1
+                        set_scale( unmap_x( x ), unmap_x( x + l ) )
+d479 1
+a479 1
+    "$Revision: 1.3 $" ? { tab( upto( ' ' ) )
+@
+
+
+1.3
+log
+@added window_opts table for handling more xwindow options
+@
+text
+@d13 2
+d17 2
+d31 1
+a31 1
+# $Id: tview.icn,v 1.2 2000/03/08 16:21:20 mccorkle Exp mccorkle $
+d57 1
+d71 1
+d89 1
+a89 1
+    opts := options( args, "-a -h -l+ -T: -u+ -v -W+", opt_err )
+d112 4
+d148 4
+d162 1
+a162 2
+    tier_height := tier_spacing := 20
+
+d174 2
+d192 3
+d198 3
+a200 3
+    if ( member( opts, "W" ) )
+        then  window_width := opts["W"]
+        else  window_width := 800
+d224 1
+a224 1
+    local tokens, command
+d239 1
+a239 1
+                                   tokens ) ) 
+d243 7
+d301 1
+a301 1
+            "tier":      { if arg[i] > max_tiers_below
+d431 1
+a431 1
+            "w" | "W":  WriteImage( "tview_out.gif" )
+d463 1
+d466 1
+d479 1
+a479 1
+    "$Revision: 1.2 $" ? { tab( upto( ' ' ) )
+@
+
+
+1.2
+log
+@added t_text command (invokeds tier_text() in graf)
+@
+text
+@d27 1
+a27 1
+# $Id: tview.icn,v 1.1 2000/02/28 17:36:17 mccorkle Exp mccorkle $
+d59 1
+a59 1
+global window_title          # string containing xwindow title (-T option)
+d103 1
+a103 1
+    open_window( window_width, window_height, window_title )
+d150 8
+a157 1
+    window_title := "tview "
+d159 1
+a159 1
+        window_title ||:= a || " "
+d185 1
+a185 1
+        then  window_title := opts["T"]
+d314 1
+a314 1
+    window_title := t
+d452 1
+a452 1
+    "$Revision: 1.1 $" ? { tab( upto( ' ' ) )
+@
+
+
+1.1
+log
+@added -W option for setting the width in pixels.
+@
+text
+@d27 1
+a27 1
+# $Id: tview.icn,v 1.0 2000/01/26 20:48:31 mccorkle Exp mccorkle $
+d136 2
+d445 1
+a445 1
+    "$Revision: 1.0 $" ? { tab( upto( ' ' ) )
+@
+
+
+1.0
+log
+@Big reworking of program - now commands specified by a table
+of syntax structures and are categorized as parameter-setting,
+drawing, or event commands.  Parameter settings simply change
+globals.  Drawing routines have their argument specified so that
+min and max x coordinates can be determined for auto scaling, as
+well as number of tiers above and below.  More work is needed still.
+
+Added wtitle command and t_line command.
+@
+text
+@d18 1
+d27 1
+a27 1
+# $Id: tview.icn,v 0.7 2000/01/25 01:26:22 mccorkle Exp mccorkle $
+d83 1
+a83 1
+    opts := options( args, "-a -h -l+ -T: -u+ -v", opt_err )
+d136 2
+d171 3
+a173 1
+    window_width := 800
+d319 1
+d434 1
+d443 1
+a443 1
+    "$Revision: 0.7 $" ? { tab( upto( ' ' ) )
+@
+
+
+0.7
+log
+@changing the name to tview.  About to do a big change to 1.0
+@
+text
+@d26 1
+a26 1
+# $Id: tview.icn,v 0.6 2000/01/18 18:35:09 mccorkle Exp mccorkle $
+d32 1
+d34 1
+a34 1
+record mouse_rec( x1, x2, yp1, yp2, txt )
+d40 2
+a41 4
+global whitespace
+global nonwhitespace
+global procs                 # maps command instruction to icon procedure
+global command_set           # set of all instruction commands
+a42 1
+global param_commands        # set of commands which set drawing parameters
+d44 3
+a46 1
+global scale_min, scale_max 
+d76 1
+a76 1
+    initialize()
+d93 1
+a93 1
+            process( strip_comments( line ) )
+d100 1
+a100 1
+    handle_opts( opts, args )
+d105 3
+d114 1
+d118 1
+a118 1
+procedure initialize()
+d120 1
+a120 13
+    whitespace := ' \t'
+    nonwhitespace := &ascii -- whitespace
+    procs := table()
+    procs[ "scale"   ] := scale
+    procs[ "symmetric" ] := set_symmetry
+    procs[ "tiers"   ] := tiers
+    procs[ "wtitle"   ] := set_window_title
+    procs[ "t_vline" ] := tier_line_vert
+    procs[ "t_hline" ] := tier_line_horiz
+    procs[ "t_rect" ] := tier_rect
+
+    command_set := set( [ "lpress" ] )           # build command set
+    every insert( command_set, key( procs ) )
+d122 18
+a139 1
+    param_commands := set( [ "symetric", "scale", "tiers", "wtitle" ] )
+d142 7
+a150 1
+procedure handle_opts( opts, args )
+d152 4
+a155 1
+    local a
+d157 6
+a162 4
+    upper_tiers := lower_tiers := 3
+    tier_height := tier_spacing := 20
+    if member( opts, "l" )  then lower_tiers := opts["l"]
+    if member( opts, "u" )  then upper_tiers := opts["u"]
+d164 2
+a171 5
+        else {
+              window_title := "tview "
+              every a := !args do
+                  window_title ||:= a || " "
+	     }
+d189 1
+d198 1
+a198 1
+            if not member( command_set, command )          # ensure its legal
+d201 10
+a210 7
+            if member( command, param_commands )          # parameter settings
+                 then procs[ command ] ! tokens            # happen immeditly
+             else if command == "lpress"                   
+               then add_mouse_list( command, tokens )      # save mouse data
+             else                                          # drawing: save
+                   put( instr_list, instr_rec( procs[ command ], tokens ) ) 
+
+a214 9
+#
+# return the connents of line upto, but not including the first '#'.
+# return the entire line if there's no #
+#
+procedure strip_comments( line )
+
+    return( line[ 1 : ( upto( '#', line ) | 0 ) ] )
+
+end
+d224 1
+a224 2
+    line ? while tab( upto( nonwhitespace ) ) do
+               put( tokens, tab( many( nonwhitespace ) ) )
+d228 43
+d282 1
+a282 1
+    set_scale( a, b )
+d290 1
+d295 7
+a309 1
+    set_tiers( upper_tiers, lower_tiers, tier_height, tier_spacing )
+d322 2
+a323 1
+    local f,  x1, x2, yp1, yp2, action, txt
+d328 2
+a329 3
+    yp1 := map_y_tier( f, get( tokens ) )
+    yp2 := map_y_tier( f, get( tokens ) )
+    if ( yp2 < yp1 ) then yp1 :=: yp2
+d334 1
+a334 1
+            put( mouse_list, mouse_rec( x1, x2, yp1, yp2, txt ) )
+d341 13
+d357 1
+d359 1
+d362 1
+d364 3
+d391 1
+d436 1
+a436 1
+    "$Revision: 0.6 $" ? { tab( upto( ' ' ) )
+@
+
+
+0.6
+log
+@added -l and -u options for setting tiers at the command line.
+Things are seriously screwed up however handling the "tiers" input
+command, so this needs to be seriously reworked.
+@
+text
+@d1 1
+a1 1
+# Program:      view
+d4 1
+a4 1
+# Description:  Reads scanseq output and displays results graphically
+d6 1
+a6 1
+# Usage:        view [-hv] [-t <str>] <instructions file> <file> ...
+d26 1
+a26 1
+# $Id: view.icn,v 0.5 1999/12/15 15:26:36 mccorkle Exp mccorkle $
+d44 1
+a44 2
+global already               # set of one-time procs which have already been
+                             # invoked
+d78 4
+d83 2
+d88 12
+a105 6
+    every infile := open_f( !args ) do
+       {
+        while ( line := read( infile ) ) do
+            process( strip_comments( line ) )
+        close( infile )
+       }
+d119 2
+d122 1
+a122 1
+    procs[ "scale"   ] := scale
+d130 1
+a130 1
+    already := set()
+a138 3
+    if member( opts, "h" )  then { help(); exit() }
+    if member( opts, "v" )  then { version(); exit() }
+
+d151 1
+a151 1
+              window_title := "view "
+d182 8
+a189 13
+            if command ==  "scale"                         # these commands
+              then {                                       # only done once,
+                     if not member( already, command )     # first time theyr
+                        then {                             # encountered
+                              procs[ command ] ! tokens
+                              insert( already, command )
+                             }            
+                   }
+             else if command == "tiers" 
+               then tiers ! tokens
+             else if command == "lpress" 
+               then add_mouse_list( command, tokens )
+             else put( instr_list, instr_rec( procs[ command ], tokens ) ) 
+d217 4
+d335 1
+a335 1
+    write( "Usage:  view [-hv] <inst. file> [<inst. file> ...]\n" )
+d355 2
+a356 2
+    "$Revision: 0.5 $" ? { tab( upto( ' ' ) )
+                           write( "View", tab( many( &digits ++ ' .' ) ) )
+d362 1
+a362 1
+    write( &errout, "view: illegal command \"", command, "\"" )
+d374 1
+a374 1
+    write( &errout, "view: ", msg, "  (type view -h for help)" )
+@
+
+
+0.5
+log
+@added symmetric and asymmetric y-coordinate system handling for tiers.
+added -a option and handling.
+@
+text
+@d14 1
+d16 1
+d26 1
+a26 1
+# $Id: view.icn,v 0.4 1999/11/10 03:38:55 mccorkle Exp mccorkle $
+d59 1
+a59 1
+global window_title          # -T option
+d62 4
+a65 1
+
+d79 1
+a79 1
+    opts := options( args, "-a -h -T: -v", opt_err )
+d108 1
+a108 1
+    procs[ "tiers"   ] := set_tiers
+a119 1
+
+a125 3
+    window_height := 300
+    window_width := 800
+
+d129 9
+d172 1
+a172 1
+            if command == ( "tiers" | "scale" )            # these commands
+d180 2
+d222 10
+d239 1
+d334 1
+d336 1
+d346 1
+a346 1
+    "$Revision: 0.4 $" ? { tab( upto( ' ' ) )
+@
+
+
+0.4
+log
+@Got rid of "window" instruction.  Now, open_window() is invoked right away.
+Added a check for accepted commands, and error handling which includes
+file name and line number where error occurred.
+Added -T option for setting window title.
+Added opt_err for handing option errors.
+@
+text
+@d10 3
+d24 1
+a24 1
+# $Id: view.icn,v 0.3 1999/11/01 15:10:19 mccorkle Exp mccorkle $
+d40 1
+d74 1
+a74 1
+    opts := options( args, "-h -T: -v", opt_err )
+d82 2
+d109 3
+d160 1
+a160 1
+            if not member( procs, command )                # ensure its legal
+d307 3
+d321 1
+a321 1
+    "$Revision: 0.3 $" ? { tab( upto( ' ' ) )
+@
+
+
+0.3
+log
+@processing multiple files.
+@
+text
+@d6 1
+a6 1
+# Usage:        view [-hv] <instructions file> <file> ...
+d10 3
+a12 2
+#               -h print help, then exit
+#               -v print version, then exit
+d21 1
+a21 1
+# $Id: view.icn,v 0.2 1999/10/29 18:16:49 mccorkle Exp mccorkle $
+d30 4
+d45 13
+d66 1
+a66 1
+    local  opts, infile, line
+d69 2
+a70 3
+    opts := options( args, "-h -v" )
+    if member( opts, "h" )  then { help(); exit() }
+    if member( opts, "v" )  then { version(); exit() }
+d73 5
+a83 1
+
+d89 3
+a96 1
+    procs[ "window"  ] := open_window
+d109 21
+d137 2
+d147 1
+a147 1
+    #write( "process: [", line, "]" )
+d151 3
+a153 1
+            if command == ( "window" | "tiers" | "scale" ) # these commands
+d297 4
+a300 3
+    write( "Options:" )
+    write( "        -h print help" )
+    write( "        -v print version" )
+d309 1
+a309 1
+    "$Revision: 0.2 $" ? { tab( upto( ' ' ) )
+d313 21
+@
+
+
+0.2
+log
+@adding options
+@
+text
+@a9 1
+#
+d20 1
+a20 1
+# $Id: view.icn,v 0.1 1999/10/13 18:22:26 mccorkle Exp mccorkle $
+d40 6
+d48 1
+a48 1
+    local  infile, line
+d52 2
+a53 7
+    if  member( opts, ( "h" | "v" ) )
+      then {
+            if member( opts, "v" )  then version()
+            if member( opts, "h" )  then help()
+            exit()
+           }
+          
+d55 7
+a61 5
+    infile := open_f( args )
+
+    while ( line := read( infile ) ) do
+        process( strip_comments( line ) )
+    close( infile )
+d86 1
+a86 1
+procedure open_f( args )
+d88 5
+a92 6
+    local filename, infile
+    if filename := args[1]
+      then
+        ( infile := open( filename )  | stop( "can't open ", filename ) )
+      else
+        infile := &input
+d240 3
+d245 4
+a248 3
+    write( "Usage:   view [-hv] <instructions file> <file> ...\n" )
+    write("         a single hyphen (-) can be used as a file name to specify")
+    write("          stdin.  If no files are specified, stdin is used\n" )
+d250 2
+a251 2
+    write( "         -h print help" )
+    write( "         -v print version" )
+d255 3
+d260 4
+a263 1
+    write( "view $Revision$ " )
+a264 1
+end
+@
+
+
+0.1
+log
+@Just extracted this as the visual "operator" from viewscan.icn
+@
+text
+@d6 1
+a6 1
+# Usage:        view <instructions file>
+d10 4
+d21 1
+a21 1
+# $Id$
+d24 1
+d28 1
+d36 1
+d39 1
+d46 9
+d76 1
+d79 3
+a81 1
+    instr_list := []    
+d111 4
+a114 2
+                   }                                   
+              else put( instr_list, instr_rec( procs[ command ], tokens ) ) 
+d165 40
+d232 3
+d239 12
+d252 1
+d254 1
+@

@@ -1,0 +1,31 @@
+procedure main()
+
+   test_str( "fred" );
+   test_str( "" );
+   test_str( "   " );
+   test_str( " " );
+   test_str( "\t" );
+   test_str( " \t" );
+   test_str( "\t " );
+   test_str( "\t fred" );
+   test_str( "\tfred" );
+   test_str( " fred       " );
+   
+end
+
+procedure test_str( s )
+
+    if is_blank( s )
+       then write( "\"", s, "\" is blank" )
+       else write( "\"", s, "\" is NOT blank" )
+end
+
+procedure is_blank( s )
+
+    if *s = 0
+        then return
+    if  s ? ( tab( many( ' \t' ) ) & pos( 0 ) )
+        then return
+        else fail
+end
+

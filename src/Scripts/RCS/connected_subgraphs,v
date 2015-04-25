@@ -1,0 +1,142 @@
+head	1.0;
+access;
+symbols;
+locks
+	mccorkle:1.0; strict;
+comment	@# @;
+
+
+1.0
+date	2009.01.02.17.36.42;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@utility for finding and reporting connected subgraphs in an edge-representation
+of a graph
+@
+
+
+1.0
+log
+@Initial revision
+@
+text
+@#!/usr/bin/perl
+# Program:      connected_subgraphs
+# Programmer:   Sean R. McCorkle, Biology Dept, Brookhaven National Laboratory
+# Language:     perl 
+# 
+# Description:  Reads DNA sequence(s) and counts occurances of n-mers of a
+#               specified size n.
+#
+# Usage:        connected_subgraphs [-d] [-m<n>]  edge-data
+#
+#               where edge-data (files or stdin) are lines of the form
+#
+#                              a  b
+#                              a  c
+#                              b  d
+#                              e  f
+#
+#               where the pairs indicate edges between nodes a, b, c, d, e, 
+#               and f (this is assumed to be an undirected graph)
+#
+#               by default, subgraphs are printed one per line, all node 
+#               members on one line
+#
+# Options:     -d    produce dotty or neato output (Bell Labs graphviz package)
+#              -m<n> report no subgraphs with number of members < n
+#
+#
+# $Id$
+#
+use Getopt::Std;
+
+die "bad option\n" unless ( getopts( 'dm:' ) );
+
+$min_membs = $opt_m ? $opt_m : 1;
+
+load_connections();
+@@subg = ();
+
+dotty_header() if $opt_d;
+
+dfs_traverse();
+
+dotty_footer() if $opt_d;
+
+sub  dfs_traverse
+   {
+    foreach my $v ( sort keys( %vert ) )
+       {
+        $state{$v} = "undiscovered";
+       }
+    foreach my $v ( sort keys( %vert ) )
+       {
+        if ( $state{$v} eq "undiscovered" )
+          {
+           dfs( $v );
+           output_subgraph();
+           @@subg = ();
+          }
+       }
+   }
+
+sub  output_subgraph
+   {
+    my $inter = " ";
+    if ( $#subg+1 >= $min_membs )
+       {
+        $inter = ' -- ' if ( $opt_d );
+        print " ", join( $inter, @@subg );
+        print ";" if ( $opt_d );
+        print "\n";
+       }
+   }
+
+sub  dfs
+   {
+    my $s = shift;
+    $state{$s} = "discovered";
+    #print " $s";
+    push( @@subg, $s );
+    foreach $v ( sort keys ( %{$edges{$s}} ) )
+       {
+        if ( $state{$v} eq 'undiscovered' )
+           { dfs( $v ); }
+       }
+    $state{$s} = "completely-explored";
+   }
+
+sub  load_connections
+   {
+    while ( <> )
+       {
+        s/^\s*//;
+        my ($a,$b) = split( /\s+/ );
+        $vert{$a}++;
+        $vert{$b}++;
+        conn( $a, $b );
+        conn( $b, $a );  #note: for directed graph, remove this 
+       }
+   }
+
+sub  conn
+  {
+   my ($a, $b) = @@_;
+   $edges{$a} = {} unless( defined( $edges{$a} ) );
+   ${$edges{$a}}{$b}++;
+  }
+
+sub  dotty_header
+   {
+    print "graph G {\n";
+   }
+
+sub  dotty_footer
+   {
+    print "}\n";
+   }
+@

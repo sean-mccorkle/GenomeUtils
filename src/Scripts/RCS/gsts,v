@@ -1,0 +1,605 @@
+head	0.9;
+access;
+symbols;
+locks
+	seanmccorkle:0.7;
+comment	@# @;
+
+
+0.9
+date	2012.03.06.21.10.49;	author seanmccorkle;	state Exp;
+branches;
+next	0.8;
+
+0.8
+date	2012.03.06.20.56.55;	author seanmccorkle;	state Exp;
+branches;
+next	0.7;
+
+0.7
+date	2003.12.29.13.12.33;	author seanmccorkle;	state Exp;
+branches;
+next	0.6;
+
+0.6
+date	2002.12.17.19.13.19;	author seanmccorkle;	state Exp;
+branches;
+next	0.5;
+
+0.5
+date	2002.12.17.16.59.10;	author seanmccorkle;	state Exp;
+branches;
+next	0.4;
+
+0.4
+date	2002.11.17.19.41.36;	author seanmccorkle;	state Exp;
+branches;
+next	0.3;
+
+0.3
+date	2002.11.17.15.39.39;	author seanmccorkle;	state Exp;
+branches;
+next	0.2;
+
+0.2
+date	2002.08.02.17.41.39;	author seanmccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	2002.07.02.18.42.24;	author seanmccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@Perl program which reads sequences (fasta) and produces tables of GST tags
+@
+
+
+0.9
+log
+@trying to undo previous modification - fix was in error.
+@
+text
+@#!/usr/bin/perl
+# Program:       gsts
+# Programmer:    Sean R. McCorkle, 
+#                Biology Department, Brookhaven National Laboratory
+#
+# Language:      perl
+#
+# Description:   Reads genome sequences, prints out table of Genome Sequence
+#                Tags (GSTs)
+#
+# Usage:         gsts [-chvFIV] [-a<seq>] [-e<n>] [-f<seq>] [seq-files ...]
+#
+#                where [seq-files] are in FASTA format.  stdin is scanned if
+#                no file specified.
+#
+# Options:       -a<seq> use <seq> as anchor enzyme sequence (def. CATG)
+#                -c      treat all sequences as circular
+#                -e<n>   tag extent <n> (default 17)
+#                -f<seq> use <seq> as fragmenting enzyme seq (def. ACTAGT)
+#                -h      print help message
+#                -l<seq> append linker sequence <seq> to short tags 
+#                        (default GGATCCGAAGGGGTTCG)
+#                -v      verbose mode
+#                -F      print out fragment information, rather than tag
+#                -I      print out internal tags as well as true GSTs
+#                -S      print out anchor site to 3' fragment end sequences
+#                        (fasta format).  Doesn't include linker
+#                -V      print version
+#
+# Caveats:       Sequence characters other than standard nucleotide and
+#                ambiguity codes will not be detected and will cause undefined
+#                behavior.  GIGO.
+#
+#                Note to self: consider options for adding fragment offsets to
+#                tag positions as well, taglengths, etc.
+#
+#                (note: sequences are not regular expressions (yet))
+#
+# $Id: gsts,v 0.7 2003/12/29 13:12:33 seanmccorkle Exp seanmccorkle $
+#
+
+use  Getopt::Std;
+
+
+
+die "bad option\n" unless ( getopts( 'a:ce:f:hl:vFISV' ) );
+
+
+$anchenz  = $opt_a ? uc( $opt_a ) : 'CATG';  # anchoring enzyme default NlaIII 
+#$fragenz  = $opt_f ? uc( $opt_f ) : 'GGATCC'; # frag'ing enzyme default BamHI 
+#$fragenz  = $opt_f ? uc( $opt_f ) : 'GCGGCCGC';  # frag'ing enzyme, def. NotI 
+$fragenz  = $opt_f ? uc( $opt_f ) : 'ACTAGT';  # frag'ing enzyme, def. SpeI
+$linker = $opt_l ? uc( $opt_l ) : 'GGATCCGAAGGGGTTCG';
+
+$tag_ext     = $opt_e ? $opt_e : 17;  # tag extent, default 17 for MmeI
+$anchenz_len = length( $anchenz );
+$fragenz_len = length( $fragenz );
+
+
+                              ################
+                              # Main program #
+                              ################
+
+if ( $opt_h )  { help(); }
+if ( $opt_V )  { version(); exit; } 
+    
+
+while ( <> )                              # continue reading lines until EOF
+   {
+    chomp;
+    if ( /^>(.*)/ )                       # if its a FASTA header, then
+       {                                  # grab it, save the file name
+        $new_hdr = $1;                    # and if we've got a previously 
+        $file = $ARGV;                    # collected sequence, then
+        process( $seq, $hdr, $file ) if ( defined( $hdr ) );  # handle it
+        $hdr = $new_hdr;                  # and then reset the buffer
+        $seq = "";
+       }
+    else                                  # otherwise, assume its a sequence
+       {                                  # line, so append it to the current
+        s/\s//g;                          # buffer
+        $seq .= uc( $_ );
+        if ( $opt_v )
+           { print STDERR "$lineno\n" unless ( ++$lineno % 10000 ); }
+       }
+   }
+
+#
+# don't forget to handle the sequence remaining in the buffer before exiting
+#
+process( $seq, $hdr, $file ) if ( defined( $hdr ) );  
+
+
+                               ###############
+                               # Subroutines #
+                               ###############
+
+#
+# process( $seq, $hdr, $file ) - split sequence into fragments, and process
+# each fragment seperately.   
+#
+sub  process
+   {
+    my ( $seq, $hdr, $file ) = @@_;
+    my $i, $fstart, $fstop;
+    $seqnum++;                               # sequence number counter (global)
+   
+    print STDERR "[$file] $hdr", length( $seq ),"\n" if ( $opt_v );
+    print STDERR "$file ", length( $seq ), "\n" if ( $opt_v );
+    
+    my @@fpos = matches( $fragenz, $seq );
+    return unless ( @@fpos );
+    printf STDERR "%12s %10d\n",  $fragenz, $#fpos + 1, "\n" if ( $opt_v );
+    #
+    # Handle the interior fragments
+    #
+    for ( $i = 0; $i < $#fpos; $i++ )
+       { 
+        $fstart = $fpos[$i] + $fragenz_len;  # exclude the frag enz sequence
+        $fstop = $fpos[$i+1];
+        process_frag( $i+1, $fstart, "fr",
+                      substr( $seq, $fstart, $fstop - $fstart ) ); 
+       }
+
+    #
+    # If the DNA is circular, make a special fragment by concatenating the ends
+    #
+    $fstart = $fpos[$#fpos] + $fragenz_len;
+    if ( $opt_c )
+       { 
+        process_frag( $i+1, $fstart, "fr",
+                      substr($seq, $fstart) . 
+                      substr($seq, 0, $fpos[0]) ); 
+       }
+    else
+       {
+        process_frag( 0, 0, "f", substr( $seq, 0, $fpos[0] ) );
+        process_frag( $#fpos + 1, $fstart, "r", 
+                       substr( $seq, $fstart ) );
+       }
+   }
+
+#
+# process_frag( $frag_num, $frag_pos, $dir, $frag_seq ) - handles the output 
+# for one fragment - either fragment summary information (if $opt_F) or 
+# all tags within the fragement.  $dir is either "f", "r" or "fr" which 
+# indicates that forward tags, reverse tags, or both directions should be
+# printed.
+#
+sub  process_frag
+   {
+    my ( $frag_num, $frag_pos, $dir, $frag_seq ) = @@_;
+    my $i;
+
+    my $len = length( $frag_seq );
+    my @@apos = matches( $anchenz, $frag_seq );
+
+    $dir = "fr" if ( $opt_I );   # internals => always doing both directions 
+
+    if ( $opt_F )
+       { 
+         printf "%8d %8d %8d %8d %8d\n", 
+                $seqnum, $frag_num, $frag_pos, $len, $#apos+1; 
+       }
+    else
+       {
+        if ( @@apos )
+           {
+            if ( $opt_I )
+               { 
+                for ( $i = 0; $i <= $#apos; $i++ )
+                   {
+                    forward_anch($apos[$i],$i,$#apos,$frag_num,$frag_seq,$len)
+                               if ( $dir =~ /f/ );
+                    reverse_anch($apos[$i],$i,$#apos,$frag_num,$frag_seq,$len)
+                               if ( $dir =~ /r/ );
+                   }
+               }
+            else
+               { 
+                forward_anch($apos[$#apos],$#apos,$#apos,$frag_num,$frag_seq,
+                             $len) if ( $dir =~ /f/ );
+                reverse_anch($apos[0],0,$#apos,$frag_num,$frag_seq,$len)
+                                   if ( $dir =~ /r/ );
+               }
+           }
+        }
+   }
+
+sub  forward_anch
+   {
+    my ( $apos, $i, $n, $frag_num, $seq, $len ) = @@_;
+    my $rank5 = $i+1;
+    my $rank3 = ($n + 1) - $i;
+
+    my $stop = $apos + $tag_ext + $anchenz_len;
+    $stop = $len if $stop > $len;
+    my $start = $apos + $anchenz_len;
+    my $fseq = substr( $seq, $start, $stop - $start );
+    if ( length( $fseq ) < $tag_ext )
+       { 
+         $fseq = substr( ($fseq . $linker ), 0, $tag_ext );
+         $flags = "S";
+       }
+    else
+       { $flags = ""; }
+    if ( $opt_S )
+       {
+        printf ">%-24.24s f %3d %5d %8d %4d %8d %4d  $flags\n", 
+            $fseq, $seqnum, $frag_num, $len-$apos, $rank3, $apos, $rank5;
+        print_fasta( substr( $seq, $start ) );
+       }
+    else
+       {
+        printf "%-24.24s f %3d %5d %8d %4d %8d %4d  $flags\n", 
+            $fseq, $seqnum, $frag_num, $len-$apos, $rank3, $apos, $rank5;
+       }
+   }
+
+
+sub  reverse_anch
+   {
+    my ( $apos, $i, $n, $frag_num, $seq, $len ) = @@_;
+    my $rank5 = $i+1;
+    my $rank3 = ($n + 1) - $i;
+
+    my $start = $apos - $tag_ext;
+    $start =  0 if ( $start < 0 );
+    my $stop = $apos;
+    my $rseq = rc( substr( $seq, $start, $stop - $start ) );
+    if ( length( $rseq ) < $tag_ext )
+       { 
+         $rseq = substr( ($rseq . $linker ), 0, $tag_ext );
+         $flags = "S";
+       }
+    else
+       { $flags = ""; }
+    if ( $opt_S )
+       {
+        printf ">%-24.24s r %3d %5d %8d %4d %8d %4d  $flags\n", 
+                $rseq, $seqnum, $frag_num, $apos + $anchenz_len, $rank5, 
+                $len-($apos + $anchenz_len), $rank3;
+        print_fasta( rc( substr( $seq, 0, $stop ) ) );
+       }
+    else
+       {
+        printf "%-24.24s r %3d %5d %8d %4d %8d %4d  $flags\n", 
+                $rseq, $seqnum, $frag_num, $apos + $anchenz_len, $rank5, 
+                $len-($apos + $anchenz_len), $rank3;
+       }
+   }
+
+# 
+# matches( $enz, $seq ) returns a list of matching positions of substring
+# $enz in string $seq.
+#
+sub  matches
+   {
+    my ($enz, $seq) = @@_;
+
+    my $i = 0;
+    my $n = length( $seq );
+    my @@res = ();
+
+    while ( ($i = index( $seq, $enz, $i )) > -1 )
+       {
+        push( @@res, $i );
+        $i++;
+       } 
+    return( @@res );
+   }
+
+
+#
+# rc( $seq ) returns the reverse complement of $seq
+#
+sub  rc
+   {
+    my $s = shift;
+    my $n = length( $s );
+    my $i, $j, $c;
+
+    my $r = " "x$n;
+    for (  $i = $n - 1, $j = 0;  $i >= 0;  $i--, $j++ )
+       {
+        $c = substr( $s, $i, 1 );
+        $c =~tr/acgtmrwsykvhdbnACGTMRWSYKVHDBN/tgcakywsrmbdhvnTGCAKYWSRMBDHVN/;
+        substr( $r, $j, 1 ) = $c;
+       }
+     return( $r );
+   }
+
+
+
+# 
+# routine print_fasta( $seq ) prints out a sequence in FASTA format
+# (without the header)
+#
+sub  print_fasta
+   {
+    my ( $seq ) = @@_;
+    my $i;
+
+    my $n = length( $seq );                # calculate length once
+    for ( $i = 0; $i < $n; $i++ )          # for each character
+       {
+        print substr( $seq, $i, 1 );       # print it out
+        if ( ( ($i + 1) % 60 ) == 0 )      # every 60 characters
+            { print "\n"; }                # put a newline
+       }
+    print "\n" if ( ( $i % 60 ) != 0 );    # last newline ensures tidy output
+   }
+
+sub  version
+   {
+    $vers = '$Revision: 0.7 $ ';
+    $vers =~ s/^\$[^ ]*\ //;
+    $vers =~ s/\ *\$ $//;
+    print "gsts           version $vers\n";
+   }
+
+sub  help
+   {
+    print "\n";
+    version();
+    print <<EndOfHelp;
+
+Usage:         gsts [-chvFIV] [-a<seq>] [-e<n>] [-f<seq>] [seq-files ...]
+
+               where [seq-files] are in FASTA format.  stdin is scanned if
+               no file specified.
+
+Options:       -a<seq> use <seq> as anchor enzyme sequence (def. CATG)
+               -c      treat all sequences as circular
+               -e<n>   tag extent <n> (default 17)
+               -f<seq> use <seq> as fragmenting enzyme seq (def. ACTAGT)
+               -h      print help message
+               -l<seq> append linker sequence <seq> to short tags 
+                       (default GGATCCGAAGGGGTTCG)
+               -v      verbose mode
+               -F      print out fragment information, rather than tag
+               -I      print out internal tags as well as true GSTs
+               -S      print out anchor site to 3' fragment end sequences
+                       (fasta format).  Doesn't include linker
+               -V      print version
+EndOfHelp
+    exit;
+   }
+@
+
+
+0.8
+log
+@fixed a bug in anchor-to-frag length sizes in reverse_anch
+@
+text
+@d39 1
+a39 1
+# $Id: gsts,v 0.7 2003/12/29 13:12:33 seanmccorkle Exp $
+d242 1
+a242 1
+                $apos + $anchenz_len, $rank3;
+d249 1
+a249 1
+                $apos + $anchenz_len, $rank3;
+@
+
+
+0.7
+log
+@made $i and $n a local in print_fasta()
+@
+text
+@d39 1
+a39 1
+# $Id: gsts,v 0.6 2002/12/17 19:13:19 seanmccorkle Exp seanmccorkle $
+d242 1
+a242 1
+                $len-($apos + $anchenz_len), $rank3;
+d249 1
+a249 1
+                $len-($apos + $anchenz_len), $rank3;
+d316 1
+a316 1
+    $vers = '$Revision: 0.6 $ ';
+@
+
+
+0.6
+log
+@fixed a small bug with the end-fragment handling for -I mode.
+@
+text
+@d30 4
+d39 1
+a39 1
+# $Id: gsts,v 0.5 2002/12/17 16:59:10 seanmccorkle Exp seanmccorkle $
+d302 3
+a304 1
+    $n = length( $seq );                   # calculate length once
+d316 1
+a316 1
+    $vers = '$Revision: 0.5 $ ';
+@
+
+
+0.5
+log
+@added options for variable tag extent, help and version.
+@
+text
+@d35 1
+a35 1
+# $Id: gsts,v 0.4 2002/11/17 19:41:36 seanmccorkle Exp seanmccorkle $
+d154 2
+d310 1
+a310 1
+    $vers = '$Revision: 0.4 $ ';
+@
+
+
+0.4
+log
+@Fixed ANOTHER bug with the handling of the very last partial fragment
+(non-circular case).
+@
+text
+@d3 3
+a5 1
+# Programmer:    Sean R. McCorkle
+d11 1
+a11 1
+# Usage:         gsts [-cFI] [-a<seq>] [-f<seq>] [seq-file [seq-file ...] ]
+d16 13
+a28 10
+#                 -c      treat all sequences as circular
+#                 -a<seq> use <seq> as anchor enzyme sequence (def. CATG)
+#                 -f<seq> use <seq> as fragmenting enzyme seq (def. GCGGCCGC)
+#                 -l<seq> append linker sequence <seq> to short tags 
+#                         (default GGATCCGAAGGGGTTCG)
+#                 -F      print out fragment information, rather than tag
+#                 -I      print out internal tags as well as true GSTs
+#                 -S      print out anchor site to 3' fragment end sequences
+#                         (fasta format).  Doesn't include linker
+#                 -v      verbose mode
+d35 1
+a35 1
+# $Id: gsts,v 0.3 2002/11/17 15:39:39 seanmccorkle Exp seanmccorkle $
+d42 1
+a42 1
+die "bad option\n" unless ( getopts( 'ca:f:l:FISv' ) );
+d47 2
+a48 1
+$fragenz  = $opt_f ? uc( $opt_f ) : 'GCGGCCGC';  # frag'ing enzyme, def. NotI 
+d51 1
+a51 1
+$tag_len     = 17;
+d60 3
+d190 1
+a190 1
+    my $stop = $apos + $tag_len + $anchenz_len;
+d194 1
+a194 1
+    if ( length( $fseq ) < $tag_len )
+d196 1
+a196 1
+         $fseq = substr( ($fseq . $linker ), 0, $tag_len );
+d221 1
+a221 1
+    my $start = $apos - $tag_len;
+d225 1
+a225 1
+    if ( length( $rseq ) < $tag_len )
+d227 1
+a227 1
+         $rseq = substr( ($rseq . $linker ), 0, $tag_len );
+d300 1
+a300 1
+        if ( ( ($i + 1) % 60 ) == 0 )      # every 50 characters
+d304 36
+@
+
+
+0.3
+log
+@Fixed a typo that caused a bug with the extension handling.
+@
+text
+@d30 1
+a30 1
+# $Id: gsts,v 0.2 2002/08/02 17:41:39 seanmccorkle Exp seanmccorkle $
+d115 1
+a117 1
+        $fstart = $fpos[$#fpos] + $fragenz_len;
+d125 2
+a126 2
+        process_frag( $#fpos + 1, $fpos[$#fpos], "r", 
+                       substr( $seq, $fpos[$#fpos] ) );
+@
+
+
+0.2
+log
+@well, I didn't get very far on the long sequence version, so I had to
+modify this one.  Added -S option for printing out '3 fragment end
+extended sequences.
+@
+text
+@d30 1
+a30 1
+# $Id: gsts,v 0.1 2002/07/02 18:42:24 seanmccorkle Exp mccorkle $
+d126 1
+a126 1
+                       substr( $seq, $fpos[$$fpos] ) );
+@
+
+
+0.1
+log
+@This seems to be working pretty well, so I'm checking it in, but i want to
+rework loading for large sequences (complete human chromosomes).
+@
+text
+@d21 2
+d30 1
+a30 1
+# $Id$
+d37 1
+a37 1
+die "bad option\n" unless ( getopts( 'ca:f:l:FIv' ) );
+d192 9
+a200 1
+    printf "%-24.24s f %3d %5d %8d %4d %8d %4d  $flags\n", 
+d202 1
+d223 13
+a235 3
+    printf "%-24.24s r %3d %5d %8d %4d %8d %4d  $flags\n", 
+            $rseq, $seqnum, $frag_num, $apos + $anchenz_len, $rank5, 
+            $len-($apos + $anchenz_len), $rank3;
+d278 18
+@

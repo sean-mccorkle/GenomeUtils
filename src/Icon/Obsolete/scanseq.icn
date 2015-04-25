@@ -1,0 +1,164 @@
+# Program:      scanseq
+# Programmer:   Sean R. McCorkle
+# Language:     Icon
+# Description:  Reads a sequence file (fasta format), finds starts, stops,
+#               their frequencies, and  ORFs in all reading frames.
+#
+#               Reading frames are designated:
+#
+#                     F1 - forward (top) strand, starting at 1
+#                     F2 - forward (top) strand, starting at 2
+#                     F3 - forward (top) strand, starting at 3
+#                     R1 - reverse (bottom) strand, starting at 1 from the end
+#                     R2 - reverse (bottom) strand, starting at 2 from the end
+#                     R3 - reverse (bottom) strand, starting at 3 from the end
+#
+#               ORFs and their lengths do not include the stops.
+#               Positions start at 1.
+#
+# Usage:        scan_seq <seq file>
+#
+#               where <seq file> contains a single DNA sequence (fasta).
+#               If not specified, stdin is used.
+#
+# $Id: scanseq.icn,v 0.5 1999/10/10 20:21:39 mccorkle Exp mccorkle $
+#
+
+link  io
+
+global bases
+global starts
+global stops
+global triplets
+global codons
+global nonstarts
+global freq_table
+
+global orf_length_thresh
+
+
+            
+procedure main( args )
+
+    local infile, s, signal
+
+    infile := open_file( args[1] )
+ 
+    init_globals()
+    init_freq_table()
+
+    orf_length_thresh := 300
+
+    fseq := read_fasta( infile )
+    s := table()
+    s["F"] := fseq.seq
+    s["R"] := rc( fseq.seq )
+    write( "Scan sequence: ", fseq.heading )
+    write( "Length: ", *s["F"] )
+
+    find_signals( s )
+
+    write_frequencies()
+
+    find_orfs( s )
+
+end
+
+
+procedure  init_globals()
+
+    bases  := set( ["A", "C", "G", "T", "N" ] )
+    starts := set( [ "ATG", "GTG" ] )
+    stops  := set( [ "TAA", "TGA", "TAG" ] ) 
+    triplets := set()
+    every insert( triplets, !bases || !bases || !bases )
+    codons := triplets -- stops    
+    nonstarts := triplets -- starts
+
+end
+
+
+procedure  init_freq_table()
+
+   freq_table := table()
+   every freq_table[ !starts | !stops ] := table( 0 )
+
+end
+
+procedure find_signals( s )
+
+    local dir, i, f, signal
+
+    write( "Signals:" )
+
+    every dir := ( "F" | "R" ) do
+        every i := find( ( !starts | !stops ), s[dir] ) do
+           {
+            f := ((i-1) % 3 ) + 1
+            codon := (s[dir])[i+:3]
+            (freq_table[ codon ])[ dir || f ] +:= 1
+            if  member( starts, codon )
+              then signal := "start"
+              else signal := "stop"
+            if ( dir == "R" )             # convert to
+              then i := *s[dir] + 2 - i  # leftmost end
+            write( dir, f, right( i, 8 ), right( signal, 8 ),"  ",
+                   codon )
+          }
+end
+
+
+procedure  write_frequencies()
+ 
+    local k, fvals
+
+    write( "Signal frequences:" )
+    fvals := ""
+    every  fvals ||:= right( ("F" | "R") || (1 to 3), 8 )
+    write( "signal", fvals )
+    every k := ( !starts | !stops ) do
+       {
+        fvals := ""
+        every fvals ||:= right( freq_table[k][ ("F" | "R") || (1 to 3) ], 8 )
+        write( k, "   ", fvals )
+       }
+
+end
+
+
+procedure find_orfs( s )
+
+    local dir, f, a, b, orf
+
+    write( "ORFs:" )
+    every dir := ( "F" | "R" ) do
+        every f := 1 to 3 do
+           {
+            s[dir] ? {
+                       move( f - 1 )   # shift to this frame
+                       orf := "z"
+                       while (orf ~== "" ) do
+               	          {
+                           while( tab( match( !nonstarts ) ) )
+                           a := &pos
+                           orf := ending := ""
+                           while ( orf ||:= tab( match( !codons ) ) )
+                           b := &pos
+                           ending := move( 3 )
+                           if ( orf ~== "" & ending ~== "" & 
+                                *orf > orf_length_thresh )
+                             then
+                               { 
+                                if ( dir == "R" )             # convert to
+                                   then a := *s[dir] + 2 - b  # leftmost end
+                                write_fasta( &output, orf, 
+                                             dir || f || "-" || a || "-" ||
+                                             *orf || "-" || ending )
+                                                 
+			       }
+        		  }
+           	     }
+           }
+
+end
+

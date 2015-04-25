@@ -1,0 +1,45 @@
+
+     IMMEDIATE:
+
+      tview: 
+             t_moveto
+             t_drawto
+             gif & hitmap output
+
+      orfs2map & signals - optional tier shift + and -
+
+B) check runs with ranseq program
+
+      - fasta input and output
+      - pp
+
+C) Gif output & hitmap output for view
+
+D) extract long ORF and check with blast
+
+E) discrepances between tras and orfs
+
+F) trans program
+        . verify against tras for a few sequnces
+
+
+Program Enhancements:
+
+   orfs:
+        . minimum cutoff of length (amino acid)
+
+   splt:
+        . option to split header field to get first as name before
+          naively appending to the header.  
+        . option -q for quiet mode.
+
+   view:
+        . COMPLETELY clean up graphics
+
+        . gif output
+        . hitmap output
+        . anyway to do mouseover events in X11?
+        . move window command to option
+        . error message & stop for bad instruction lines
+
+   6) backup!!!!backup!!!!backup!!!!backup!!!!backup!!!!

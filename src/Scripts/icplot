@@ -1,0 +1,92 @@
+#!/usr/bin/perl
+# Program:      icplot
+# Programmer:   Sean R. McCorkle
+# Language:     perl
+#
+# Description:  This accepts input from the ic program, and creates a 
+#               graph (.png) of the itegrated charge profiles.  
+#               This uses gnuplot for the actual plot generation.
+#
+# Usage:        ic [opts] [files] | icplot [-c]
+#
+#               output goes directly to stdout
+#
+#                -c      generate color plot (otherwise black & white)
+#                -y a,b  set yrange [a:b]
+#                -Y str  set ylabel str
+#                -F func   plot this function as well as data
+# 
+# $Id: icplot,v 1.3 2003/07/23 19:52:24 mccorkle Exp mccorkle $
+#
+#
+use  Getopt::Std;
+
+getopts( 'cF:y:Y:' ) || die "Bad option\n";
+
+$ENV{'PATH'} .= ':/usr/bin:/usr/local/bin';   # for gnuplot
+
+$tfile_base = "/tmp/icplotT$$";
+
+$options = <>;  # get options line
+#
+#  First split up the input proteins into seperate files in /tmp
+#  We'll accumulate the /tmp file names in @tfiles, and we'll save
+#  the "# seq-heading" lines for each, in the hash %names, and that
+#  way we can have a nice key for each trace in the plot.
+#
+while ( <> )
+   {
+    if ( /^\#(.*)/ )
+      {
+       $n = $1;
+       close( TFILE ) if ( $tfile );
+       $i++;
+       $tfile = "$tfile_base.$i";
+       push( @tfiles, $tfile );
+       $name{$tfile} = $n;
+       open( TFILE, ">$tfile" ) || die "Can't open $tfile for writing\n";
+      }
+    print TFILE;
+   }
+close( TFILE ) if ( $tfile );
+
+
+#
+#  Now lets open up a pipe to gnuplot and feed in commands to plot
+#  these /tmp files
+#
+open( GNUPLOT, "|gnuplot" ) || die "Can't run gnuplot!\n";
+
+if ( $options =~ /^\# 1/ )
+   { $xaxis = "% protein length"; }
+else 
+   { $xaxis = "position (aa)"; }
+$color = $opt_c ? "color" : "";
+
+print GNUPLOT <<EndOfPreamble;
+set terminal png $color
+set data style line
+set xlabel "$xaxis"
+EndOfPreamble
+
+print GNUPLOT "set ylabel  \"", ($opt_Y ? $opt_Y : "Integrated Charge"), 
+               "\"\n";
+
+
+if ( $opt_y =~ /,/)
+   {
+    ($y1,$y2) = split( /,/, $opt_y );
+    print GNUPLOT "set yrange [$y1:$y2]\n";
+   }
+
+print GNUPLOT 
+     "plot ",
+      join( ", ", 
+            map( ("\"$_\" title \"" . $name{$_} . "\""), @tfiles )
+          ),
+     ( $opt_F ? ",$opt_F" : "" ),
+     "\n";
+
+close( GNUPLOT );
+
+unlink ( @tfiles );    # don't forget to remove the temp files

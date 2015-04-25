@@ -1,0 +1,95 @@
+#!/usr/bin/perl
+# Program:      fasta2phd 
+# Programmer:   Sean R. McCorkle
+# Language:     perl
+#
+# Description:  Generates a "faked" phred file from a FASTA format file,
+#               so that phrap will use pure sequence data in an assembly
+#               instead of having to work from a chromatogram
+#
+# Usage:        fasta2phd [<fasta-file> ...]
+#               
+#               Stdin is scanned if no files are specified.  This generates
+#               one  *.phd.1 file for each fasta sequence record.  Qualities
+#               are faked at 19, chrom positions every 10.
+#
+# $Id: fasta2phd,v 0.1 2000/04/13 19:49:51 mccorkle Exp mccorkle $
+
+$qual      = 19;
+$step_size = 10;
+
+while ( <> )
+   {
+    chomp;
+    next if ( /^\s*$/ || /^\s*;/ );   # skip blanks or comments
+    if ( /^>\s*([^\s]*)/ )
+       {
+        $hdr = $1;
+        &output() if ( $current_file );
+        $current_file = $hdr;
+        $seq = "";
+       }
+    else
+       {
+        s/\s//g;                            # no blanks please
+        tr/A-Z/a-z/;                        # all lowercase
+        s/^\d+//;                           # remove possible leading digits
+        s/[^acgtn]/n/;                      # anything weird?  -> n
+        $seq .= $_;                         # append to sequence
+       }
+   }
+&output() if ( $current_file );
+
+
+sub output
+   {
+    open( PHD, ">$current_file.phd.1" ) 
+               || die "Can't open $current_file.phd.1\n";
+    &preamble();
+    my $p = 0;
+    while ( $seq =~ s/^(.)// )
+       { print PHD "$1 $qual ", (++$p * $step_size), "\n"; }
+    &postamble();
+    close( PHD );
+   }
+
+
+sub  preamble
+   {
+    my $size = length( $seq );
+    my $max_ind = ($size + 2) * $step_size;
+    my $date = localtime;
+
+    print PHD <<EndOfPreamble;
+BEGIN_SEQUENCE $current_file
+
+BEGIN_COMMENT
+
+CHROMAT_FILE: $current_file
+ABI_THUMBPRINT: 064241350252003127161054143236
+PHRED_VERSION: 0.990722.f
+CALL_METHOD: phred
+QUALITY_LEVELS: 99
+TIME: $date
+TRACE_ARRAY_MIN_INDEX: 0
+TRACE_ARRAY_MAX_INDEX: $max_ind
+TRIM: 1 $size 0.0500
+CHEM: term
+DYE: big
+
+END_COMMENT
+
+BEGIN_DNA
+EndOfPreamble
+   }
+
+
+sub  postamble
+   {
+    print PHD <<EndOfPostamble;
+END_DNA
+
+END_SEQUENCE
+EndOfPostamble
+   }
+

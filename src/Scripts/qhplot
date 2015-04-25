@@ -1,0 +1,39 @@
+#!/usr/bin/perl
+
+$binsize = 100;
+$tier = 4;
+$_ = <>;
+chomp;
+$name = $_;
+
+$last_x = 0;
+
+$i = 0;
+while ( $_ = <> )
+   {
+    while ( s/^\s*(\d+)// )
+       {
+        $q = $1;
+        if ( ++$i > $binsize )
+           {
+            $avg /= 1.0 * $binsize;
+            $y = $avg / 100.0;
+            $color = "white";
+            $color = "red" if $avg < 90;
+            $color = "orange" if $avg < 80;
+            $color = "yellow" if $avg < 60;
+            $color = "green" if $avg < 40;
+            $color = "blue" if $avg < 20;
+
+            $new_x = $last_x + $binsize;
+            print "t_rect $tier $last_x $new_x  0 $y $color\n";
+            print "lpress $tier $last_x $new_x  0 1 ",
+                  "display \"q ~ $avg ($last_x to $new_x)\" \n";
+            $last_x = $new_x;
+            $i = 0;
+            $avg = 0;
+           }
+        $avg += $q;
+       }
+   }
+

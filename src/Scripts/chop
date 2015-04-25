@@ -1,0 +1,30 @@
+#!/usr/bin/perl
+#
+# chop [-b <n>] seq
+#
+#    -b <n> begin at position, default 1
+#
+use Getopt::Std;
+
+getopts( 'b:' );
+$seq = shift;
+
+$seq_len = "/home/mccorkle/IconPrograms/Bio/seq_len";
+$pp      = "/home/mccorkle/IconPrograms/Bio/pp";
+
+`$seq_len $seq` =~ /\s(\d+)$/;
+$len = $1;
+
+$start = $opt_b ? $opt_b : 1;
+
+print "Length of $seq is $len\n";
+
+$k = 300;
+
+for ( $i = $start; $i + $k < $len; $i += $k )
+   {
+    $name = sprintf( "$seq.%05d.frag", $i );
+    $cmd = "$pp -s0 -n -B$i -L$k -t$name $seq >$name";
+    print "$cmd\n";
+    system( $cmd );
+   }

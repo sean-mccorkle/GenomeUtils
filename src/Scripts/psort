@@ -1,0 +1,21 @@
+#!/usr/bin/perl
+# Sort & reformat Proteins table
+#
+
+
+while ( <> )
+   {
+    chomp;
+    next if ( /^\s*$/ );
+    /^\s*([A-Z])\s+([A-Z][a-z][a-z])\s+(\w[\w ]*\w)\s+(basic|acidic|(neutral, \w+))\s+([UCAG, ]*)\s*$/;
+    ($l,$abbr,$name,$class,$codons) = ($1,$2,$3,$4,$6);
+    $codons =~ s/\s//g;
+    #print "$l|$abbr|$name|$class|$codons;\n";
+    foreach $c ( split( /,/, $codons ) )
+       { $code{$c} = $l; }
+   }
+
+foreach $k ( sort keys( %code ) )
+   {
+    print "$k: ", $code{$k}, "\n";
+   }

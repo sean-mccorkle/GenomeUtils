@@ -1,0 +1,136 @@
+
+link  grfx
+link  io
+
+
+global bases
+global starts
+global stops
+global triplets
+global codons
+
+global color_table
+global freq_table
+
+            
+procedure main( args )
+
+   infile := open_file( args )
+
+   w := 10
+
+   init_globals()
+   init_color_table()
+   init_freq_table()
+
+   s := read_fasta( infile )
+
+   #open_window( 1200, 300 )
+   open_window( 800, 300 )
+   set_tiers( 20, 20 )
+   draw_scale( *s, "red" )
+   
+   every i := find( ( !starts | !stops ) , s ) do
+      {
+       f := ((i-1) % 3 ) + 1
+       codon := s[i+:3]
+       (freq_table[ codon ])[f] +:= 1
+       if  member( starts, codon ) then
+           {
+            y1 := 0.5
+            y2 := 1.0
+	   }
+       else
+           {
+            y1 := 0
+            y2 := 0.5
+	   }
+      
+       vert_mark( f, i, y1, y2, color_table[ codon ] )
+      }
+
+   write( "Signal frequences:" )
+   every k := key( freq_table ) do
+       write( k, "  ", left( color_table[k], w ),
+                       right( freq_table[k][1], w ), 
+                       right( freq_table[k][2], w ), 
+                       right( freq_table[k][3], w ) 
+            )
+
+    every f := 1 to 3 do
+       {
+        s ? {
+             move( f - 1 )
+             while  triplets_upto( starts ) do
+                {
+                 start_signal := move( 3 ) 
+                 a := &pos
+                 orf := triplets_upto( stops )
+                 stop_signal := move( 3 )
+                 b := &pos
+                 if ( (b - a) > 200 )
+                    then  draw_line( f, a, b, color_table[ start_signal ] )
+                }
+            }
+       }
+
+
+   WDone()
+
+end
+
+procedure  open_file ( args )
+
+    local filename, infile
+    if filename := args[1]
+      then
+        ( infile := open( filename )  | stop( "can't open ", filename ) )
+      else
+        infile := &input
+    return( infile )
+
+end
+
+
+procedure  init_globals()
+
+    bases  := set( ["A", "C", "G", "T", "N" ] )
+    starts := set( [ "ATG", "GTG" ] )
+    stops  := set( [ "TAA", "TGA", "TAG" ] ) 
+    triplets := set()
+    every insert( triplets, !bases || !bases || !bases )
+    codons := triplets -- stops    
+
+end
+
+procedure  init_color_table()
+
+   color_table := table( "black" )
+   color_table[ "TAA" ] := "purple"
+   color_table[ "TAG" ] := "brown"
+   color_table[ "TGA" ] := "red"
+   color_table[ "ATG" ] := "green"
+   color_table[ "GTG" ] := "orange"
+
+end
+
+procedure  init_freq_table()
+
+   freq_table := table()
+   freq_table[ "TAA"] := list( 3, 0 );
+   freq_table[ "TAG"] := list( 3, 0 );
+   freq_table[ "TGA"] := list( 3, 0 );
+   freq_table[ "ATG"] := list( 3, 0 );
+   freq_table[ "GTG"] := list( 3, 0 );
+
+end
+
+procedure  triplets_upto( s )
+
+    acceptable := triplets -- s
+    if ( *&subject - &pos <= 3 )
+        then fail
+    t := ""
+    while ( t ||:= tab( match( !acceptable ) ) )
+    return( t )
+end

@@ -1,0 +1,15 @@
+version	U9.0.00
+impl	local
+global	12
+	0,000001,doc_html_state,0
+	1,000005,write_doc,2
+	2,000005,doc_header,4
+	3,000005,doc_line,2
+	4,000005,doc_sec_header,4
+	5,000005,doc_item,5
+	6,000005,doc_text,2
+	7,000005,doc_par,1
+	8,000005,doc_process,2
+	9,000005,doc_trans,2
+	10,000005,set_html_state,1
+	11,000005,clear_html_state,0

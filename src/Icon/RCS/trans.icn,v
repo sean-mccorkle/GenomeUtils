@@ -1,0 +1,216 @@
+head	0.2;
+access;
+symbols;
+locks
+	mccorkle:0.2; strict;
+comment	@# @;
+
+
+0.2
+date	99.11.01.16.54.59;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	99.10.30.19.32.16;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@Translates DNA/RNA sequences into amino acid sequences
+@
+
+
+0.2
+log
+@fixed bug: forgot to handle N's
+@
+text
+@# Program:      trans
+# Programmer:   Sean R. McCorkle
+# Language:     Icon
+# Description:  Translates DNA sequence (fasta format) into 
+#
+# Usage:        trans [-hv] <file> [<file> ...]
+#
+#               where <file> contains one or more more dna sequences in
+#               FASTA format
+#
+#                   -h print help, then exit
+#                   -v print version, then exit
+#
+# Note:        In the case of multiple files, sequences may NOT cross
+#              file boundaries.  If you really need this, use cat and pipe
+#              into trans
+#
+# $Id: trans.icn,v 0.1 1999/10/30 19:32:16 mccorkle Exp mccorkle $
+#
+
+link options
+link io
+
+global coding   # table which maps codon to amino acid
+
+                             ################
+                             # Main Program #
+                             ################
+
+
+procedure main( args )
+
+    local opts, filename, f, fseq
+
+    opts := options( args, "-h -v" )
+    if member( opts, "h" )  then { help(); exit() }
+    if member( opts, "v" )  then { version(); exit() }
+
+    initialize();
+
+    if ( *args = 0 ) then push( args, "-" )
+    every filename := !args do
+       {
+        f := open_file( filename )
+        while fseq := read_fasta( f ) do
+            write_fasta( &output, translate( fseq.seq ), fseq.heading )
+        close_file( f )
+       }
+
+end
+
+#
+# translate a DNA character sequence - all ambiguity codes result in an
+# X (unknown) for amino acids.  Rna (U's handled as T's)
+# Truncatates last 1 or 2 leftovers, which shouldn't matter, as orfs should
+# always produce triplets output
+#
+procedure translate( dna )
+
+    local u, a, cod, aa
+    u := map( map( dna, &lcase, &ucase ), "TMRWSYKVHDBX", "UNNNNNNNNNNN" )
+    a := ""
+    u ? {
+         while cod := move( 3 ) do
+             if member( coding, cod )
+               then a ||:= coding[cod]
+               else a ||:= "X"
+        }
+    return( a )
+end
+
+procedure initialize()
+
+    coding := table()
+    coding["AAA"] := "K"
+    coding["AAC"] := "N"
+    coding["AAG"] := "K"
+    coding["AAU"] := "N"
+    coding["ACA"] := "T"
+    coding["ACC"] := "T"
+    coding["ACG"] := "T"
+    coding["ACU"] := "T"
+    coding["AGA"] := "R"
+    coding["AGC"] := "S"
+    coding["AGG"] := "R"
+    coding["AGU"] := "S"
+    coding["AUA"] := "I"
+    coding["AUC"] := "I"
+    coding["AUG"] := "M"
+    coding["AUU"] := "I"
+    coding["CAA"] := "Q"
+    coding["CAC"] := "H"
+    coding["CAG"] := "Q"
+    coding["CAU"] := "H"
+    coding["CCA"] := "P"
+    coding["CCC"] := "P"
+    coding["CCG"] := "P"
+    coding["CCU"] := "P"
+    coding["CGA"] := "R"
+    coding["CGC"] := "R"
+    coding["CGG"] := "R"
+    coding["CGU"] := "R"
+    coding["CUA"] := "L"
+    coding["CUC"] := "L"
+    coding["CUG"] := "L"
+    coding["CUU"] := "L"
+    coding["GAA"] := "E"
+    coding["GAC"] := "D"
+    coding["GAG"] := "E"
+    coding["GAU"] := "D"
+    coding["GCA"] := "A"
+    coding["GCC"] := "A"
+    coding["GCG"] := "A"
+    coding["GCU"] := "A"
+    coding["GGA"] := "G"
+    coding["GGC"] := "G"
+    coding["GGG"] := "G"
+    coding["GGU"] := "G"
+    coding["GUA"] := "V"
+    coding["GUC"] := "V"
+    coding["GUG"] := "V"
+    coding["GUU"] := "V"
+    coding["UAA"] := "*"
+    coding["UAC"] := "Y"
+    coding["UAG"] := "*"
+    coding["UAU"] := "Y"
+    coding["UCA"] := "S"
+    coding["UCC"] := "S"
+    coding["UCG"] := "S"
+    coding["UCU"] := "S"
+    coding["UGA"] := "*"
+    coding["UGC"] := "C"
+    coding["UGG"] := "W"
+    coding["UGU"] := "C"
+    coding["UUA"] := "L"
+    coding["UUC"] := "F"
+    coding["UUG"] := "L"
+    coding["UUU"] := "F"
+
+end
+    
+#
+# print version number & help
+#
+procedure help()
+
+    version()
+    write( "Usage:  trans [-hv] <file> [<file> ...]\n" )
+    write( "        a single hyphen (-) can be used as a file name to specify")
+    write( "        stdin.  If no files are specified, stdin is scanned.\n" )
+    write( "Options:" )
+    write( "        -h print help" )
+    write( "        -v print version" )
+
+end
+
+#
+# print version number
+#
+procedure version()
+
+    "$Revision: 0.1 $" ? { tab( upto( ' ' ) )
+                           write( "trans", tab( many( &digits ++ ' .' ) ) )
+		         }
+end
+
+@
+
+
+0.1
+log
+@Initial version looking good.
+@
+text
+@d18 1
+a18 1
+# $Id$
+d60 1
+a60 1
+    local u, a, cod
+d65 3
+a67 1
+            a ||:= coding[cod]
+d162 1
+a162 1
+    "$Revision: 0.0$" ? { tab( upto( ' ' ) )
+@

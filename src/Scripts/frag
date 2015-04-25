@@ -1,0 +1,84 @@
+#!/usr/bin/perl
+# Program:       frag
+# Programmer:    Sean R. McCorkle
+# Language:      perl
+#
+# Description:   Read DNA sequences (FASTA format), output full-restriction-
+#                digest sequences (not including the restriction sites).
+#                tetramer frequences
+#
+# Usage:         frag [-e<seq>[-tuTA] [<seqs> ...]
+#
+#                 -e<seq>  - use <seq> as enzyme restiction site.
+#                 -a       - include very end fragments 
+#
+#  Note to self:  add -c to assume "circular sequence"
+#
+# $Id$
+#
+
+
+use Getopt::Std;
+
+die "bad option\n" unless ( getopts( 'ae:' ) );
+
+$enz = defined( $opt_e ) ? $opt_e : 'CATG';
+
+while ( <> )
+   {
+    if ( /^>(.*)/ )
+       {
+        $new_hdr = $1;
+        fragment( $enz, $seq, $hdr ) if defined( $hdr );
+        $hdr = $new_hdr;
+        $seq = "";
+       }
+ 
+    else
+       {
+        chomp;
+        s/^\s//g;
+        $seq .= uc( $_ );
+       }
+   }
+
+fragment( $enz, $seq, $hdr ) if defined( $hdr );
+
+sub  fragment
+   {
+    my ( $enz, $seq, $hdr ) = @_;
+    my $enz_len = length( $enz );   # this is wrong if enz is a regexp!!!!
+
+    my $pos = 0;
+    my @frags = split( /$enz/, $seq ) ;
+    unless ( $opt_a )
+       {
+        pop( @frags );    # first and last are worthless
+        $pos += $enz_len + length( shift( @frags ) );   
+       }
+    foreach my $frag ( @frags )
+       {
+        print_fasta( "frag $pos $hdr", $frag );
+        $pos += length( $frag ) + $enz_len; 
+       }
+    printf "%8d $enz $hdr\n", length( $seq );
+   }
+
+#
+# print_fasta( $hdr, $seq ) prints out a sequence in FASTA format
+#  ($hdr is assumed to include beginning > and ending \n already)
+#
+sub  print_fasta
+   {
+    my ( $hdr, $seq ) = @_;
+    print ">$hdr\n";
+    my $n = length( $seq );                # calculate length once
+    for ( $i = 0; $i < $n; $i++ )          # for each character
+       {
+        print substr( $seq, $i, 1 );       # print it out
+        if ( ( ($i + 1) % 60 ) == 0 )      # every 50 characters
+            { print "\n"; }                # put a newline
+       }
+    print "\n" if ( ( $i % 60 ) != 0 );    # last newline ensures tidy output
+   }
+

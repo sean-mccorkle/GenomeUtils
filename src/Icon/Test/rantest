@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+# rantest - check ranseq
+#           run ranseq a bunch of times with random min and max lengths
+#           (-a and -b options) and -p randomly set or not.  Check that
+#           nominal lenght is same as actual length, and that its in
+#           the bounds.   Check alphabet for consistency with -p option.
+# TODO - check -n option too.
+#
+
+$n_reps = 5000;                  # run this many checks
+
+%alphabet = (
+              ""    => "ACGT",
+              "-p"  => "AVLIWFMPGSTYCNQKRHDE",
+            );
+for ( $i = 0; $i < $n_reps; $i++ )
+   {
+    print "$i\n" unless ( $i % 1000 );
+    $seq_type = ( $i % 2 ) ? "" : "-p";
+    $a = int( rand( 1000 ) );
+    $b = $a + int( rand( 1000 ) );
+    $cmd = "../ranseq $seq_type -a $a -b $b";
+    #print "$cmd\n";
+    open( RS, "$cmd|" ) || die "Can't do $cmd|\n";
+    chomp( $_ = <RS> );
+    /^>\d+-(\d+)$/ || die "Bad header [$_]\n";
+    $nom_len = $1;
+    $s = "";
+    while ( $_ = <RS> )
+       {
+        chomp;
+        s/\s*//;
+        $s .= $_;
+       }
+    close( RS );
+
+    $real_len = length( $s );
+    die "Bad lengths: nomially $nom_len but really $real_len\n($cmd)\n"   
+       unless ( $real_len == $nom_len );
+    die "Length $real_len out of range $a to $b\n($cmd)\n"
+        if ( $real_len < $a || $real_len > $b );
+    $alfa = $alphabet{$seq_type};
+    if ( $s =~ /([^$alfa])/ )
+       { die "bad char $1 in string $s\n($cmd)\n"; }
+   }
+

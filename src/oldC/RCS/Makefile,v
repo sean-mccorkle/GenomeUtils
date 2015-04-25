@@ -1,0 +1,58 @@
+head	0.1;
+access;
+symbols;
+locks
+	mccorkle:0.1; strict;
+comment	@# @;
+
+
+0.1
+date	2000.04.20.20.03.40;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@Genome C program makefile
+@
+
+
+0.1
+log
+@pretty skimpy now, but checking in anyway.
+@
+text
+@# C-level makefile for BNL Genome sequence utilities
+#
+# $Id$
+#
+
+include ../Config/config.mak
+include ../header.mak
+
+CSRCS      = seqdiff.c io.c lpa_align.c sequtils.c
+INCLUDES   = seqlib.h
+SRCS       = $(CSRCS) $(INCLUDES)  Makefile
+BINS       = seqdiff
+
+all:  $(BINS)
+
+
+seqdiff:   seqdiff.o  libseq.a
+	cc $(CCFLAGS) -o $@@ seqdiff.o -L. -lseq  $(CLIBS)
+
+libseq.a:  io.o sequtils.o lpa_align.o
+	ar r $@@ io.o sequtils.o lpa_align.o
+
+.c.o:
+	cc -c $(CCFLAGS) $*.c
+
+seqdiff.o:    seqdiff.c   seqlib.h  
+io.o:         io.c        seqlib.h  
+sequtils.o:   sequtils.c  seqlib.h
+lpa_align.o:  lpa_align.c seqlib.h
+
+
+
+
+@

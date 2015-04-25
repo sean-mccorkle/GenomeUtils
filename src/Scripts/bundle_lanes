@@ -1,0 +1,183 @@
+#!/usr/bin/perl
+# Program:      bundle_lanes
+# Programmers:  Willy Crockett, Sean McCorkle
+# Language:     perl
+#
+# Description:  Reads in a list of gel-lanes, creates a CAP-style directory
+#               and copies the designated chromatograms (from the new
+#               archive or the old file-system) into the directory so that
+#               the lanes can be fetched as single folder bundle by a mac.
+#
+# Usage:        bundle_lanes <Cap directory>  [ <lane-list> ... ]
+#
+#               lane-list files must contain one gel-lane specificier per
+#               line.  A gel-lane specifier is of the form GGGGm-LL
+#               where GGGG is a four digit gel number, m is a machine code
+#               (a,b,c,d etc), and LL is a two digit 
+#               Example lane-list file:
+#
+#                         0888b-02
+#                         1200a-02
+#                         1200a-05
+#                         0974b-01
+#
+#               (leading and trailing whitespace on each line are ignored)
+#
+#               If no lane-list files are specified, stdin is scanned.
+#
+#               A file, "missing_chromatograms.txt", is placed in the target
+#               directory, which lists any lanes for which chromatograms were
+#               not found in either the new archive or old archive.
+#
+#               If <Cap directory> already exists and the user has write
+#               permision, then files are added to this existing directory.
+#               (Any files with the same name will be overwritten)
+#
+# Future ideas:  Options for created permisions.  May the whole cap thing
+#                should be an option.
+#
+# $Id: bundle_lanes,v 0.1 2001/01/30 04:31:53 mccorkle Exp mccorkle $
+#
+
+use     Getopt::Std;
+use     File::Copy;
+
+require "/usr/local/labdb/lib/bnlseq.pl";  # for OLD file archives ONLY
+
+$missing_file = 'missing_chromatagrams.txt';
+
+getopts( 'v' ) || die "$0: bad option\n";
+
+if ( @ARGV )                             # Get target directory name
+   { $targ_dir = shift; }
+else
+   {
+    do {
+        print "target directory? ";
+        $targ_dir = <STDIN>;
+        $targ_dir =~ s/^\s*//;
+        $targ_dir =~ s/\s*$//;
+       }
+    while ( $targ_dir eq "" );
+   }
+
+
+#
+# Okay okay, lets put in a couple of sanity checks.  But I'm warning you,
+# you can go crazy doing these things.  I should know.
+#
+check_or_make_dir( $targ_dir );
+check_or_make_dir( "$targ_dir/.finderinfo" );
+check_or_make_dir( "$targ_dir/.resource" );
+
+open( MISSING, ">$targ_dir/$missing_file" ) 
+   || die "$0: Can't write to missing_file: $!\n";
+
+#
+#  Main loop:  For each gel-lane specifier from input stream...
+#
+while ( <> )
+   {
+    chomp;                         # clean up
+    s/^\s*//;
+    s/\s*$//;
+    next unless ( $_ );            # ignore empty lines
+
+    /^(\d+)([abcdef])\s*[\-\.]?\s*(\d+)$/i 
+                   || die "$0: bad gel-lane spec: \"$_\"\n";
+    ( $gnum, $mach, $ln ) = ( $1, lc($2), $3 );
+
+    $gel = sprintf( "%04d%s", $gnum, $mach );  # clean gel      GGGGm
+    $gl = sprintf( "%s-%02d", $gel, $ln );     # clean gel-lane GGGGm-LL
+
+    # Look first in the new Archive
+   
+    $abi_chromat = sprintf( "/chrom2/Archive/%s/%04d/$gel/$gel-%02d", 
+                             $mach, int( $gnum / 100 ) * 100, $ln );
+    if ( ! -e $abi_chromat )
+        { 
+         $abi_chromat = raw_abi_chrom_file( $gel, $ln );
+         unless ( $abi_chromat && -e $abi_chromat )
+            {
+             print STDERR "$0: Can't locate chromatogram for $gl\n"; 
+             print MISSING "Can't locate chromatogram for $gl\n"; 
+             next;
+            }
+        }
+
+    unless ( -r $abi_chromat ) 
+       {
+        print STDERR "$0: Can't read \"$abi_chromat\": $!\n"; 
+        next;      # no point continuing here
+       }
+    # At this point, $abi_chromat contains a valid path specifier for
+    # the chromatogram, be it old or new archive.  Now we construct
+    # and check for .finderinfo and 
+
+#            symlink $abi_chromat, "$chromat_dir/$gl"
+#              || die "Can't symlink $abi_chromat to $chromat_dir/$gl\n";
+
+    print "$abi_chromat\n" if ( $opt_v ); 
+    @parts = split( /\//, $abi_chromat );
+    $fi_file = constr_and_check( ".finderinfo", @parts );
+    $re_file = constr_and_check( ".resource", @parts );
+    print "$fi_file\n" if ( $opt_v && $fi_file ); 
+    print "$re_file\n" if ( $opt_v && $re_file );
+    #
+    # At last: do the copy
+    #
+    copy( $abi_chromat, "$targ_dir/$gl" ) ||
+        printf STDERR "$0: can't copy \"$abi_chromat\" to \"$targ_dir/$gl\": $!\n";
+    copy( $fi_file, "$targ_dir/.finderinfo/$gl" ) ||
+        printf STDERR "$0: can't copy \"$fi_file\" to \"$targ_dir/.finderinfo/$gl\": $!\n";
+    copy( $re_file, "$targ_dir/.resource/$gl" ) ||
+        printf STDERR "$0: can't copy \"$re_file\" to \"$targ_dir/.resource/$gl\": $!\n";
+   }
+
+close( MISSING );
+
+
+# 
+#  check_or_make_dir( $dirname ) - check to see if dir exists.  If so, and is
+#  a writeable directory, just go ahead and user it.  If so, and its not 
+#  a writeable directory, die with a message.  If it doesn't exist,
+#  create it.
+#
+sub check_or_make_dir
+   {
+    my $dir = shift;
+    if ( -e $dir )
+       { 
+        ( -d $dir ) ||
+            die "$0: file \"$dir\" already exists and its not a directory!\n";
+        ( -w $dir ) ||
+        die "$0: directory \"$dir\" already exists, but its not writeable!\n";
+        print "Using existing directory \"$dir\"\n" if ( $opt_v );
+       }
+    else   # Target directory doesn't exist.  Make it.
+       {
+        print "mkdir $dir\n" if ( $opt_v );
+        mkdir( $dir, 0755 ) || die "$0: Can't mkdir \"$dir\": $!\n";
+       }
+   }
+
+
+# $fi_file = constr_and_check( ".finderinfo", @parts );
+#
+
+sub constr_and_check
+   { 
+    my ( $typ, @parts ) = @_;
+
+    my $last = pop( @parts );
+    push( @parts, $typ, $last );
+
+    my $file = join( '/', @parts );
+    if ( -e $file && -r $file )
+       { return( $file ); }
+    else
+       { 
+        print STDERR "$0: Can't read \"$file\": $!\n"; 
+        return( "" );
+       }
+   }

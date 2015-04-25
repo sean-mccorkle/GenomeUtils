@@ -1,0 +1,31 @@
+.TH "sn" "LDB" "15 May 97" "LabDB Tools" "LabDB Tools"
+.SH NAME
+pp - sequence pretty-printer                                          
+.SH USAGE
+pp [options] [<seq file> ...]
+            where <seq file> contains one or more fasta format DNA or        
+             amino acid sequences. A single hyphen (-) can be used as        
+             a file name to specify stdin.  If no files are given,           
+             stdin is scanned.                                               
+.SH OPTIONS
+.IP -B
+<n>   begin at position n                                  
+.IP -L
+<n>   print <n> characters                                 
+.IP -h
+print help then exit                                 
+.IP -l
+<n>   print <n> characters per line (default 50)           
+.IP -n
+don't print position numbers on left                 
+.IP -s
+<n>   insert a space every <n> characters (default 10),    
+                         if 0 or <0, no subgrouping is done                  
+.IP -t
+<str> use <str> as header title                            
+.IP -v
+print version then exit                              
+.SH NOTE
+
+             -B, -L and -t are applied to each sequence (they really         
+             only make sense for input which is a single sequence            

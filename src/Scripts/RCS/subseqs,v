@@ -1,0 +1,193 @@
+head	0.3;
+access;
+symbols;
+locks
+	mccorkle:0.3; strict;
+comment	@# @;
+
+
+0.3
+date	2003.09.13.03.34.01;	author mccorkle;	state Exp;
+branches;
+next	0.2;
+
+0.2
+date	2003.01.19.14.36.16;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	2002.11.13.23.44.26;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@extract ordered same-size subsequences from DNA or protein sequences,
+for using lossc to do searching.
+@
+
+
+0.3
+log
+@changed the whole processing method.  Now each line is handled as it
+is read, to prevent the wait for the whole sequence when working on
+large chromosomal files.
+@
+text
+@#!/usr/bin/perl
+# Program:      subseqs
+# Programmer:   Sean R. McCorkle, BNL Biology
+# Language:     perl
+#
+# Description:  reads in FASTA-format DNA or protein sequences and prints out,
+#               in order, each subsequence of the desired length, one at a
+#               time, with the sequence number and position within the sequence
+# 
+#               This output can be fed into the lossc program
+#
+# Usage:        subseqs [-s] [-f] <n>  [<seqfile> ...]
+#               where <n> is the subsequence length.  Stdin is scanned if no
+#               sequence files are specifiedy
+#  
+# Example output:    ACGATGTTAG    1  0   (for n= 10)
+#                    CGATGTTAGT    1  1
+#                    GATGTTAGTA    1  2
+#                    ATGTTAGTAG    1  3
+#                         .        .  .
+#
+# Options:          -s   print out fasta sequence header instead of sequential
+#                        sequence number
+#                   -f   print out filename instead of sequential number
+#                        (this assumes only one sequence per file)
+#
+# $Id: subseqs,v 0.2 2003/01/19 14:36:16 mccorkle Exp mccorkle $
+#
+use  Getopt::Std;
+use  File::Basename;
+
+die "bad option\n" unless ( getopts( 'fs' ) );
+
+$n = shift;
+
+while ( <> )
+   {
+    if ( /^>(.*)$/ )
+       {
+        $new_hdr = $1;
+        $new_file = $ARGV;
+        $hdr = $new_hdr;
+        if ( $opt_f )
+           {
+            ($file,$path,$suffix) = 
+                     fileparse( $new_file, ".fasta", ".fna", ".fa" );
+           }
+        else
+           { $file = $new_file; }
+        $seq = "";
+        $pos = 0;
+        $seq_num++;
+       }
+    else
+       {
+        chomp;
+        s/^\s*\d+//;     # in case of optional prefix numbers
+        s/\s//g;
+        $seq .= uc($_);
+        update();
+       }
+   }
+
+
+
+sub  update
+   {
+    my $stop = length( $seq ) - $n;
+    my $i;
+    for ( $i = 0; $i <= $stop; $i++, $pos++ )
+       { 
+        printf "%s %10d ", substr( $seq, $i, $n ), $pos;
+        if ( $opt_s )
+           { print "$hdr\n"; }
+        elsif ( $opt_f )
+           { print "$file\n"; }
+        else
+           { printf "%8d\n", $seq_num; }
+       }
+    $seq = substr( $seq, $i );
+   }
+
+
+
+@
+
+
+0.2
+log
+@added -s and -f options to identify the sequences by fasta header or
+filename.  Changed output format.
+@
+text
+@d12 1
+a12 1
+# Usage:        subseqs <n>  [<seqfile> ...]
+d22 6
+a27 1
+# $Id: subseqs,v 0.1 2002/11/13 23:44:26 mccorkle Exp mccorkle $
+d42 11
+a52 2
+        process( $seq, $hdr, $file ) if ( defined( $hdr ) );
+        ( $seq, $hdr, $file ) = ( "", $new_hdr, $new_file );
+d60 1
+a63 1
+process( $seq, $hdr, $file ) if ( defined( $hdr ) );
+d66 1
+a66 1
+sub  process
+a67 5
+    my ( $seq, $hdr, $filename ) = @@_;
+
+    my ($file,$path,$suffix) = fileparse( $filename, ".fasta", ".fna", ".fa" )
+             if ( $opt_f );
+    $seq_num++;
+d69 2
+a70 1
+    for ( $i = 0; $i <= $stop; $i++ )
+d72 7
+a78 7
+         printf "%s %10d ", substr( $seq, $i, $n ), $i;
+         if ( $opt_s )
+            { print "$hdr\n"; }
+         elsif ( $opt_f )
+            { print "$file\n"; }
+         else
+            { printf "%8d\n", $seq_num; }
+d80 1
+a81 1
+
+@
+
+
+0.1
+log
+@hot off the presses and going public already.
+@
+text
+@d22 1
+a22 1
+# $Id$
+d24 4
+d36 3
+a38 2
+        process( $seq, $hdr ) if ( $hdr );
+        ( $seq, $hdr ) = ( "", $new_hdr );
+d49 1
+a49 1
+process( $seq, $hdr ) if ( $hdr );
+d54 4
+a57 1
+    my ( $seq, $hdr ) = @@_;
+d61 9
+a69 1
+       { printf "%s %8d %10d\n", substr( $seq, $i, $n ), $seq_num, $i; }
+@

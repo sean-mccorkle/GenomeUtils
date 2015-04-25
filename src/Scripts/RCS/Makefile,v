@@ -1,0 +1,69 @@
+head	0.2;
+access;
+symbols;
+locks
+	mccorkle:0.2; strict;
+comment	@# @;
+
+
+0.2
+date	2003.01.19.13.33.46;	author mccorkle;	state Exp;
+branches;
+next	0.1;
+
+0.1
+date	2001.01.30.04.33.19;	author mccorkle;	state Exp;
+branches;
+next	;
+
+
+desc
+@Makefile for Scripts part of BNL seq utils
+@
+
+
+0.2
+log
+@added a bunch of scripts.
+@
+text
+@# Scripts-level makefile for BNL Genome sequence utilities package
+#
+# $Id: Makefile,v 0.1 2001/01/30 04:33:19 mccorkle Exp mccorkle $
+#
+
+include  ../Config/config.mak
+include  ../header.mak
+
+PERLS      = bundle_lanes compare gc_cont fasta2phd gb2bnl gb2fasta mum2tv \
+             poly_a pqual qhplot qfix re2tv seq_len sings2ace grpp nmers \
+             rna2dna sel subseqs gsts truncseq
+
+SRCS       = $(PERLS) Makefile
+BINS       = $(PERLS)
+
+
+all:
+
+
+
+
+
+
+@
+
+
+0.1
+log
+@some restructuring - now there's a make file right in the
+scripts directory.
+@
+text
+@d3 1
+a3 1
+# $Id$
+d9 4
+a12 2
+PERLS      = bundle_lanes compare seq_len fasta2phd gb2bnl pqual mum2tv \
+             qhplot qfix re2tv sings2ace
+@

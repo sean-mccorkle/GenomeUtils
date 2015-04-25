@@ -1,0 +1,114 @@
+<HTML>
+<HEAD>
+<TITLE>: compare</TITLE>
+</HEAD>
+<BODY>
+Previous
+Next
+<A HREF="compare.html#toc1">Table of Contents</A>
+<HR>
+<H2><A NAME="s1">1. compare</A></H2>
+
+<H2><A NAME="ss1.1">1.1 NAME</A></H2>
+
+<P><CODE>compare</CODE></P>
+
+<H2><A NAME="ss1.2">1.2 SYNOPSIS</A></H2>
+
+<P><CODE>/usr/local/seq/bin/compare</CODE> <EM>old getlocs file</EM> <EM>new getlocs file</EM></P>
+
+
+
+<H2><A NAME="ss1.3">1.3 DESCRIPTION</A></H2>
+
+<P>This program compares <B>getlocs</B> outputs from two of a projects
+<B>splice</B> assemblies that have been made at different times.
+Typically, <B>mat</B> numbers assigned by <B>splice</B> are 
+highly sensitive to the details of the input sequences, making
+comparison difficult because many otherwise unchanged mats will 
+receive different numbers in the assembly.
+<B>compare</B> reassigns mat numbers in the new getcmnts file to reflect
+similarities and differences between the new and old assemblies.</P>
+<P>While the <B>getlocs</B> files contain much assembly information,
+<B>compare</B> simply considers mats sets of sequences and analyzes
+old and new assemblies by examining set memberships.
+Sequences are considered the same if and only if their <B>gel-lane</B>
+designations are the same --- All other name information is disregarded.
+If a sequence has been determined to be a chimera and has been
+split into two new sequences with <EM>a</EM> and <EM>b</EM> extensions,
+the sequences are considered <EM>different</EM> from the original.</P>
+<P><B>compare</B> detects the following relationships between old and new mats:</P>
+<P>
+<UL>
+<LI><B>equivalences</B>
+<P>A mat in the old assembly and a mat in the new assembly are considered
+<EM>equivalent</EM> if they both have exactly the same set of sequences
+(barring sequences which have been removed from or added to the project
+in the time between the two assemblies).</P>
+</LI>
+<LI><B>fusions</B>
+<P>A mat in the new assembly is a <EM>fusion</EM> of two or more mats 
+in the old assembly if and only if the sequence set of the new mat is
+exactly the sum of the sequence sets in the old mats (again, disregarding
+sequences which have been removed from or added to the project after
+the time of the old assembly).</P>
+</LI>
+<LI><B>fissions</B>
+<P>A mat from the old assembly <EM>fissions</EM> into two or more mats
+in the new assembly if and only if the sequence set of the old mat is
+exactly the sum of the sequence sets in the mats (once again, 
+disregarding sequences that have been removed from or added to 
+the project after the old assembly).</P>
+</LI>
+<LI><B>appearances</B>
+<P>A mat in the new assembly <EM>appears</EM> if none of its member
+sequences are present <EM>anywhere</EM> in the old assembly 
+(i.e. if all of its sequences have been added after the old assembly 
+was made).</P>
+</LI>
+<LI><B>disappearances</B>
+<P>A mat in the old assembly <EM>disappears</EM> if none of its member
+sequences are present <EM>anywhere</EM> in the new assembly (i.e.
+if all its sequences have been removed after the old assembly was made).</P>
+</LI>
+<LI><B>complexes</B>
+<P>These are combinations of partial fusions and fissions.
+Basically, these are mats which do not fall into any of the above
+categories.
+A mat from the old assembly is either completely <EM>contained</EM> by
+a single mat in the new assembly, or <EM>splits</EM> into two or more
+mats in the new assembly.</P>
+</LI>
+</UL>
+</P>
+
+
+
+
+<H2><A NAME="ss1.4">1.4 AVAILABILITY</A></H2>
+
+<P>Currently, on
+<A HREF="http://genome5.bio.bnl.gov/Software/Local/">genome5</A>,
+genome4, genome1, ospa, ospb</P>
+
+
+<H2><A NAME="ss1.5">1.5 CAVEATS</A></H2>
+
+<P>Mat-renaming capabilities have not been added to the new version.</P>
+<P>The current version does not recognize mat names like block11a or new1.
+It therefore will not accept one of it's own output files as input.
+This can be fixed if necessary.</P>
+<P>
+<PRE>
+$Revision$
+$Date$
+</PRE>
+</P>
+
+
+<HR>
+Previous
+Next
+<A HREF="compare.html#toc1">Table of Contents</A>
+</BODY>
+</HTML>

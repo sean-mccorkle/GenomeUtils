@@ -1,0 +1,41 @@
+#!/usr/bin/perl
+
+$red_cut = 1;
+$_ = <>;
+/^>(Top_coverage_Contig\d+)$/ || die "Bad 1st: $_" ;
+$title = $1;
+
+($x1, $y1) = ( 0, 0 );
+$x2 = 0;
+while ( ($_ = <>) && ! /^>/ ) 
+   {
+    chomp;
+    s/\s//g;
+    while ( s/(.)// )
+       {
+        $y2 = ord( $1 ) - ord( 'a' );
+        $x2++;
+        $color = "green";
+        $color = "red" if ( $y1 < $red_cut || $y2 < $red_cut );
+        print "t_line 2 $x1 $y1 $x2 $y2 $color\n";
+        ( $x1, $y1 ) = ( $x2, $y2 );
+       }
+   }
+/^>(Bottom_coverage_Contig\d+)$/ || die "Bad 1st: $_" ;
+
+($x1, $y1) = ( 0, 0 );
+$x2 = 0;
+while ( ($_ = <>) && ! /^>/ ) 
+   {
+    chomp;
+    s/\s//g;
+    while ( s/(.)// )
+       {
+        $y2 = ord( $1 ) - ord( 'a' );
+        $x2++;
+        $color = "green";
+        $color = "red" if ( $y1 < $red_cut || $y2 < $red_cut );
+        print "t_line -1 $x1 $y1 $x2 $y2 $color\n";
+        ( $x1, $y1 ) = ( $x2, $y2 );
+       }
+   }

@@ -1,0 +1,22 @@
+#!/usr/bin/perl
+# Find strings of Xs in cross_match vector screened output
+#
+
+while ( <> )
+   {
+    chomp;
+    if ( /^>/ )
+       { process(); }
+    elsif ( ! /^\s*;/ )
+       {
+        s/\s//g;
+        $seq .= $_;
+       }
+   }
+
+sub  process
+   {
+    return unless( $seq );
+    $header = $_;
+    $seq = "";
+   }

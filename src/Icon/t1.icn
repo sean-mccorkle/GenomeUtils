@@ -1,0 +1,105 @@
+record tier_spec( tier, x1, x2, y1, y2 )
+record term( type, val )
+record token( type, str )
+
+procedure main()
+
+  
+    s := "t_hline (1 9:-3.1  -3.14:) \"red blue\" \"alpha romeo\"# comment"
+    write( s )
+    s ? every t := get_term() do
+          if t.type == "tr_sp"
+             then write( "term ", t.type, ": ", t.val.tier, " ", 
+                                                t.val.x1, " ", t.val.x2, " ",
+                                                t.val.y1, " ", t.val.y2 )
+             else write( "term ", t.type, ": ", image(t.val) )
+end
+
+procedure get_term()
+
+    local tok, t, tier, x1, x2, y1, y2
+
+    repeat
+       {
+        (tok := get_token()) | fail
+        if ( tok.type == ( "str" | "num" ) )
+            then suspend term( tok.type, tok.str )
+        else if tok.type == "lparen" 
+            then {
+                  tier := get_num()
+                  x2 := x1 := get_num()
+                  t := get_token()
+                  if t.type == "colon"
+                    then {
+                          x2 := get_num()
+                          y2 := y1 := get_num()
+		         }
+                    else if t.type = "num"
+                       then  y2 := y1 := t.str
+                       else  input_err( "expected number or :number" )  
+                  t := get_token()
+                  if t.type == "colon"
+                     then {
+                           y2 := get_num()
+                           t := get_token()
+		          }
+                  if t.type ~== "rparen" 
+                     then input_err( "expected \")\"" )
+
+                  suspend term( "tr_sp", tier_spec( tier, x1, x2, y1, y2 ) )
+                 }
+       }
+end    
+
+procedure get_num()
+
+    local t
+
+    t := get_token()
+    if t.type ~== "num" then input_err( "expected number" )
+    return( t.str )
+
+end
+
+#
+# This is really a crappy token scanner - its just to get us started.
+# The numeric input really should be fixed.  It just happens to work as
+# long as the input is okay
+#
+procedure get_token()
+
+    local tok, c
+
+    repeat
+       {
+        tab( many( ' \t' ) )
+        if ="#" | pos( 0 ) then fail
+        if any( &letters )
+            then tok := token( "str", tab( many( &letters ++ '_' ) ) )
+        else if any( &digits ++ '+-.' )
+            then tok := token( "num", tab( many( &digits ++ '+-.' ) ) )
+        else if ="\""
+            then { tok := token( "str", tab( upto( '"' ) ) )
+                   move( 1 )
+	        }
+        else
+            case c := move( 1 ) of 
+               {
+                ":"     :  tok := token( "colon", ":" )
+                "("     :  tok := token( "lparen", "(" )
+                ")"     :  tok := token( "rparen", ")" )
+                default :  input_err( "bad char in input: ", c )
+               }
+        suspend tok
+       }
+
+end
+
+procedure input_err( s[] )
+
+    local l
+
+    l := ""
+    every l ||:= !s
+    stop( "input error: ", l )
+end

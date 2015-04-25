@@ -1,0 +1,253 @@
+# F1-10123-420-GTG-TGA.blastx2.nr 
+# F1-1252-1071-TTG-TAG.blastx2.nr 
+# 5e-40 -1 530856 (U12892) GTG start [Pseudomonas aeruginosa]
+t_rect 1 1280 1762 0.0 0.4 blue
+t_rect 1 1814 1933 0.0 0.4 blue
+t_rect 1 1994 2299 0.0 0.4 blue
+t_rect 1 1280 2299 0.1 0.25 blue
+lpress 1 1280 2299 0.1 0.25 display (U12892)_GTG_start_[Pseudomonas_aeruginosa]
+# F1-13501-348-TTG-TGA.blastx2.nr 
+# F1-14845-807-TTG-TGA.blastx2.nr 
+# F1-16090-342-GTG-TAA.blastx2.nr 
+# 2e-32 +2 1914833 (U72876) hypothetical GTPase [Neisseria gonorrhoeae]
+t_rect 1 16095 16157 0.0 0.4 blue
+t_rect 1 16194 16424 0.0 0.4 blue
+t_rect 1 16095 16424 0.1 0.25 blue
+lpress 1 16095 16424 0.1 0.25 display (U72876)_hypothetical_GTPase_[Neisseria_gonorrhoeae]
+# F1-19792-423-TTG-TAG.blastx2.nr 
+# 4e-24 -2 5052208/gb|AAD38449.1|AF102175_1 (AF102175) thiol disulfide interchange protein [Pantoea citrea]
+t_rect 1 19798 20214 0.0 0.4 blue
+t_rect 1 19798 20214 0.1 0.25 blue
+lpress 1 19798 20214 0.1 0.25 display (AF102175)_thiol_disulfide_interchange_protein_[Pantoea_citrea]
+# F1-21184-339-ATG-TAG.blastx2.nr 
+# F1-2854-426-GTG-TGA.blastx2.nr 
+# 6e-27 +2 2213542/emb|CAA71565| (Y10537) glycosyltransferase [Ralstonia eutropha]
+t_rect 1 2955 2987 0.0 0.4 blue
+t_rect 1 3057 3278 0.0 0.4 blue
+t_rect 1 2955 3278 0.1 0.25 blue
+lpress 1 2955 3278 0.1 0.25 display (Y10537)_glycosyltransferase_[Ralstonia_eutropha]
+# F1-6418-357-TTG-TGA.blastx2.nr 
+# 5e-45 +3 1169235/sp|P44316|DCDA_HAEIN DIAMINOPIMELATE DECARBOXYLASE (DAP DECARBOXYLASE) >gi|1073995|pir||B64089 diaminopimelate decarboxylase (dap decarboxylase) (lysA) homolog - Haemophilus influenzae (strain Rd KW20) >gi|1573731 (U32756) diaminopimelate decarboxylase (lysA) [Haemophilus influenzae Rd]
+t_rect 1 6421 6768 0.0 0.4 blue
+t_rect 1 6421 6768 0.1 0.25 blue
+lpress 1 6421 6768 0.1 0.25 display DIAMINOPIMELATE_DECARBOXYLASE_(DAP_DECARBOXYLASE)_>gi|1073995|pir||B64089_diaminopimelate_decarboxylase_(dap_decarboxylase)_(lysA)_homolog_-_Haemophilus_influenzae_(strain_Rd_KW20)_>gi|1573731_(U32756)_diaminopimelate_decarboxylase_(lysA)_[Haemophilus_influenzae_Rd]
+# F1-7714-372-GTG-TGA.blastx2.nr 
+# F1-9700-399-GTG-TGA.blastx2.nr 
+# F2-12458-327-TTG-TGA.blastx2.nr 
+# F2-1340-312-TTG-TGA.blastx2.nr 
+# F2-15335-357-ATG-TGA.blastx2.nr 
+# F2-15890-750-ATG-TGA.blastx2.nr 
+# 8e-59 +1 1914833 (U72876) hypothetical GTPase [Neisseria gonorrhoeae]
+t_rect 2 15960 16025 0.0 0.4 blue
+t_rect 2 16035 16157 0.0 0.4 blue
+t_rect 2 16194 16481 0.0 0.4 blue
+t_rect 2 16506 16595 0.0 0.4 blue
+t_rect 2 15960 16595 0.1 0.25 blue
+lpress 2 15960 16595 0.1 0.25 display (U72876)_hypothetical_GTPase_[Neisseria_gonorrhoeae]
+# F2-16913-990-ATG-TGA.blastx2.nr 
+# 1e-143 +1 2495167/sp|Q59643|HEM2_PSEAE DELTA-AMINOLEVULINIC ACID DEHYDRATASE (PORPHOBILINOGEN SYNTHASE) (ALAD) (ALADH) >gi|2120642|pir||S60577 porphobilinogen synthase (EC 4.2.1.24) - Pseudomonas aeruginosa >gi|5821790|pdb|1B4K|A Chain A, High Resolution Crystal Structure Of A Mg2-Dependent 5- Aminolevulinic Acid Dehydratase >gi|5821791|pdb|1B4K|B Chain B, High Resolution Crystal Structure Of A Mg2-Dependent 5- Aminolevulinic Acid Dehydratase >gi|1009431|emb|CAA62930| (X91820) porphobilinogen synthase [Pseudomonas aeruginosa]
+t_rect 2 16986 17816 0.0 0.4 blue
+t_rect 2 17805 17900 0.0 0.4 blue
+t_rect 2 16986 17900 0.1 0.25 blue
+lpress 2 16986 17900 0.1 0.25 display DELTA-AMINOLEVULINIC_ACID_DEHYDRATASE_(PORPHOBILINOGEN_SYNTHASE)_(ALAD)_(ALADH)_>gi|2120642|pir||S60577_porphobilinogen_synthase_(EC_4.2.1.24)_-_Pseudomonas_aeruginosa_>gi|5821790|pdb|1B4K|A_Chain_A,_High_Resolution_Crystal_Structure_Of_A_Mg2-Dependent_5-_Aminolevulinic_Acid_Dehydratase_>gi|5821791|pdb|1B4K|B_Chain_B,_High_Resolution_Crystal_Structure_Of_A_Mg2-Dependent_5-_Aminolevulinic_Acid_Dehydratase_>gi|1009431|emb|CAA62930|_(X91820)_porphobilinogen_synthase_[Pseudomonas_aeruginosa]
+# F2-19436-360-GTG-TAG.blastx2.nr 
+# F2-20336-336-ATG-TGA.blastx2.nr 
+# F2-2051-312-TTG-TGA.blastx2.nr 
+# F2-2417-309-TTG-TAG.blastx2.nr 
+# F2-2807-2376-ATG-TGA.blastx2.nr 
+# 1e-178 +1 1763284 (U73780) penicillin-binding protein 1A [Pseudomonas aeruginosa]
+t_rect 2 2949 3194 0.0 0.4 blue
+t_rect 2 3189 3815 0.0 0.4 blue
+t_rect 2 4071 4715 0.0 0.4 blue
+t_rect 2 4686 4772 0.0 0.4 blue
+t_rect 2 4782 5009 0.0 0.4 blue
+t_rect 2 2949 5009 0.1 0.25 blue
+lpress 2 2949 5009 0.1 0.25 display (U73780)_penicillin-binding_protein_1A_[Pseudomonas_aeruginosa]
+# F2-5246-735-GTG-TGA.blastx2.nr 
+# F2-7289-324-ATG-TGA.blastx2.nr 
+# F2-7847-696-GTG-TAG.blastx2.nr 
+# 2e-60 -1 1788282 (AE000288) putative reductase [Escherichia coli]
+t_rect 2 8028 8135 0.0 0.4 blue
+t_rect 2 8151 8456 0.0 0.4 blue
+t_rect 2 8466 8531 0.0 0.4 blue
+t_rect 2 8028 8531 0.1 0.25 blue
+lpress 2 8028 8531 0.1 0.25 display (AE000288)_putative_reductase_[Escherichia_coli]
+# F2-8696-354-TTG-TGA.blastx2.nr 
+# F2-929-402-TTG-TAG.blastx2.nr 
+# F2-9773-360-ATG-TAA.blastx2.nr 
+# F3-11352-1164-GTG-TGA.blastx2.nr 
+# 9e-77 -1 3790606 (AF089766) putative cytochrome c-type biogenesis protein 2 [Thiobacillus ferrooxidans]
+t_rect 3 11353 11556 0.0 0.4 blue
+t_rect 3 11557 12072 0.0 0.4 blue
+t_rect 3 12109 12219 0.0 0.4 blue
+t_rect 3 11353 12219 0.1 0.25 blue
+lpress 3 11353 12219 0.1 0.25 display (AF089766)_putative_cytochrome_c-type_biogenesis_protein_2_[Thiobacillus_ferrooxidans]
+# F3-12591-492-TTG-TAG.blastx2.nr 
+# F3-13113-858-TTG-TGA.blastx2.nr 
+# 3e-21 -1 3790604 (AF089765) putative cytochrome c-type biogenesis protein 1 [Thiobacillus ferrooxidans]
+t_rect 3 13330 13542 0.0 0.4 blue
+t_rect 3 13729 13971 0.0 0.4 blue
+t_rect 3 13330 13971 0.1 0.25 blue
+lpress 3 13330 13971 0.1 0.25 display (AF089765)_putative_cytochrome_c-type_biogenesis_protein_1_[Thiobacillus_ferrooxidans]
+# F3-135-549-GTG-TAG.blastx2.nr 
+# 3e-28 -1 530858 (U12892) pilO [Pseudomonas aeruginosa]
+t_rect 3 136 549 0.0 0.4 blue
+t_rect 3 136 549 0.1 0.25 blue
+lpress 3 136 549 0.1 0.25 display (U12892)_pilO_[Pseudomonas_aeruginosa]
+# F3-14127-651-GTG-TGA.blastx2.nr 
+# 1e-36 -1 3790604 (AF089765) putative cytochrome c-type biogenesis protein 1 [Thiobacillus ferrooxidans]
+t_rect 3 14170 14385 0.0 0.4 blue
+t_rect 3 14470 14718 0.0 0.4 blue
+t_rect 3 14170 14718 0.1 0.25 blue
+lpress 3 14170 14718 0.1 0.25 display (AF089765)_putative_cytochrome_c-type_biogenesis_protein_1_[Thiobacillus_ferrooxidans]
+# F3-17913-1179-ATG-TAG.blastx2.nr 
+# F3-19326-1863-TTG-TAG.blastx2.nr 
+# 8e-55 -1 2599340 (AF010322) protein-disulfide reductase [Pseudomonas aeruginosa]
+t_rect 3 19327 19413 0.0 0.4 blue
+t_rect 3 19747 19791 0.0 0.4 blue
+t_rect 3 19912 20154 0.0 0.4 blue
+t_rect 3 20227 20331 0.0 0.4 blue
+t_rect 3 20548 20652 0.0 0.4 blue
+t_rect 3 20710 20826 0.0 0.4 blue
+t_rect 3 19327 20826 0.1 0.25 blue
+lpress 3 19327 20826 0.1 0.25 display (AF010322)_protein-disulfide_reductase_[Pseudomonas_aeruginosa]
+# F3-5241-411-GTG-TGA.blastx2.nr 
+# F3-5736-1518-GTG-TGA.blastx2.nr 
+# 1e-147 +1 118304/sp|P19572|DCDA_PSEAE DIAMINOPIMELATE DECARBOXYLASE (DAP DECARBOXYLASE) >gi|77626|pir||A31133 diaminopimelate decarboxylase (EC 4.1.1.20) - Pseudomonas aeruginosa
+t_rect 3 6004 6798 0.0 0.4 blue
+t_rect 3 6817 7248 0.0 0.4 blue
+t_rect 3 6004 7248 0.1 0.25 blue
+lpress 3 6004 7248 0.1 0.25 display DIAMINOPIMELATE_DECARBOXYLASE_(DAP_DECARBOXYLASE)_>gi|77626|pir||A31133_diaminopimelate_decarboxylase_(EC_4.1.1.20)_-_Pseudomonas_aeruginosa
+# F3-7461-348-GTG-TAG.blastx2.nr 
+# F3-9099-567-GTG-TAG.blastx2.nr 
+# F3-9900-342-ATG-TGA.blastx2.nr 
+# R1-10504-423-ATG-TGA.blastx2.nr 
+# R1-11119-594-GTG-TGA.blastx2.nr 
+# 3e-57 +2 3790606 (AF089766) putative cytochrome c-type biogenesis protein 2 [Thiobacillus ferrooxidans]
+t_rect -1 11121 11276 0.6 1.0 blue
+t_rect -1 11277 11609 0.6 1.0 blue
+t_rect -1 11121 11609 0.9 0.75 blue
+lpress -1 11121 11609 0.9 0.75 display (AF089766)_putative_cytochrome_c-type_biogenesis_protein_2_[Thiobacillus_ferrooxidans]
+# R1-1270-1113-GTG-TAA.blastx2.nr 
+# 9e-40 +1 530856 (U12892) GTG start [Pseudomonas aeruginosa]
+t_rect -1 1355 1660 0.6 1.0 blue
+t_rect -1 1721 1840 0.6 1.0 blue
+t_rect -1 1892 2374 0.6 1.0 blue
+t_rect -1 1355 2374 0.9 0.75 blue
+lpress -1 1355 2374 0.9 0.75 display (U12892)_GTG_start_[Pseudomonas_aeruginosa]
+# R1-13885-306-GTG-TGA.blastx2.nr 
+# R1-14971-657-ATG-TAA.blastx2.nr 
+# R1-19300-1029-GTG-TGA.blastx2.nr 
+# 3e-42 +2 1169428/sp|P36655|DSBD_ECOLI THIOL:DISULFIDE INTERCHANGE PROTEIN DSBD (C-TYPE CYTOCHROME BIOGENESIS PROTEIN CYCZ) (INNER MEMBRANE COPPER TOLERANCE PROTEIN) >gi|581055|emb|CAA85375| (Z36905) inner membrane copper tolerance protein [Escherichia coli] >gi|871029|emb|CAA54781| (X77707) disulphide isomerase like protein [Escherichia coli]
+t_rect -1 19347 19715 0.6 1.0 blue
+t_rect -1 19800 19883 0.6 1.0 blue
+t_rect -1 20190 20327 0.6 1.0 blue
+t_rect -1 19347 20327 0.9 0.75 blue
+lpress -1 19347 20327 0.9 0.75 display THIOL:DISULFIDE_INTERCHANGE_PROTEIN_DSBD_(C-TYPE_CYTOCHROME_BIOGENESIS_PROTEIN_CYCZ)_(INNER_MEMBRANE_COPPER_TOLERANCE_PROTEIN)_>gi|581055|emb|CAA85375|_(Z36905)_inner_membrane_copper_tolerance_protein_[Escherichia_coli]_>gi|871029|emb|CAA54781|_(X77707)_disulphide_isomerase_like_protein_[Escherichia_coli]
+# R1-21082-405-GTG-TGA.blastx2.nr 
+# R1-2458-444-ATG-TAA.blastx2.nr 
+# R1-3802-339-TTG-TAG.blastx2.nr 
+# R1-6757-555-TTG-TGA.blastx2.nr 
+# 4e-56 -3 118304/sp|P19572|DCDA_PSEAE DIAMINOPIMELATE DECARBOXYLASE (DAP DECARBOXYLASE) >gi|77626|pir||A31133 diaminopimelate decarboxylase (EC 4.1.1.20) - Pseudomonas aeruginosa
+t_rect -1 6822 7253 0.6 1.0 blue
+t_rect -1 6822 7253 0.9 0.75 blue
+lpress -1 6822 7253 0.9 0.75 display DIAMINOPIMELATE_DECARBOXYLASE_(DAP_DECARBOXYLASE)_>gi|77626|pir||A31133_diaminopimelate_decarboxylase_(EC_4.1.1.20)_-_Pseudomonas_aeruginosa
+# R1-7333-468-GTG-TAG.blastx2.nr 
+# R2-11223-1221-ATG-TGA.blastx2.nr 
+# 1e-96 +1 3790606 (AF089766) putative cytochrome c-type biogenesis protein 2 [Thiobacillus ferrooxidans]
+t_rect -2 11449 11559 0.6 1.0 blue
+t_rect -2 11596 12111 0.6 1.0 blue
+t_rect -2 12112 12444 0.6 1.0 blue
+t_rect -2 11449 12444 0.9 0.75 blue
+lpress -2 11449 12444 0.9 0.75 display (AF089766)_putative_cytochrome_c-type_biogenesis_protein_2_[Thiobacillus_ferrooxidans]
+# R2-12549-2250-ATG-TAG.blastx2.nr 
+# 5e-83 +1 3790604 (AF089765) putative cytochrome c-type biogenesis protein 1 [Thiobacillus ferrooxidans]
+t_rect -2 12631 12879 0.6 1.0 blue
+t_rect -2 12964 13179 0.6 1.0 blue
+t_rect -2 13198 13620 0.6 1.0 blue
+t_rect -2 13807 14019 0.6 1.0 blue
+t_rect -2 14347 14565 0.6 1.0 blue
+t_rect -2 12631 14565 0.9 0.75 blue
+lpress -2 12631 14565 0.9 0.75 display (AF089765)_putative_cytochrome_c-type_biogenesis_protein_1_[Thiobacillus_ferrooxidans]
+# R2-16509-384-GTG-TGA.blastx2.nr 
+# R2-18609-390-TTG-TGA.blastx2.nr 
+# R2-19116-2049-TTG-TGA.blastx2.nr 
+# 8e-67 +1 2599340 (AF010322) protein-disulfide reductase [Pseudomonas aeruginosa]
+t_rect -2 19456 19572 0.6 1.0 blue
+t_rect -2 19630 19734 0.6 1.0 blue
+t_rect -2 19951 20055 0.6 1.0 blue
+t_rect -2 20128 20370 0.6 1.0 blue
+t_rect -2 20491 20535 0.6 1.0 blue
+t_rect -2 20869 21081 0.6 1.0 blue
+t_rect -2 19456 21081 0.9 0.75 blue
+lpress -2 19456 21081 0.9 0.75 display (AF010322)_protein-disulfide_reductase_[Pseudomonas_aeruginosa]
+# R2-5022-327-ATG-TGA.blastx2.nr 
+# R2-5598-1719-TTG-TAG.blastx2.nr 
+# 1e-147 -1 118304/sp|P19572|DCDA_PSEAE DIAMINOPIMELATE DECARBOXYLASE (DAP DECARBOXYLASE) >gi|77626|pir||A31133 diaminopimelate decarboxylase (EC 4.1.1.20) - Pseudomonas aeruginosa
+t_rect -2 5668 6099 0.6 1.0 blue
+t_rect -2 6118 6912 0.6 1.0 blue
+t_rect -2 5668 6912 0.9 0.75 blue
+lpress -2 5668 6912 0.9 0.75 display DIAMINOPIMELATE_DECARBOXYLASE_(DAP_DECARBOXYLASE)_>gi|77626|pir||A31133_diaminopimelate_decarboxylase_(EC_4.1.1.20)_-_Pseudomonas_aeruginosa
+# R2-7353-672-ATG-TAA.blastx2.nr 
+# R2-8199-390-TTG-TGA.blastx2.nr 
+# 3e-49 +2 1788282 (AE000288) putative reductase [Escherichia coli]
+t_rect -2 8201 8323 0.6 1.0 blue
+t_rect -2 8333 8587 0.6 1.0 blue
+t_rect -2 8201 8587 0.9 0.75 blue
+lpress -2 8201 8587 0.9 0.75 display (AE000288)_putative_reductase_[Escherichia_coli]
+# R2-864-459-GTG-TGA.blastx2.nr 
+# R2-9108-834-ATG-TAA.blastx2.nr 
+# R3-15416-345-ATG-TAA.blastx2.nr 
+# R3-16121-549-TTG-TGA.blastx2.nr 
+# 3e-39 -1 1914833 (U72876) hypothetical GTPase [Neisseria gonorrhoeae]
+t_rect -3 16197 16286 0.6 1.0 blue
+t_rect -3 16311 16598 0.6 1.0 blue
+t_rect -3 16635 16670 0.6 1.0 blue
+t_rect -3 16197 16670 0.9 0.75 blue
+lpress -3 16197 16670 0.9 0.75 display (U72876)_hypothetical_GTPase_[Neisseria_gonorrhoeae]
+# R3-16910-393-ATG-TGA.blastx2.nr 
+# 5e-37 -1 2495167/sp|Q59643|HEM2_PSEAE DELTA-AMINOLEVULINIC ACID DEHYDRATASE (PORPHOBILINOGEN SYNTHASE) (ALAD) (ALADH) >gi|2120642|pir||S60577 porphobilinogen synthase (EC 4.2.1.24) - Pseudomonas aeruginosa >gi|5821790|pdb|1B4K|A Chain A, High Resolution Crystal Structure Of A Mg2-Dependent 5- Aminolevulinic Acid Dehydratase >gi|5821791|pdb|1B4K|B Chain B, High Resolution Crystal Structure Of A Mg2-Dependent 5- Aminolevulinic Acid Dehydratase >gi|1009431|emb|CAA62930| (X91820) porphobilinogen synthase [Pseudomonas aeruginosa]
+t_rect -3 16911 17228 0.6 1.0 blue
+t_rect -3 16911 17228 0.9 0.75 blue
+lpress -3 16911 17228 0.9 0.75 display DELTA-AMINOLEVULINIC_ACID_DEHYDRATASE_(PORPHOBILINOGEN_SYNTHASE)_(ALAD)_(ALADH)_>gi|2120642|pir||S60577_porphobilinogen_synthase_(EC_4.2.1.24)_-_Pseudomonas_aeruginosa_>gi|5821790|pdb|1B4K|A_Chain_A,_High_Resolution_Crystal_Structure_Of_A_Mg2-Dependent_5-_Aminolevulinic_Acid_Dehydratase_>gi|5821791|pdb|1B4K|B_Chain_B,_High_Resolution_Crystal_Structure_Of_A_Mg2-Dependent_5-_Aminolevulinic_Acid_Dehydratase_>gi|1009431|emb|CAA62930|_(X91820)_porphobilinogen_synthase_[Pseudomonas_aeruginosa]
+# R3-17420-1077-ATG-TGA.blastx2.nr 
+# 4e-75 -1 2495167/sp|Q59643|HEM2_PSEAE DELTA-AMINOLEVULINIC ACID DEHYDRATASE (PORPHOBILINOGEN SYNTHASE) (ALAD) (ALADH) >gi|2120642|pir||S60577 porphobilinogen synthase (EC 4.2.1.24) - Pseudomonas aeruginosa >gi|5821790|pdb|1B4K|A Chain A, High Resolution Crystal Structure Of A Mg2-Dependent 5- Aminolevulinic Acid Dehydratase >gi|5821791|pdb|1B4K|B Chain B, High Resolution Crystal Structure Of A Mg2-Dependent 5- Aminolevulinic Acid Dehydratase >gi|1009431|emb|CAA62930| (X91820) porphobilinogen synthase [Pseudomonas aeruginosa]
+t_rect -3 18045 18113 0.6 1.0 blue
+t_rect -3 18102 18497 0.6 1.0 blue
+t_rect -3 18045 18497 0.9 0.75 blue
+lpress -3 18045 18497 0.9 0.75 display DELTA-AMINOLEVULINIC_ACID_DEHYDRATASE_(PORPHOBILINOGEN_SYNTHASE)_(ALAD)_(ALADH)_>gi|2120642|pir||S60577_porphobilinogen_synthase_(EC_4.2.1.24)_-_Pseudomonas_aeruginosa_>gi|5821790|pdb|1B4K|A_Chain_A,_High_Resolution_Crystal_Structure_Of_A_Mg2-Dependent_5-_Aminolevulinic_Acid_Dehydratase_>gi|5821791|pdb|1B4K|B_Chain_B,_High_Resolution_Crystal_Structure_Of_A_Mg2-Dependent_5-_Aminolevulinic_Acid_Dehydratase_>gi|1009431|emb|CAA62930|_(X91820)_porphobilinogen_synthase_[Pseudomonas_aeruginosa]
+# R3-1907-321-ATG-TAG.blastx2.nr 
+# R3-21095-399-TTG-TGA.blastx2.nr 
+# R3-2708-1956-ATG-TAA.blastx2.nr 
+# 1e-155 -1 1763284 (U73780) penicillin-binding protein 1A [Pseudomonas aeruginosa]
+t_rect -3 2709 3302 0.6 1.0 blue
+t_rect -3 3315 3473 0.6 1.0 blue
+t_rect -3 3558 4184 0.6 1.0 blue
+t_rect -3 4179 4424 0.6 1.0 blue
+t_rect -3 2709 4424 0.9 0.75 blue
+lpress -3 2709 4424 0.9 0.75 display (U73780)_penicillin-binding_protein_1A_[Pseudomonas_aeruginosa]
+# R3-5261-390-TTG-TAA.blastx2.nr 
+# R3-608-642-ATG-TGA.blastx2.nr 
+# 4e-25 +1 455330 (L28837) membrane protein [Pseudomonas syringae]
+t_rect -3 639 1109 0.6 1.0 blue
+t_rect -3 639 1109 0.9 0.75 blue
+lpress -3 639 1109 0.9 0.75 display (L28837)_membrane_protein_[Pseudomonas_syringae]
+# R3-6131-378-TTG-TAG.blastx2.nr 
+# 2e-43 -2 118304/sp|P19572|DCDA_PSEAE DIAMINOPIMELATE DECARBOXYLASE (DAP DECARBOXYLASE) >gi|77626|pir||A31133 diaminopimelate decarboxylase (EC 4.1.1.20) - Pseudomonas aeruginosa
+t_rect -3 6134 6508 0.6 1.0 blue
+t_rect -3 6134 6508 0.9 0.75 blue
+lpress -3 6134 6508 0.9 0.75 display DIAMINOPIMELATE_DECARBOXYLASE_(DAP_DECARBOXYLASE)_>gi|77626|pir||A31133_diaminopimelate_decarboxylase_(EC_4.1.1.20)_-_Pseudomonas_aeruginosa
+# R3-6731-336-GTG-TAG.blastx2.nr 
+# 7e-29 -2 118304/sp|P19572|DCDA_PSEAE DIAMINOPIMELATE DECARBOXYLASE (DAP DECARBOXYLASE) >gi|77626|pir||A31133 diaminopimelate decarboxylase (EC 4.1.1.20) - Pseudomonas aeruginosa
+t_rect -3 6734 6982 0.6 1.0 blue
+t_rect -3 6980 7024 0.6 1.0 blue
+t_rect -3 6734 7024 0.9 0.75 blue
+lpress -3 6734 7024 0.9 0.75 display DIAMINOPIMELATE_DECARBOXYLASE_(DAP_DECARBOXYLASE)_>gi|77626|pir||A31133_diaminopimelate_decarboxylase_(EC_4.1.1.20)_-_Pseudomonas_aeruginosa
+# R3-8027-1320-ATG-TGA.blastx2.nr 
+# 1e-96 +1 1788282 (AE000288) putative reductase [Escherichia coli]
+t_rect -3 8574 8909 0.6 1.0 blue
+t_rect -3 8919 9224 0.6 1.0 blue
+t_rect -3 9240 9347 0.6 1.0 blue
+t_rect -3 8574 9347 0.9 0.75 blue
+lpress -3 8574 9347 0.9 0.75 display (AE000288)_putative_reductase_[Escherichia_coli]
+# R3-9941-531-ATG-TGA.blastx2.nr 

@@ -1,0 +1,47 @@
+<title>pp</title>
+<blockquote>
+<P>
+</blockquote>
+<h4>Name</h4>
+<blockquote>
+pp - sequence pretty-printer                                     
+<P>
+</blockquote>
+<h4>Usage</h4>
+<blockquote>
+pp [options] [<font color="blue">seq</font> ...]                                         
+<P>
+where <font color="blue">seq</font> is a file that contains one or more fasta format DNA 
+or amino acid sequences. A single hyphen (-) can be used as      
+a file name to specify stdin.  If no files are given,            
+stdin is scanned.                                                
+<P>
+</blockquote>
+<h4>Options</h4>
+<blockquote>
+
+<DL>
+<dt><tt>-B <font color="blue">n</font></tt></dt><dd>
+begin at position n                                  
+<dt><tt>-L <font color="blue">n</font></tt></dt><dd>
+print <font color="blue">n</font> characters                                 
+<dt><tt>-h</tt></dt><dd>
+print help then exit                                 
+<dt><tt>-l <font color="blue">n</font></tt></dt><dd>
+print <font color="blue">n</font> characters per line (default 50)           
+<dt><tt>-n</tt></dt><dd>
+don't print position numbers on left                 
+<dt><tt>-s <font color="blue">n</font></tt></dt><dd>
+insert a space every <font color="blue">n</font> characters (default 10),    
+if 0 or <0, no subgrouping is done                   
+<dt><tt>-t <font color="blue">str</font></tt></dt><dd>
+use <font color="blue">str</font> as header title                            
+<dt><tt>-v</tt></dt><dd>
+print version then exit                              
+</DL>
+</blockquote>
+<h4>Note</h4>
+<blockquote>
+
+-B, -L and -t are applied to each sequence (they really         
+only make sense for input which is a single sequence            

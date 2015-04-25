@@ -1,0 +1,104 @@
+#!/usr/bin/perl
+
+use Bio::Tools::Blast;
+
+$bl = "";
+
+foreach $file ( @ARGV )
+   {
+    #print "\n$file:\n";
+    #
+    # Unfortunately, Blast->new() will BOMB the program on failure,
+    # which includes an attempt to parse a non-blast file, or worse:
+    # a perfectly good but empty blast report.  We are therefore forced
+    # to eval and then check $@.
+    #
+    eval { $bl = Bio::Tools::Blast->new( -file   => $file,
+                                  -parse  => 1,  
+                                 # -signif => '1e-10',
+                               ); 
+         };
+
+    if ( $@  )
+       {
+        print STDERR "**** $file is bad ****\n";
+        print STDERR "$@\n";
+        next;
+       }
+
+    #print $b->num_hits, " hits\n";
+
+    $h = $bl->hit( 'best' );
+    #print "Lowest hit is ", $h->expect(), "\n";
+    $gi = "";
+    $d = $h->desc();
+    $d =~ s/\>gi\|(\w*).*$//;
+    $gi = $1;
+
+    #print "Name: ", $h->name(),   " gi: ", $gi, "\n";\
+    #print "Desc: ", $d, "\n";
+    
+    ($frame,$x1, $x2, $t ) = &frame_and_pos( $file );
+    if ( $t eq 'O' )
+       { ($y1,$y2) = (0.10,0.48); }
+    else
+       { ($y1,$y2) = (-0.3,-0.1); }
+    $color = &get_color( $h->expect() );
+    ($a,$b) = $h->range( 'query' );
+    $a *= 3;
+    $b *= 3;
+    $a += $x1;
+    $b += $x1;
+    $d =~ s/\s+/_/g;
+    print "t_rect $frame $a $b $y1 $y2 $color\n";
+    print "lpress $frame $a $b $y1 $y2 display \"",
+          join( " ", $h->expect(), $d, ), "\"\n";
+    #print $frame, " ", $x, " ", $y, "  ",
+    #      $h->expect(), " ", join( " - ", $h->range( 'query' ) ), "  ",
+    #                         join( " - ", $h->range( 'sbjct' ) ), "  ",
+    #      $h->name(), "\n";
+    $bl->destroy();
+   }
+
+#029576-030211-2R-ATG
+#R2-14426-330-ATG-TAA
+
+sub frame_and_pos
+   {
+    my $start,$stop,$f,$dir,$len,$typ;
+    $_ = shift;
+    if ( /^(\d+)-(\d+)-([123])(R)?-/ )
+        {
+         ($start,$stop,$f,$dir) = ($1,$2,$3,$4);
+         $dir = 'F' unless( $dir );
+         $typ = "T";   #tras
+        }
+    elsif( /^([RF])([123])-(\d+)-(\d+)-/ )
+        { 
+         ($dir,$f,$start,$len) = ($1,$2,$3,$4);
+         $stop = $start + $len;
+         $typ = "O";   #orfs
+        }
+    else { die "Bad file [$_]\n"; }
+    $f = -$f if ( $dir eq 'R' );
+    return( $f, $start, $stop, $typ );
+   }
+
+sub  get_color
+   {
+    my $e = shift;
+    return( "white" ) if $e < 1.0e-30;
+    return( "red" ) if $e < 1.0e-20;
+    return( "orange" ) if $e < 1.0e-10;
+    return( "yellow"   )  if $e < 1.0e-6;
+    return( "green" )     if $e < 1.0e-3;
+    return( "blue" )      if $e <0.1;
+    return( "black" )
+   }
+
+
+
+
+
+
+

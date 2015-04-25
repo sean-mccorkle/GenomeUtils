@@ -1,0 +1,23 @@
+link io
+
+procedure main()
+
+    seq := read_fasta()
+ 
+    #write( seq )
+    write( "Length is ", *seq )
+
+    seq ? { 
+           count := 0
+           while( p :=  find( "TGA" ) ) do
+               {
+                write( "TAA at ", p, " frame ", (p % 3) + 1 )
+                tab( p + 1 )
+                count +:= 1
+	       }
+          }
+    write( "Count is ", count )
+
+end
+
+

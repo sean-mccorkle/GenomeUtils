@@ -1,0 +1,15 @@
+#!/usr/bin/perl
+# Perl variation of Willys gb2bnl  genbank format to BNL format converter
+#
+
+while ( <> )
+   {
+    if ( s/^LOCUS\s*/>/ )
+        { $inheader = 1; 
+          print;
+        }
+    elsif( /^ORIGIN/ )
+        { $inheader = 0; }
+    elsif ( ! $inheader && ! m=^//= )
+        { print; }
+   }

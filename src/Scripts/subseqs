@@ -1,0 +1,84 @@
+#!/usr/bin/perl
+# Program:      subseqs
+# Programmer:   Sean R. McCorkle, BNL Biology
+# Language:     perl
+#
+# Description:  reads in FASTA-format DNA or protein sequences and prints out,
+#               in order, each subsequence of the desired length, one at a
+#               time, with the sequence number and position within the sequence
+# 
+#               This output can be fed into the lossc program
+#
+# Usage:        subseqs [-s] [-f] <n>  [<seqfile> ...]
+#               where <n> is the subsequence length.  Stdin is scanned if no
+#               sequence files are specifiedy
+#  
+# Example output:    ACGATGTTAG    1  0   (for n= 10)
+#                    CGATGTTAGT    1  1
+#                    GATGTTAGTA    1  2
+#                    ATGTTAGTAG    1  3
+#                         .        .  .
+#
+# Options:          -s   print out fasta sequence header instead of sequential
+#                        sequence number
+#                   -f   print out filename instead of sequential number
+#                        (this assumes only one sequence per file)
+#
+# $Id: subseqs,v 0.3 2003/09/13 03:34:01 mccorkle Exp mccorkle $
+#
+use  Getopt::Std;
+use  File::Basename;
+
+die "bad option\n" unless ( getopts( 'fs' ) );
+
+$n = shift;
+
+while ( <> )
+   {
+    if ( /^>(.*)$/ )
+       {
+        $new_hdr = $1;
+        $new_file = $ARGV;
+        $hdr = $new_hdr;
+        if ( $opt_f )
+           {
+            ($file,$path,$suffix) = 
+                     fileparse( $new_file, ".fasta", ".fna", ".fa" );
+           }
+        else
+           { $file = $new_file; }
+        $seq = "";
+        $pos = 0;
+        $seq_num++;
+       }
+    else
+       {
+        chomp;
+        s/^\s*\d+//;     # in case of optional prefix numbers
+        s/\s//g;
+        $seq .= uc($_);
+        update();
+       }
+   }
+
+
+
+sub  update
+   {
+    my $stop = length( $seq ) - $n;
+    my $i;
+    for ( $i = 0; $i <= $stop; $i++, $pos++ )
+       { 
+        printf "%s %10d ", substr( $seq, $i, $n ), $pos;
+        if ( $opt_s )
+           { print "$hdr\n"; }
+        elsif ( $opt_f )
+           { print "$file\n"; }
+        else
+           { printf "%8d\n", $seq_num; }
+       }
+    $seq = substr( $seq, $i );
+   }
+
+
+

@@ -1,0 +1,10 @@
+procedure main()
+
+   if  member( set( ["a", "b", "c" ] ), "b" ) 
+      then write( "yes" )
+      else write( "no" )
+
+   if  member( 'abc', "b" ) 
+      then write( "yes" )
+      else write( "no" )
+end

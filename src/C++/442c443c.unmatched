@@ -1,0 +1,75 @@
+58 unmatched 
+
+Unmatched tags: 
+
+                      YP sq Bam   3' end    5' end      ln    ln  gel- 
+tag seq              dir id frag  pos ank   pos rnk flg dir  pos  lane 
+ACACGCATATTGCTGGT                                        r    99 442c-25-C1
+ACATCTTGTGGGGCTGA                                        f    29 442c-12-A12
+ACGGAAAAAAAAGGCAC                                        f   564 443c-23-B11
+ACGTCCTGCACTGAGCA                                        r    27 442c-42-D6
+ACTGTAACCAATTTTCC                                        r   403 442c-08-A8
+AGGAGTTCCCTTCCCCC                                        r    98 442c-32-C8
+ATACTTTTCTGCCCAAC                                        f   158 442c-07-A7
+ATCAAAAAGGCCGGGAA                                        f    75 443c-29-C5
+ATCAAAAGGCCGCGAAC                                        f    72 442c-29-C5
+ATCATACAATGACGGAT                                        f   452 442c-28-C4
+ATGACCAACGGCAAGCC                                        f   308 443c-21-B9
+                                                         f   304 442c-21-B9
+ATTAAAAAGGCCGCGAA                                        r   335 443c-43-D7
+                                                         r   338 442c-43-D7
+ATTTTGCGGTAATCTGC                                        f   333 442c-08-A8
+CACGCACTTCGCCACTG                                        r   408 442c-10-A10
+CAGTGGCCATCCTCACG                                        f   478 443c-47-D11
+CATTTGTCGATTGTGGC                                        r   404 442c-42-D6
+CCACGTTGCTGCTGATG                                        r    27 443c-38-D2
+CCAGTCAGGACATTACC                                        r   100 443c-34-C10
+                                                         r   103 442c-34-C10
+CCGTCAAACACAAACTC                                        r    27 443c-08-A8
+CCTTGGTATTGCGCAGC                                        r   192 443c-06-A6
+                                                         r   190 442c-06-A6
+CGCTGGGCGGTCATCTC                                        f   411 442c-41-D5
+CGTCATCTCGCTGACGG                                        r   379 442c-47-D11
+CTACAGGCCATCGTCTC                                        f   222 442c-44-D8
+CTCCTGTCATTACATTG                                        f   393 442c-29-C5
+CTGCTGTGGATCAACCA                                        f   220 442c-27-C3
+                                                         f   217 443c-27-C3
+CTGTTAGGTCTGGGAGG                                        f    73 443c-21-B9
+GAGGGGTTGNTACAAGC                                        r   175 443c-10-A10
+GATATGCTAGCTAGCTT                                        r   380 442c-08-A8
+GATCACCTAATGTATCC                                        f   145 442c-30-C6
+GCAAAAACATCGTTGAA                                        r   501 443c-42-D6
+GCAAACCGAAACTCTAG                                        r    97 442c-42-D6
+GCAACTTCTGTTGCGTG                                        f    93 442c-21-B9
+GCGCATAGCTGCGTTAG                                        f     4 442c-29-C5
+GCGGCGGTCAGCAGCAG                                        f     4 442c-41-D5
+GCGGGGCATATTTTGGT                                        f   124 442c-41-D5
+GCGTATTTGCTATCCTA                                        f   431 443c-47-D11
+GCTTCATTCATCCCTGA                                        r     4 442c-27-C3
+GGACTACGCCGTGATGA                                        r   175 442c-44-D8
+GGAGCGTCTAATTCTGG                                        f    75 443c-09-A9
+GTNTCTTTACCTTATGC                                        r     4 443c-09-A9
+GTTAGCCGCATCCTACC                                        f   199 442c-44-D8
+GTTTGGTCCTGTGTATA                                        r    98 443c-45-D9
+NTGNNGTTCGATGGAAA                                        f     4 443c-24-B12
+TACCCCATCCACTTTAC                                        r    84 442c-10-A10
+TAGGAAGGTGAGGGGTT                                        f     4 443c-10-A10
+TAGGTGGGCGTCGCTCC                                        r     4 442c-01-A1
+TCAAAACGATTAACACC                                        f   388 442c-41-D5
+TCAGAGCGAAGAAGCGG                                        r   356 442c-47-D11
+TCTGGAGCCTGGATGTC                                        f   260 442c-02-A2
+                                                         f   263 443c-02-A2
+TGCGGCTCGATGGAAGG                                        r   478 443c-02-A2
+                                                         r   475 442c-02-A2
+TGCGTTTTCAGCACGCT                                        r    27 442c-41-D5
+TGGCCGTCATTGTTGGC                                        r   290 443c-35-C11
+                                                         r   290 442c-35-C11
+TGGCGTCGTGGGCAAGG                                        f     4 442c-13-B1
+TGGGTTCAGGTCTTCAA                                        f    35 442c-44-D8
+TGTAGCTGAAAAATCAC                                        f    27 442c-27-C3
+TTGATCGAAACAGGCGA                                        f   427 442c-30-C6
+                                                         f   426 443c-30-C6
+TTGGAACAGTTCACCGC                                        r     4 442c-36-C12
+TTTGAGATTAATATGAC                                        r     4 442c-33-C9
+
+

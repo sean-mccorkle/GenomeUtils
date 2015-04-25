@@ -1,0 +1,171 @@
+#!/usr/bin/perl
+# Program:       trimers
+# Programmer:    Sean R. McCorkle
+# Language:      perl
+#
+# Description:   read DNA sequences (fasta or short tag table) and output
+#                trimer frequences
+#
+# Usage:         trimers [-tuTA] [<seqs> ...]
+#
+#                 -t  - short tags one per line, rather than fasta
+#                 -u  - unidirectional (for fasta sequences)
+#                 -T  - total only (for fasta sequences) 
+#                 -A  - show all trimers including ambiguities
+#                 -p  - normalize counts to total to 100%
+#                 -n  - numeric specification of trimers (AA=1 1, CG=2 3,...)
+#
+# $Id: trimers,v 0.2 2003/06/03 20:46:23 mccorkle Exp mccorkle $
+#
+
+use  Getopt::Std;
+
+                           ################
+                           # Main Program #
+                           ################
+
+die "bad option\n" unless ( getopts( 'AnptTu' ) );
+
+select( ( select(STDOUT), $| = 1 )[0] );
+select( ( select(STDERR), $| = 1 )[0] );
+
+
+@trimer_list = ();                            # create list of required
+foreach $a ( ( 'A', 'C', 'G', 'T' ) )         # trimers
+   {
+    foreach my $b ( ( 'A', 'C', 'G', 'T' ) )
+       {
+        foreach my $c ( ( 'A', 'C', 'G', 'T' ) )
+           {  push( @trimer_list, "$a$b$c" );  }
+       }
+   }
+
+foreach my $d ( @trimer_list )                # ensure all required trimers are
+   { $trimers{$d} = 0; }                      # count 0 to begin with
+
+if ( $opt_t )
+   {
+    while ( <> )
+       {
+        /([A-Za-z]+)/ || die "Can't find a DNA tag on this line: $_";
+        process( $1, $1 );
+       }
+    output() if ( $opt_T );
+   }
+else
+   {
+    while ( <> )
+       {
+        chomp;
+        if ( /^>(.*)/ )
+           {
+            $new_hdr = $1;
+            process( $seq, $hdr) if ( $hdr );
+            $hdr = $new_hdr;
+            $seq = "";
+           }
+        else
+           {
+            s/\s//g;
+            s/^\d*//;
+            $seq .= uc( $_ );
+           }
+       }
+    process( $seq, $hdr ) if ( $hdr );
+    output() if ( $opt_T );
+   }
+
+
+
+
+
+
+                               ###############
+                               # Subroutines #
+                               ###############
+
+
+sub  process
+   {
+    my ( $seq, $hdr ) = @_;
+
+    my $n = length( $seq ) - 2;
+
+    for ( my $i = 0;  $i < $n;  $i++ )
+       {
+        my $s = substr( $seq, $i, 3 );
+        $trimers{$s}++;
+        $trimers{rc($s)}++  unless ( $opt_t || $opt_u );
+       }
+    output( $hdr ) unless ( $opt_T );
+   }
+
+#
+# Print out the trimer hash table contents, and clear the table
+#
+sub  output
+   {
+    my $label = shift;
+    my @tlist = ( $opt_A ? ( sort keys( %trimers ) ) : @trimer_list );
+
+    if ( $opt_p )                     # if -p, convert counts to normalized
+       {                              # percentages, before printing and
+        my $n = 0;                    # clearing
+        foreach my $d ( @tlist )
+           { $n += $trimers{$d}; }
+        foreach my $d ( @tlist )
+           { $trimers{$d} *=  (($n > 0) ? ( 100.0 / $n) : 0.0);  }  
+                                      # overflows are zeroed out until I think
+                                      # of a better way to handle it.
+       }
+
+    if ( $opt_t && (! $opt_A) && (! $opt_T) )
+       {
+        print "$label " if ( $label );     
+        foreach my $d ( @tlist )
+           {
+            if ( $opt_p )
+               { printf "%4.1f ", $trimers{$d}; }
+            else
+               { printf "%3d", $trimers{$d}; }
+           }
+        print "\n";
+       }
+    else
+       {
+        print "$label:\n" if ( $label );     
+        foreach my $d ( @tlist )
+          { 
+           my $dp = $d;
+           if ( $opt_n )
+              {
+               $dp =~ s/^([A-Z])([A-Z])/$1 $2 /;
+               $dp =~ tr/ACGT/1234/;
+              }
+           printf scalar( $opt_p ? "%s %f\n" : "%s %d\n" ), $dp, $trimers{$d};
+          }
+       }
+    undef( %trimers );
+    foreach my $d ( @tlist )
+       { $trimers{$d} = 0; }
+   }
+
+#
+# rc( $seq ) returns the reverse complement of $seq
+#
+sub  rc
+   {
+    my $s = shift;
+    my $n = length( $s );
+    my $i, $j, $c;
+
+    my $r = " "x$n;
+    for (  $i = $n - 1, $j = 0;  $i >= 0;  $i--, $j++ )
+       {
+        $c = substr( $s, $i, 1 );
+        $c =~tr/acgtmrwsykvhdbnACGTMRWSYKVHDBN/tgcakywsrmbdhvnTGCAKYWSRMBDHVN/;
+        substr( $r, $j, 1 ) = $c;
+       }
+     return( $r );
+   }
+
