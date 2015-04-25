@@ -7,7 +7,7 @@ Most of these read and write sequence data in fasta format.
 
 ### Perl scripts
 
-* **fasta2md5** - reads fasta seqeuences and writes the md5 hex hashcode along with the sequence header (DNA, RNA, protein)
+* **fasta2md5** - reads fasta sequences and writes the md5 hex hashcode along with the sequence header (DNA, RNA, protein)
 * **sel**   - (select) reads fasta sequences and filters according to various criteria (DNA, RNA, protein)
 * **seq_len** - (sequence length) reads fasta sequences and prints out their lengths (DNA, RNA, protein)
 * **trans.pl** - (translate) translates DNA or RNA sequences into protein sequences (fasta format)
