@@ -21,6 +21,7 @@ Most of these read and write sequence data in fasta format.
 
 ### compiled C programs
 
-* **nt** - nucleotide frequencies of DNA or RNA sequences
+* **intervals** - extract multiple sequence intervals from a large DNA sequence (chromosome sized)
 * **kmers** - nucleotide k-mer counts
+* **nt** - nucleotide frequencies of DNA or RNA sequences
 * **prosearch** - search DNA for binding motifs specified by patterns
