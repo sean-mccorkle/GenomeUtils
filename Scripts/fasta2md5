@@ -1,23 +1,34 @@
 #!/usr/bin/perl
 #
-# usage:  fasta2md5  <seqfile> [...]
+# usage:  [-F]  fasta2md5  <seqfile> [...]
 # 
 # converts each fasta-format sequence to an md5sum 
 # (after converting to uppercase) and prints it
 #  out (along with the fasta header)
-
+#
+# Options:  -F   printout fasta sequences using md5 as header
+#           -P   like -f but prepend md5 <space> to header
+#
 use strict;
 use Digest::MD5 qw(md5_hex);
 
+our ( $opt_F, $opt_P );
+use Getopt::Std;
+
+getopts( "FP" ) || die "Bad option, only -F or -P recognized\n";
+
+
 my $hdr;
 my $seq = "";
+
+my $line_len = 50;
 
 while ( <> )
    {
     if ( /^>(.*)/ )
        {
         my $newhdr = $1;
-        print md5_hex( $seq ), "  $hdr\n" if ( $hdr );
+        output( md5_hex( $seq ), $hdr, $seq ) if ( $hdr );
         $hdr = $newhdr;
         $seq = "";
        }
@@ -29,6 +40,35 @@ while ( <> )
        }
    }
 
-print md5_hex( $seq ), "  $hdr\n" if ( $hdr );
+output( md5_hex( $seq ), $hdr, $seq ) if ( $hdr );
 
 
+sub  output
+   {  
+    my ( $md5, $hdr, $seq ) = @_;
+
+    if ( $opt_P )
+        { print_fasta( "$md5 $hdr", $seq ); }        
+    elsif ( $opt_F )
+        { print_fasta( $md5, $seq ); }
+    else
+        { print "$md5  $hdr\n"; }
+   }
+
+
+sub  print_fasta
+   {
+    my ( $hdr, $seq ) = @_;
+    my $i;
+
+    print ">$hdr\n";
+    my $n = length( $seq );                       # calculate length once
+    for ( $i = 0; $i < $n; $i++ )                 # for each character
+       {
+        print substr( $seq, $i, 1 );              # print it out
+        if ( ( ($i + 1) % $line_len ) == 0 )      # every 50 characters
+            { print "\n"; }                       #   put a newline
+       }
+    print "\n" if ( ( $i % $line_len ) != 0 );    # last newline ensures tidy 
+                                                  #output
+   }
