@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 #
-# usage:  [-F]  fasta2md5  <seqfile> [...]
+# usage:  [-FPs]  fasta2md5  <seqfile> [...]
 # 
 # converts each fasta-format sequence to an md5sum 
 # (after converting to uppercase) and prints it
@@ -8,14 +8,16 @@
 #
 # Options:  -F   printout fasta sequences using md5 as header
 #           -P   like -f but prepend md5 <space> to header
+#           -s   use base64 md5, not hex
+#
 #
 use strict;
-use Digest::MD5 qw(md5_hex);
+use Digest::MD5 qw(md5_hex md5_base64);
 
-our ( $opt_F, $opt_P );
+our ( $opt_F, $opt_P, $opt_s );
 use Getopt::Std;
 
-getopts( "FP" ) || die "Bad option, only -F or -P recognized\n";
+getopts( "FPs" ) || die "Bad option, only -F, -P or -srecognized\n";
 
 
 my $hdr;
@@ -28,7 +30,7 @@ while ( <> )
     if ( /^>(.*)/ )
        {
         my $newhdr = $1;
-        output( md5_hex( $seq ), $hdr, $seq ) if ( $hdr );
+        output( md5( $seq ), $hdr, $seq ) if ( $hdr );
         $hdr = $newhdr;
         $seq = "";
        }
@@ -40,7 +42,12 @@ while ( <> )
        }
    }
 
-output( md5_hex( $seq ), $hdr, $seq ) if ( $hdr );
+output( md5( $seq ), $hdr, $seq ) if ( $hdr );
+
+
+sub  md5
+   {  return( $opt_s ? md5_base64( shift ) : md5_hex( shift ) ); }
+
 
 
 sub  output
