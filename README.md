@@ -17,6 +17,7 @@ Most of these read and write sequence data in fasta format.
 * **rc** - reverse complement DNA fasta sequences
 * **sel**   - (select) reads fasta sequences and filters according to various criteria (DNA, RNA, protein)
 * **seq_len** - (sequence length) reads fasta sequences and prints out their lengths (DNA, RNA, protein)
+* **seq_range** - (range of sequences filter) reads fasta sequences, prints out only those in specified numeric range  
 * **splt** - breaks files of multiple fasta sequences into separate files (DNA, RNA, protein)
 * **trans.pl** - (translate) translates DNA or RNA sequences into protein sequences (fasta format)
 
