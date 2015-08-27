@@ -1,0 +1,33 @@
+#!/usr/bin/env  perl
+#
+#  usage:   seq_range <first> <n>  [seqs]
+#
+#   where <first> and <n> are integers
+#   pass fasta sequences >=  <first> < <first> + <n>
+#   where the first sequence is numbered 1
+#
+#  This is intended to run faster than sel which reads and assembles
+#  the sequences
+#
+#  TODO - convert command line args into options for first, last, n assuming
+#         reasonable 
+#
+use strict;
+
+my $i = 0;
+my $start = shift;
+my $n = shift;
+my $stop = $start + $n;
+
+my $pass = 0;
+
+while ( <> )
+   {
+    if ( /^>/ )
+       {
+        $i++;
+        $pass = ( $i >= $start ) && ( $i < $stop );
+       }
+    print if ( $pass );
+   }
+
