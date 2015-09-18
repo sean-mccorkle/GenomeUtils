@@ -1,0 +1,108 @@
+#!/usr/bin/perl
+#
+# new_overlapper  a b 
+#  both a and b files of format                                                                    
+#      <chr>  <start> <stop>  [<dir> [...]]                                            
+#
+#    same chromosome, each sorted by interval position,
+#    with non-self-overlapping intervals
+#
+
+use strict;
+
+my ( $file_a, $file_b ) = @ARGV;
+
+my $a_chr;
+my $b_chr;
+my $a1; 
+my $a2;
+my $b1;
+my $b2;
+my $n;
+my $m;
+my $u;  # same as n - only for completely contained occurances of b
+my $v;  # same as m -   "   "       "         "         "      "  "
+
+open( A, $file_a ) || die "Can't open $file_a: $!\n";
+open( B, $file_b ) || die "Can't open $file_b: $!\n";
+
+( $b_chr, $b1, $b2 ) = get_interval( \*B );
+
+
+while ( $_ = <A> )  # for each a interval 
+   {
+    chomp;     # save entire a-line for eventual output
+    ( $a_chr, $a1, $a2 ) = split( /\s+/ );
+    ($n,$m) = (0,0);
+    ($u,$v) = (0,0);
+    if ( $b_chr && ($a2 >= $b1) )
+       {
+        while ( $b_chr && ($b2 < $a1) )   # skip b intervals to the left of this a
+            {  ( $b_chr, $b1, $b2 ) = get_interval( \*B ); }
+        Assert( "('$b_chr' eq '') || ($b2 >= $a1)", "#1 not b or b2 >= a1" );
+        if ( $b_chr ne '' )
+           {
+            if ( $b2 > $a2 )  # if right end of B past right end of a
+               {
+                if ( $b1 > $a2 )
+                    { } # no overlap - this b is completely to the right of a 
+                elsif ( $b1 < $a1 )
+                    { Assert( "($b1 < $a1) && ($b2 > $a2)", "b completely encloses a" );
+                      ($n,$m) = ( 1, ($a2 - $a1) + 1  ); 
+                    } 
+                elsif ( $b1 >= $a1 )
+                    { Assert( "($b1 >= $a1) && ($b2 > $a2)", "left end of b in a" );
+                      ($n,$m) = ( 1, ($a2 - $b1) + 1 );
+                    }
+                else
+                    { die "this should never happen\n"; }
+               }
+            else
+               { Assert( "('$b_chr' ne '') && ($b2 <= $a2) && ($b2 >= $a1)", "right end of b inside a");
+                 while ( $b_chr && ($b2 <= $a2) )
+                    {
+                     $n++;
+                     if ( $b1 >= $a1 )
+                        { 
+                          $m += ($b2 - $b1) + 1; 
+                          $u++;
+                          $v += ($b2 - $b1) + 1;
+                        }
+                     else
+                        { $m += ($b2 - $a1) + 1; }
+                     ( $b_chr, $b1, $b2 ) = get_interval( \*B );
+                    }
+                 Assert( "('$b_chr' eq '') || (($b2 > $a2) && ($b1 >= $a1))", "b daisychain runout");
+                 # must check this last b for overlap
+                 if ( $b_chr && $b1 <= $a2 )
+                    {
+                     $n++;
+                     $m += ($a2 - $b1) + 1;
+                    }
+               }
+           }
+       }
+    print "$_ $n $m $u $v\n";
+   }
+
+close( B );
+close( A );
+
+sub get_interval
+   { 
+    my $fh = shift;
+    my $line = <$fh>;
+    chomp( $line );
+    return ( $line ?  split( /\s+/, $line ) : ( '', 0, 0 ) );
+   }
+
+sub  Assert
+   {
+    my $exp = shift;
+    die "assertion failure ($exp) \"@_\"\n" unless ( eval( $exp ) );
+   }
+
+
+
+
+
