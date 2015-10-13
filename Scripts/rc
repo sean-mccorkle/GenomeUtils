@@ -14,13 +14,14 @@
 #
 # Options:
 #                   -a <str>   append str to each fasta > header  
+#                   -s <str>   reverse complement string rather than fasta on stdin
 #
 # $Id: rc,v 0.2 2003/12/29 13:10:27 mccorkle Exp mccorkle $
 #
 
 use  Getopt::Std;
 
-getopts( "a:" ) || die "Bad option\n";
+getopts( "a:s:" ) || die "Bad option\n";
 
 $line_len = 50;
 
@@ -32,6 +33,12 @@ $line_len = 50;
 # state machine loop to read fasta format sequences, make them into
 # perl character strings, and then process them
 #
+if ( $opt_s )
+   {
+    print rc( $opt_s ), "\n";
+    exit;
+   }
+
 while ( <> )                                         # keep reading lines
    {
     if ( /^>(.*)/ )                                  # is it a FASTA >header?
