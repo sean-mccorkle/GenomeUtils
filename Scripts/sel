@@ -6,7 +6,7 @@
 # Description:  Selects some subset of input sequences (fasta/BNL) and outputs
 #               them.  Does not alter the sequences which are passed.
 #
-# Usage:        sel [-Chv] [-B <n>] [-N <n>] [ <fasta file> ... ]
+# Usage:        sel [-ChvQ] [-B <n>] [-N <n>] [ <fasta file> ... ]
 #
 #               a single hyphen (-) can be used as a file name to specify
 #               stdin.  If no files are specified, stdin is scanned.
@@ -23,6 +23,7 @@
 #                        reg. expr. <pat>
 #               -N <n>   cut off selection after <n> sequences have been output
 #                        (default is all sequences)
+#               -Q       input files are fastq, not fasta
 #               -S <pat> print sequences which contain reg. exp. <pat>
 #               -v       print version, then exit
 #
@@ -47,7 +48,7 @@ use  Getopt::Std;
 select( ( select(STDOUT), $| = 1 )[0] );
 select( ( select(STDERR), $| = 1 )[0] );
 
-getopts( "a:b:B:ChH:N:S:v" ) || die "Bad option.  type sel -h for help\n";
+getopts( "a:b:B:ChH:N:QS:v" ) || die "Bad option.  type sel -h for help\n";
 if ( $opt_h ) { help();  exit; }
 if ( $opt_v ) { version();  exit; }
 $start = $opt_B ? $opt_B : 1;
@@ -59,25 +60,46 @@ $n_seq = 0;                        # counts number of sequences read
 $n_out = 0;                        # counts number of sequences output
 
 
-
-while ( <> )                       # finite state machine, reading FASTA format
-   {                               # format sequence lines.  Either its
-    if ( /^>/ )                    # a sequence header
+if ( $opt_Q )                      # if FASTQ format
+   {
+    while ( $_ = <> )
        {
-        $new_hdr = $_;
-        select_seq( $hdr, $seq ) if ( defined( $hdr ) );
-        $hdr = $new_hdr;
-        $seq = "";
-       }
-    else
-       {                           # or its a sequence data line, so we 
-        chomp;                     # trim the trailing newline,
-        s/\s//g;                   # extract whitespace and 
-        $seq .= $_;                # append it to the current buffer
+        if ( /^@/ )
+           { $hdr = $_; }
+        else
+           { die "does not look like FASTQ header: $_"; }
+        ( $_ = <> ) || die "did not find FASTQ sequence line\n";
+        chomp;
+        $seq = $_;
+        ( $_ = <> ) || die "did not find FASTQ quality header line\n";
+        my $qhdr = $_;
+        /^+/ || die "die find FASTQ quality header line\n"; 
+        ( $_ = <> ) || die "did not find FASTQ quality line\n";
+        my $qseq = $_;
+        select_seq( $hdr, $seq, $qhdr, $qseq );
        }
    }
+else                               # FASTA format
+   {
+    while ( <> )                   # finite state machine, reading FASTA format
+       {                           # format sequence lines.  Either its
+        if ( /^>/ )                # a sequence header
+           {
+            $new_hdr = $_;
+            select_seq( $hdr, $seq ) if ( defined( $hdr ) );
+            $hdr = $new_hdr;
+            $seq = "";
+           }
+        else
+           {                       # or its a sequence data line, so we 
+            chomp;                 # trim the trailing newline,
+            s/\s//g;               # extract whitespace and 
+            $seq .= $_;            # append it to the current buffer
+           }
+       }
+    select_seq( $hdr, $seq ) if ( defined( $hdr ) );
+   }
 
-select_seq( $hdr, $seq ) if ( defined( $hdr ) );
 
 
                              ###############
@@ -89,7 +111,7 @@ select_seq( $hdr, $seq ) if ( defined( $hdr ) );
 #
 sub  select_seq
    {
-    my ( $hdr, $seq ) = @_;
+    my ( $hdr, $seq, @rest ) = @_;
 
     if ( ++$n_seq >= $start )
        {
@@ -107,7 +129,7 @@ sub  select_seq
                         $mat = uc( $mat );
                         $hdr =~ s/$opt_H/$mat/i;
                        }
-                    print_fasta( $hdr, $seq );
+                    print_seq( $hdr, $seq, @rest );
                     $n_out++;
                    }
                }
@@ -122,19 +144,33 @@ sub  select_seq
                         $mat = uc( $mat );
                         $seq =~ s/$opt_S/$mat/i;
                        }
-                    print_fasta( $hdr, $seq );
+                    print_seq( $hdr, $seq, @rest );
                     $n_out++;
                    }
                }
             else
                {
-                print_fasta( $hdr, $seq );
+                print_seq( $hdr, $seq, @rest );
                 $n_out++;
                }
            }
        }
    }
 
+sub  print_seq
+   {
+    my ( $hdr, $seq, @rest ) = @_;
+    if ( $opt_Q )
+       { print_fastq( $hdr, $seq . "\n", @rest ); }
+    else
+       { print_fasta( $hdr, $seq ); }
+   }
+
+sub  print_fastq
+   {
+    foreach my $line ( @_ )
+      { print "$line" };
+   }
 #
 # print_fasta( $hdr, $seq ) prints out a sequence in FASTA format
 #  ($hdr is assumed to include beginning > and ending \n already)
@@ -177,6 +213,7 @@ Options:
          -H <pat> print sequences with headers containing reg. expr. <pat>
          -N <n>   cut off selection after <n> sequences have been output
                   (default is all sequences)
+         -Q       input sequences are fastq
          -S <pat> print sequences which contain reg. exp. <pat>
          -v       print version, then exit
 EndOfHelp
