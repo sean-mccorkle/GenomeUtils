@@ -1,0 +1,49 @@
+#!/usr/bin/perl
+#
+
+use strict;
+
+my $line_len = 50;   # option to set this!!
+
+my $seq;
+my $hdr;
+
+while ( <> )
+   {
+    if ( /^>(.*)/ )
+       {
+        my $new_hdr = $1;
+        output( $hdr, $seq ) if ( $hdr );
+        $hdr = $new_hdr;
+        $seq = "";
+       }
+    else
+       {
+        chomp;
+        s/\s//g;
+        s/^\d+//;   # trim leading digits (in case fed pp output)
+        $seq .= $_;
+       }
+   }
+
+output( $hdr, $seq ) if ( defined( $hdr ) );
+
+
+sub  output
+   {
+    my ($hdr, $seq) = @_;
+ 
+    print ">$hdr\n";
+
+    my $n = length( $seq );                       # calculate length once
+    my $i;
+    for ( $i = 0; $i < $n; $i++ )                 # for each character
+       {
+        print substr( $seq, $i, 1 );              # print it out
+        if ( ( ($i + 1) % $line_len ) == 0 )      # every 50 characters
+            { print "\n"; }                       #   put a newline
+       }
+    print "\n" if ( ( $i % $line_len ) != 0 );    # last newline ensures tidy 
+                                                  #output
+
+   }
