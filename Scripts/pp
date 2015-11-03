@@ -1,9 +1,28 @@
 #!/usr/bin/perl
+# Program:      pp
+# Description:  fasta-ish sequence pretty-printer
+# Programmer:   Sean R. McCorkle
+#               Biology Dept.  Brookhaven National Laboratory
+#
+#
+# Usage:
+#           pp [options]  [fasta-seqs ...]
+#
+# Options:
+#
+#           -l <n>   print <n> characters per line (default 50)
+#           -n       don't print position numbers on left
+#           -s <n>   insert a space every <n> characters (default 10)y
 #
 
 use strict;
+our( $opt_l, $opt_n, $opt_s );
+use Getopt::Std;
 
-my $line_len = 50;   # option to set this!!
+getopts( "l:ns:" );
+
+my $line_len = $opt_l ? $opt_l : 50;    # characters per line in output
+my $spacer_len = $opt_s ? $opt_s : 10;  # put a space every one of these lengths
 
 my $seq;
 my $hdr;
@@ -32,18 +51,30 @@ output( $hdr, $seq ) if ( defined( $hdr ) );
 sub  output
    {
     my ($hdr, $seq) = @_;
- 
     print ">$hdr\n";
 
     my $n = length( $seq );                       # calculate length once
     my $i;
+    outputlinenum( $i+1 );
     for ( $i = 0; $i < $n; $i++ )                 # for each character
        {
         print substr( $seq, $i, 1 );              # print it out
         if ( ( ($i + 1) % $line_len ) == 0 )      # every 50 characters
-            { print "\n"; }                       #   put a newline
+           { 
+            print "\n";                           #   put a newline
+            outputlinenum( $i+1 ) if ( $i < $n);  #   and next line num
+           }
+        elsif ( ( ($i + 1) % $spacer_len ) == 0 )
+           {
+            print " ";
+           }
        }
     print "\n" if ( ( $i % $line_len ) != 0 );    # last newline ensures tidy 
                                                   #output
 
+   }
+
+sub  outputlinenum
+   {
+    printf "%10d ", (shift) unless( $opt_n );
    }
