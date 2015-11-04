@@ -1,0 +1,91 @@
+#!/usr/bin/perl
+# Program:     kmers_by_frame
+# Programmer:  Sean R. McCorkle
+#              Biology Dept, Brookhaven National Laboratory
+#
+# Description: reads fasta sequences, prints out counts of k-mers in each reading 
+#              frame (top (+) strand frames only, intended primarily for analyzing
+#              coding sequences.  For bottom strand DNA, rc the sequence first)
+#
+# Usage: 
+#               kmers_by_frame [options]  [fasta sequences ...]
+#
+# Options:
+#              -f [<n>]   report for <n> frames 
+#              -k [<k>]   report for kmers of length <k>  (default 3)
+#              -p         report percentages for each kmer
+#
+ 
+use strict;
+our( $opt_f, $opt_k, $opt_p );
+use Getopt::Std;
+
+getopts( "f:k:p" ) || die "unrecognized option\n";
+
+my $n_frames = $opt_f ? $opt_f : 3;
+my $k        = $opt_k ? $opt_k : 3;
+
+my $hdr;
+my $seq;
+
+my %counts;
+
+while ( <> )
+   {
+    chomp;
+    if ( /^>(.*)/ )
+       {
+        my $newhdr = $1;
+        process( $hdr, $seq ) if ( $hdr );
+        $hdr = $newhdr; 
+        $seq = "";
+       }
+    else
+       {
+        s/\s//g;
+        $seq .= uc( $_ );
+       }
+   }
+
+process( $hdr, $seq ) if ( $hdr );
+
+foreach my $kmer ( sort keys( %counts ) )
+   {
+    my $tot = sum( values( %{$counts{$kmer}} ) ) if ( $opt_p );
+    print "$kmer  ";
+    for ( my $i = 0; $i < $n_frames; $i++ )    # for each frame
+       {
+        if ( $opt_p )
+           {  printf "%10.3lf    ", 100.0 * ($counts{$kmer}->{$i} / $tot);  }
+        else
+           {  printf "%10d    ", $counts{$kmer}->{$i};  }
+       }
+    print "\n";
+   }
+
+
+
+sub   process
+   {
+    my ( $hdr, $seq ) = @_;
+
+    my $len = length( $seq );
+    my $n = ($len - $k) + 1;
+    for ( my $i = 0; $i < $n; $i++ )
+       {
+        my $kmer = substr( $seq, $i, $k );
+        #printf "%10d $kmer\n", $i % $n_frames;
+        $counts{$kmer} = {} unless( defined( $counts{$kmer} ) );
+        $counts{$kmer}->{($i % $n_frames)} += 1;
+       }
+   }
+
+
+sub  sum
+   {
+    my $sum = 0;
+    foreach my $x ( @_ )
+       { $sum += $x; }
+    return( $sum );
+   }
+
