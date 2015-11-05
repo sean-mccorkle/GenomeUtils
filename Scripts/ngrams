@@ -61,7 +61,6 @@ sub  process
     for ( my $i = 0; $i < $n; $i++ )
        {
         my $ngram = substr( $seq, $i, $k );
-        print "$i $ngram\n";
         $counts{$ngram}++;
        }
    }
