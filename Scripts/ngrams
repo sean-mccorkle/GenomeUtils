@@ -1,0 +1,68 @@
+#!/usr/bin/perl
+# Program:       ngrams
+# Programmer:    Sean R. McCorkle,
+#                Biology Department, Brookhaven National Laboratory
+#
+# Language:      perl5
+#
+# Description:   read fasta-format sequences (DNA, RNA, protein) and prints out
+#                counts of n-grams of size k.
+#
+# Usage:         ngrams [opts] [<seq-file> ...]
+#
+#                where <seq-file>'s are in FASTA format.  Stdin is scanned
+#                if no files are specified.
+#
+# Options:
+#                -k <k>  compile ngrams of length k (default 3)
+#
+
+
+use strict;
+our ( $opt_k ); 
+use  Getopt::Std;
+
+getopts( "k:" ) || die "bad option\n";
+
+my $k = $opt_k ? $opt_k : 3;
+
+my $seq;
+my $hdr;
+my %counts;
+
+while ( <> )                                 # keep reading lines
+   {
+    if ( /^>(.*)/ )                          # is it a FASTA >header?
+       {                                     # handle current sequence
+        my $new_hdr = $1;         
+        process( $hdr, $seq ) if ( $hdr );
+        $hdr = $new_hdr;                     # reset sequence header
+        $seq = "";                           # and buffer
+       }
+    else                                     # not a header? must be sequence
+       {
+        chomp;                               # off with the newline
+        s/\s//g;                             # hose out all whitespace (if any)
+        $seq .= uc( $_ );                    # uppercase it & append to buffer
+       }
+   }
+
+process( $hdr, $seq ) if ( $hdr );
+
+foreach my $ngram ( sort keys( %counts ) )
+   { printf "$ngram %10d\n", $counts{$ngram}; }
+    
+
+sub  process
+   {
+    my ( $hdr, $seq ) = @_;
+
+    my $n = (length( $seq ) - $k) + 1;
+    for ( my $i = 0; $i < $n; $i++ )
+       {
+        my $ngram = substr( $seq, $i, $k );
+        print "$i $ngram\n";
+        $counts{$ngram}++;
+       }
+   }
+
