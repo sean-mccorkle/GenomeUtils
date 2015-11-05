@@ -11,8 +11,9 @@ Most of these read and write sequence data in fasta format.
 * **connected_subgraphs** Reads pairwise edges (node node) and outputs connected subgraphs
 * **extract_sequences_list** Read list of ids, extract those fasta sequences with those ids in header
 * **fasta2md5** - read fasta sequences and write the md5 hex hashcode along with the sequence header (DNA, RNA, protein)
-* **kmers_by_frame** - print out kmer counts in each reading frame (DNA, RNA - can work protein too).
+* **kmers_by_frame** - print out kmer counts in each reading frame (DNA, RNA - can work on proteins too).
 * **new_overlapper** - reads two (sorted) tables of chromosome coordinates and reports overlaps between them
+* **ngrams** - reads fasta-format sequences, prints counts of ngrams (DNA, RNA, protein)
 * **numseqs** - report count of numbers of fasta sequences (DNA, RNA, protein)
 * **orfs.pl** - find open reading frames in DNA sequences
 * **poly_a** - report long polynucleotide streches in DNA and RNA sequences
