@@ -15,20 +15,23 @@
 #
 # Options:
 #                -k <k>  compile ngrams of length k (default 3)
+#                -p      print percentages instead of counts
+#                -s      sort by counts (decreasing)
 #
 
 
 use strict;
-our ( $opt_k ); 
+our ( $opt_k, $opt_p, $opt_s ); 
 use  Getopt::Std;
 
-getopts( "k:" ) || die "bad option\n";
+getopts( "k:ps" ) || die "bad option\n";
 
 my $k = $opt_k ? $opt_k : 3;
 
 my $seq;
 my $hdr;
 my %counts;
+my $total = 0;
 
 while ( <> )                                 # keep reading lines
    {
@@ -49,8 +52,15 @@ while ( <> )                                 # keep reading lines
 
 process( $hdr, $seq ) if ( $hdr );
 
-foreach my $ngram ( sort keys( %counts ) )
-   { printf "$ngram %10d\n", $counts{$ngram}; }
+foreach my $ngram ( sort { if ( $opt_s ) { return($counts{$b} <=> $counts{$a}); }
+                                    else { return( $a cmp $b ); } }
+                          keys( %counts ) )
+   { 
+    if ( $opt_p )
+       { printf "$ngram %10.6lf\n", 100.0 * $counts{$ngram} / $total;  }
+    else 
+       { printf "$ngram %10d\n", $counts{$ngram};  }
+   }
     
 
 sub  process
@@ -62,6 +72,7 @@ sub  process
        {
         my $ngram = substr( $seq, $i, $k );
         $counts{$ngram}++;
+        $total++;
        }
    }
 
