@@ -23,30 +23,35 @@ getopts( "FPs" ) || die "Bad option, only -F, -P or -srecognized\n";
 my $hdr;
 my $seq = "";
 
-my $line_len = 50;
+my $line_len = 60;
 
 while ( <> )
    {
     if ( /^>(.*)/ )
        {
         my $newhdr = $1;
-        output( md5( $seq ), $hdr, $seq ) if ( $hdr );
+        output( md5( $seq ), $hdr, $seq ) if ( $hdr && length( $seq ) > 0 );
         $hdr = $newhdr;
         $seq = "";
        }
     else
        {
         chomp;
-        s/[\s0-9]//g;
+        #s/[\s0-9]//g;
+        s/\s//g;
         $seq .= uc( $_ );
        }
    }
 
-output( md5( $seq ), $hdr, $seq ) if ( $hdr );
+output( md5( $seq ), $hdr, $seq ) if ( $hdr && length( $seq ) > 0 );
 
 
 sub  md5
-   {  return( $opt_s ? md5_base64( shift ) : md5_hex( shift ) ); }
+   {  
+    my $seq = shift;
+    $seq =~ s/\*$//;
+    return( $opt_s ? md5_base64( $seq ) : md5_hex( $seq ) ); 
+   }
 
 
 
