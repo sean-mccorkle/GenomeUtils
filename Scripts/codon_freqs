@@ -1,5 +1,9 @@
 #!/usr/bin/perl
 #
+# Read DNA/RNA sequences in fasta format, print out counts
+# and frequencies of codon usage.
+#
+
 use strict;
 
 
