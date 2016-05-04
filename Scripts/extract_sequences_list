@@ -36,22 +36,23 @@ if ( $opt_Q )                      # if FASTQ format
    {
     while ( $_ = <> )   # get record
        {
+        my $hdr;
         if ( /^@/ )        # if header, 
            { 
             $hdr = $_; 
-            $hdr =~ /^@(\S+)(\/[12])?/;   # get ID & figure out if we print it or not
-            $pass = $want{$1}; 
+            $hdr =~ /^@(\S+)/;   # get ID & figure out if we print it or not
+            my $id = $1;
+            $id =~ s/\/[12]$//;
+            $pass = $want{$id}; 
             $pass = ! $pass if ( $opt_v );
-            $pass = 0 if ( $opt_u && $pass && $have{$1} );
-            #undef( $want{$1} ) if ( $want{$1} && $opt_u );  # clear after first time
-            $have{$1} = 1 if ( $opt_u && $pass );
-
+            $pass = 0 if ( $opt_u && $pass && $have{$id} );
+            #undef( $want{$id} ) if ( $want{$id} && $opt_u );  # clear after first time
+            $have{$id} = 1 if ( $opt_u && $pass );
            }
         else
            { die "does not look like FASTQ header: $_"; }
         ( $_ = <> ) || die "did not find FASTQ sequence line\n";    # now collect all records for 
-        chomp;                                                      # this read
-        $seq = $_;
+        my $seq = $_;
         ( $_ = <> ) || die "did not find FASTQ quality header line\n";
         my $qhdr = $_;
         /^+/ || die "die find FASTQ quality header line\n"; 
