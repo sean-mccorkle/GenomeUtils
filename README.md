@@ -15,6 +15,7 @@ Most of these read and write sequence data in fasta format.
 * **new_overlapper** - reads two (sorted) tables of chromosome coordinates and reports overlaps between them
 * **ngrams** - reads fasta-format sequences, prints counts of ngrams (DNA, RNA, protein)
 * **numseqs** - report count of numbers of fasta sequences (DNA, RNA, protein)
+* **one_line_fasta** - remove newlines from fasta sequences (ouput sequence on one line only, regardless of length)
 * **orfs.pl** - find open reading frames in DNA sequences
 * **poly_a** - report long polynucleotide streches in DNA and RNA sequences
 * **pp** - fasta format sequence pretty-printer (DNA, RNA, protein)
