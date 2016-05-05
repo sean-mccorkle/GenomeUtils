@@ -16,11 +16,11 @@ CC          = cc
 MAXCOPT     = -O3
 
 # for linux
-CLIBS       = 
-RANLIB      =
+# CLIBS       = 
+# RANLIB      =
 # for MacOSX
-#CLIBS       = -lm      
-#RANLIB      = ranlib   
+CLIBS       = -lm      
+RANLIB      = ranlib   
 
 
 CSRCS      = intervals.c kmers.c nt.c prosearch.c
