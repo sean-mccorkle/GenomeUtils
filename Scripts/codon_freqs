@@ -30,11 +30,11 @@ my %codons = (
                'V' => [ 'GTT', 'GTC', 'GTA', 'GTG' ],
                '*' => [ 'TAA', 'TGA', 'TAG' ],
              );
-my %trans;
-my %freq;
+
+my %trans;     # trans{cod} == aa
+my %freq;      # freq{cod} == number of occurences
 
 create_trans();
-
 
 my $seq;
 my $hdr;
@@ -45,23 +45,27 @@ while ( $_ = <> )
     if ( /^>(.*)$/ )
        {
         $new_hdr = $1;
-        process( $hdr, $seq ) if ( defined( $hdr ) );
+        count_codons( $hdr, $seq ) if ( defined( $hdr ) );
         $hdr = $new_hdr;
         $seq = "";
        }
+    else
+       {
+        chomp;
+        s/\s//g;
+        $seq .= uc( $_ );
+       }
    }
 
-process( $hdr, $seq ) if ( defined( $hdr ) );
+count_codons( $hdr, $seq ) if ( defined( $hdr ) );
 
-print "$seq\n";
-
-
+report();
 
 
 
-                                      ###############
-                                      # Subroutines #
-                                      ###############
+                                   ###############
+                                   # Subroutines #
+                                   ###############
 
 #
 # creates %trans from %codons,  where $trans{$codon} = $aa  
@@ -82,7 +86,41 @@ sub  create_trans
    }
 
 
-sub  fscore
+sub  count_codons
+   {
+    my ( $hdr, $seq ) = @_;
+    my $len = length( $seq );
+    #print ">$hdr\n";
+    for ( my $i = 0; $i < $len; $i += 3 )
+       {
+        my $cod = substr( $seq, $i, 3 );
+        next unless( $trans{$cod} );     # ignore things like N
+        $freq{$cod}++;
+        #print "$i $cod ", $trans{$cod}, "   ", $freq{$cod}, "\n";
+       }
+   }
+
+sub  report
+   {
+    my @allcods = sort keys( %freq );
+    my $tot = freqtot( @allcods );
+    foreach my $cod ( @allcods )
+       { print "$cod: ", $freq{$cod}, "  ", 1000.0 * $freq{$cod} / $tot, "\n"; }
+    foreach my $aa ( sort keys( %codons ) )
+       {
+        my @aacods = @{$codons{$aa}};
+        my $aatot = freqtot( @aacods );
+        print "$aa:  ";
+        foreach my $cod ( @aacods )
+           {
+            printf "  $cod:%8.3f", 100.0 * $freq{$cod} / $aatot;
+           }
+        print "\n";
+       }
+   }
+
+
+sub  freqtot
    {
     my $tot = 0.0;
 
