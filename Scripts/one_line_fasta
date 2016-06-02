@@ -1,0 +1,26 @@
+#!/usr/bin/perl
+#
+#   feed this fasta sequences on the command line or standard input.  
+#   This outputs (standard output) each sequence in fasta such that 
+#   the sequence is all on one line (regardless of length)
+#
+use strict;
+
+my $seq = "";
+
+while ( <> )
+   {
+    if ( /^>/ )
+       {
+        print "$seq\n" if ( $seq );   # print previous sequence if exists
+        $seq = "";                    # reset buffer
+        print;                        # print this header
+       }
+    else
+       {
+        chomp;                        # remove newline
+        s/\s//g;                      # remove any other whitespace for good measure
+        $seq .= $_;
+       }
+   }
+print "$seq\n" if ( $seq );           # print last sequence if exists
