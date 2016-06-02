@@ -72,17 +72,14 @@ report();
 #
 sub  create_trans
    {
-    my $n = 0;
     foreach my $aa ( keys( %codons ) )
        {
         foreach my $cod ( @{$codons{$aa}} )
            {
             die "already have " . $trans{$cod} . " for codon $cod: $aa\n" if ( $trans{$cod} );
             $trans{$cod} = $aa;  
-            $n++;
            }
        }
-    print "$n codons in translation table\n";
    }
 
 
@@ -104,19 +101,31 @@ sub  report
    {
     my @allcods = sort keys( %freq );
     my $tot = freqtot( @allcods );
-    foreach my $cod ( @allcods )
-       { print "$cod: ", $freq{$cod}, "  ", 1000.0 * $freq{$cod} / $tot, "\n"; }
+    #foreach my $cod ( @allcods )
     foreach my $aa ( sort keys( %codons ) )
        {
         my @aacods = @{$codons{$aa}};
         my $aatot = freqtot( @aacods );
-        print "$aa:  ";
         foreach my $cod ( @aacods )
-           {
-            printf "  $cod:%8.3f", 100.0 * $freq{$cod} / $aatot;
+           { 
+            printf "%s %s  %10d  %8.3f  %8.3f\n", 
+                    $aa, $cod, $freq{$cod}, 100.0 * $freq{$cod} / $tot,
+                    100.0 * $freq{$cod} / $aatot;
            }
-        print "\n";
        }
+
+    # this might be a useful alternate output format, grouped on a single line:
+    #foreach my $aa ( sort keys( %codons ) )
+    #   {
+    #    my @aacods = @{$codons{$aa}};
+    #    my $aatot = freqtot( @aacods );
+    #    print "$aa:  ";
+    #    foreach my $cod ( @aacods )
+    #       {
+    #        printf "  $cod:%8.3f", 100.0 * $freq{$cod} / $aatot;
+    #       }
+    #    print "\n";
+    #   }
    }
 
 
