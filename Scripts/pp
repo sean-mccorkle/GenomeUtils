@@ -62,7 +62,7 @@ sub  output
         if ( ( ($i + 1) % $line_len ) == 0 )      # every 50 characters
            { 
             print "\n";                           #   put a newline
-            outputlinenum( $i+1 ) if ( $i < $n);  #   and next line num
+            outputlinenum( $i+2 ) if ( $i < $n);  #   and next line num
            }
         elsif ( ( ($i + 1) % $spacer_len ) == 0 )
            {
