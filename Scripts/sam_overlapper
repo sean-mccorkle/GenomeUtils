@@ -1,0 +1,117 @@
+#!/usr/bin/perl
+#
+# Usage:   sam_overlapper [-v]  transcript_file  sam_file
+#
+#   BOTH transcript file and sam file must ALREADY be sorted by chromosome
+#   and then interval 
+#
+#   transcript file has format
+#
+#      <chr>  <start> <stop>  [<dir> [...]]                                     #       
+#   and its assumed there are no overlapping transcripts.
+#
+
+use strict;
+our( $opt_v );
+use Getopt::Std;
+
+getopts( 'v' ) || die "bad option: only -v recognized\n";
+
+my ( $transcript_file, $sam_file ) = @ARGV;
+
+my $trans_chr;
+my $sam_chr;
+my $trans_a;    # transcript start
+my $trans_b;    # transcript stop
+my $sam_a;      # sam read start
+my $sam_b;      # sam read stop
+my $sam_line;   # sam input line
+
+open( TRANS, $transcript_file ) || die "Can't open $transcript_file: $!\n";
+open( SAM, $sam_file ) || die "Can't open $sam_file: $!\n";
+
+( $sam_chr, $sam_a, $sam_b, $sam_line ) = get_next_sam( \*SAM );
+
+while ( $_ = <TRANS> )  # for each a interval 
+   {
+    chomp;     # save entire a-line for eventual output
+    ( $trans_chr, $trans_a, $trans_b ) = split( /\s+/ );
+
+    while ( $sam_chr && preceeds( $sam_chr, $sam_b, $trans_chr, $trans_a )  )   # skip sam intervals completely to the 
+       {                                                                        # left of this tran      
+        print "$sam_line" if ( $opt_v );
+        ( $sam_chr, $sam_a, $sam_b, $sam_line ) = get_next_sam( \*SAM ); 
+       }
+
+    while ( $sam_chr && overlaps( $sam_chr, $sam_a, $sam_b, $trans_chr, $trans_a, $trans_b ) )
+       {
+        print "$sam_line" unless( $opt_v );
+        ( $sam_chr, $sam_a, $sam_b, $sam_line ) = get_next_sam( \*SAM ); 
+       }
+   }
+
+close( TRANS );
+
+# run out remaining sams
+while ( $sam_chr )
+   {
+    print "$sam_line" if ( $opt_v );
+    ( $sam_chr, $sam_a, $sam_b, $sam_line ) = get_next_sam( \*SAM );
+   }
+
+
+close( SAM );
+
+
+# preceeds( $sam_chr, $sam_b, $trans_chr, $trans_a )
+#     returns TRUE if sam read is completely to the left of the given
+#     transcript (including if its on the preceeding chromosome
+
+sub  preceeds
+   {
+    my ($sam_chr, $sam_b, $trans_chr, $trans_b ) = @_;
+    return( 1 ) if ( ( $sam_chr cmp $trans_chr ) < 0 );
+    return( 0 ) if ( ( $sam_chr cmp $trans_chr ) > 0 );   # this should never occur
+    if ( ($sam_chr cmp $trans_chr) == 0 )
+       { return( $sam_b < $trans_a ); }
+    else        
+       { die "in preceeds - this should never happen\n"; }
+   }
+
+#  overlaps( $sam_chr, $sam_a, $sam_b, $trans_chr, $trans_a, $trans_b ) )
+#  returns true if the intervals overlap
+
+sub  overlaps
+   {
+    my ( $sam_chr, $sam_a, $sam_b, $trans_chr, $trans_a, $trans_b ) = @_;
+
+    return( 0 ) if ( $sam_chr ne $trans_chr );
+    return( 0 ) if ( $sam_b < $trans_a );
+    return( 0 ) if ( $sam_a > $trans_b );
+    return( 1 );
+   }
+
+sub get_next_sam
+   { 
+    my $fh = shift;
+    my $line = <$fh>;
+    if ( $line )
+       {
+        my ( $chrom, $left, $cigar) = (split( /\t/, $line ))[2,3,5];
+        my $right = $left + 100;
+        return( ($chrom, $left, $right, $line ) );
+       }
+    else
+       { return ( ("",0,0,0) ); }
+   }
+
+sub  Assert
+   {
+    my $exp = shift;
+    die "assertion failure ($exp) \"@_\"\n" unless ( eval( $exp ) );
+   }
+
+
+
+
+

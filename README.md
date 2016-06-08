@@ -20,6 +20,7 @@ Most of these read and write sequence data in fasta format.
 * **poly_a** - report long polynucleotide streches in DNA and RNA sequences
 * **pp** - fasta format sequence pretty-printer (DNA, RNA, protein)
 * **rc** - reverse complement DNA fasta sequences
+* **sam_overlapper** - finds SAM file mapped reads which overlap (or not) a set of transcript (or other) coordinates
 * **sel**   - (select) reads fasta sequences and filters according to various criteria (DNA, RNA, protein)
 * **seq_len** - (sequence length) reads fasta sequences and prints out their lengths (DNA, RNA, protein)
 * **seq_range** - (range of sequences filter) reads fasta sequences, prints out only those in specified numeric range  
