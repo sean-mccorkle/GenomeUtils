@@ -8,7 +8,7 @@
 #   transcript file has format
 #
 #      <chr>  <start> <stop>  [<dir> [...]]                                     #       
-#   and its assumed there are no overlapping transcripts.
+#   this assumes there are NO overlapping transcripts.
 #
 
 use strict;
@@ -37,15 +37,12 @@ while ( $_ = <TRANS> )  # for each a interval
     chomp;     # save entire a-line for eventual output
     ( $trans_chr, $trans_a, $trans_b ) = split( /\s+/ );
 
-    while ( $sam_chr && preceeds( $sam_chr, $sam_b, $trans_chr, $trans_a )  )   # skip sam intervals completely to the 
-       {                                                                        # left of this tran      
-        print "$sam_line" if ( $opt_v );
-        ( $sam_chr, $sam_a, $sam_b, $sam_line ) = get_next_sam( \*SAM ); 
-       }
-
-    while ( $sam_chr && overlaps( $sam_chr, $sam_a, $sam_b, $trans_chr, $trans_a, $trans_b ) )
-       {
-        print "$sam_line" unless( $opt_v );
+    while ( $sam_chr && preceeds_or_overlaps( $sam_chr, $sam_a, $trans_chr, $trans_b )  )  
+       {                                                                       
+        if ( overlaps( $sam_chr, $sam_a, $sam_b, $trans_chr, $trans_a, $trans_b ) )
+           {  print "$sam_line" unless( $opt_v );  }
+        else
+           {  print "$sam_line" if ( $opt_v ); }
         ( $sam_chr, $sam_a, $sam_b, $sam_line ) = get_next_sam( \*SAM ); 
        }
    }
@@ -62,21 +59,17 @@ while ( $sam_chr )
 
 close( SAM );
 
-
-# preceeds( $sam_chr, $sam_b, $trans_chr, $trans_a )
-#     returns TRUE if sam read is completely to the left of the given
-#     transcript (including if its on the preceeding chromosome
-
-sub  preceeds
+sub  preceeds_or_overlaps
    {
-    my ($sam_chr, $sam_b, $trans_chr, $trans_b ) = @_;
-    return( 1 ) if ( ( $sam_chr cmp $trans_chr ) < 0 );
-    return( 0 ) if ( ( $sam_chr cmp $trans_chr ) > 0 );   # this should never occur
-    if ( ($sam_chr cmp $trans_chr) == 0 )
-       { return( $sam_b < $trans_a ); }
+    my ( $schr, $sa, $tchr, $tb ) = @_;
+    return( 1 ) if ( ( $schr cmp $tchr ) < 0 );
+    return( 0 ) if ( ( $schr cmp $tchr ) > 0 );
+    if ( ($schr cmp $tchr) == 0 )
+       { return( $sa <= $tb ); }
     else        
-       { die "in preceeds - this should never happen\n"; }
+       { die "in preceeds_or_overlaps - this should never happen\n"; }
    }
+
 
 #  overlaps( $sam_chr, $sam_a, $sam_b, $trans_chr, $trans_a, $trans_b ) )
 #  returns true if the intervals overlap
@@ -91,26 +84,43 @@ sub  overlaps
     return( 1 );
    }
 
-sub get_next_sam
+sub  get_next_sam
    { 
     my $fh = shift;
     my $line = <$fh>;
     if ( $line )
        {
         my ( $chrom, $left, $cigar) = (split( /\t/, $line ))[2,3,5];
-        my $right = $left + 100;
+        my $right = $left + cigar_to_length( $cigar );
         return( ($chrom, $left, $right, $line ) );
        }
     else
        { return ( ("",0,0,0) ); }
    }
 
-sub  Assert
-   {
-    my $exp = shift;
-    die "assertion failure ($exp) \"@_\"\n" unless ( eval( $exp ) );
-   }
 
+sub  cigar_to_length
+   {
+    my $cigar = shift;
+    my $save_cigar = $cigar;
+    my $len = 0;
+    while ( $cigar =~ s/^(\d+)([A-Z])// )
+       {
+        my ($n, $code) = ($1,$2);
+        if ( $code eq "M" )
+           { $len += $n; }
+        elsif ( $code eq "N" )
+           { $len += $n; }
+        elsif ( $code eq "D" )
+           { $len -= $n; }
+        elsif ( $code eq "I" )
+           { $len += $n; }
+        else 
+           { die "unhandled code $code in cigar string $save_cigar\n"; }
+       }
+    die "Bad cigar string $save_cigar leftover [$cigar]\n" if ( $cigar );
+    return( $len );
+   }
 
 
 
