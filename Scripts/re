@@ -1,0 +1,71 @@
+#!/usr/bin/perl
+# Program:      re
+# Programmer:   Sean R. McCorkle
+# Language:     Perl
+# Description:  search strings for regexps
+# 
+#                 -a all matches
+#                 -n total number of matches only
+#
+# $Id: re,v 0.6 2005/06/28 17:56:29 mccorkle Exp mccorkle $
+#
+
+
+                                     ########
+                                     # Main #
+                                     ########
+
+use  Getopt::Std;
+
+die "Bad options\n" unless ( getopts( 'anN' ) );
+
+$re = shift;
+
+while ( <> )
+   {
+    if ( /^>(.*)/ )
+       {
+        $new_hdr = $1;
+        scan() if ( defined( $hdr ) );
+        $hdr = $new_hdr;
+        $seq = "";
+       }
+    else 
+       {
+        chomp;
+        s/\s//g;
+        s/^\d+//;
+        $seq .= uc $_;
+       }
+   }
+
+scan() if ( defined( $hdr ) );
+
+
+                                 ###############
+                                 # Subroutines #
+                                 ###############
+
+
+sub scan
+   {
+    my $s = $seq;
+    my $count = 0;
+    my $offset = 0;
+    while ( $s =~ /$re/i )
+       {
+        ($fivep,$matp,$threep) = ( $`, $&, $' ); #'
+        $count++;
+        $offset += length( $fivep );
+        printf "%10d %10d $matp $hdr\n", $offset, length( $matp ) unless( $opt_n );
+        #printf "%10d %10d %-60.60s\n", 
+        #       length( $fivep ), length( $threep ), $hdr unless ( $opt_n );
+        last unless( $opt_a || $opt_n ); 
+        # $offset += length( $matp );      # WRONG!
+        $offset += 1;
+        $s = substr( $s, (length( $fivep ) + 1) );
+       }
+    printf "%10d %s\n", $count, $hdr if ( $opt_n );
+   }
+
+
