@@ -1,0 +1,99 @@
+#!/usr/bin/perl
+# Program:     fasta_chunker
+# Programmer:  Sean R. McCorkle, Biology Dept., Broohaven National Laboratory
+# Language:    perl
+#
+# Description: splits a fasta file of sequences into a specfied number
+#              of smaller chunks.
+#
+# Usage:       fasta_chunker [-p prefix] [-e ext]  <nchunks> <seqfile>
+#
+# Options:        -p prefix - string prefix for output chunk files ("chunk_")
+#                 -e ext    - extension (suffix) for chunk files (.fasta)
+#
+use strict;
+our ( $opt_e, $opt_p );
+use Getopt::Std;
+
+sub  usage
+  { die "usage: fasta_chunker [-p prefix] [-e ext] <nchunks> <fasta-file>\n"; }
+
+getopts( "e:p:") || usage();
+
+
+my $nchunks = shift;
+( $nchunks =~ /^\d+$/ ) || usage();
+my $filename = shift;
+$filename || usage();
+
+# we use tell() and seek() to make two passes through the file,
+# but only open and close it once.
+
+open( SEQ, $filename ) || die "can't open $filename: $!\n";
+
+#
+# first, read through the file and collect byte positions of the
+# beginnings of each >header, store in @poslist
+#
+my @poslist = ();
+my $last_pos = 0;
+
+while ( $_ = <SEQ> )
+   {
+    if ( /^>/ )
+       {
+        #printf "%d %s", $last_pos, $_;
+        push( @poslist, $last_pos );
+       }
+    $last_pos = tell( SEQ );
+   }
+
+my $nseqs = @poslist;
+print "$nseqs sequences\n";
+
+my $nseqs_per_chunk = int( $nseqs / $nchunks ) + 1;
+
+print "$nchunks chunks\n";
+print "$nseqs_per_chunk seqs per chunk\n";
+my $nfull = ($nchunks-1) * $nseqs_per_chunk;
+print "$nfull seqs in full chunks\n";
+print "remainder: ", $nseqs - $nfull, "\n";
+
+#  Now go back to beginning of file and use positions to copy 
+#  $nseqs_per_chunk into successive chunk files..
+
+seek( SEQ, 0, 0 );   # reposition to beginning of file
+
+my $chunk;
+my $i;
+my $j;
+for ( $i = 0, $j = 0; $j < $nfull; $i++, $j += $nseqs_per_chunk )
+   {
+    my $chunkname = make_chunk_name( $i );
+    print "$j $chunkname  position ", $poslist[$j], " - ", 
+           $poslist[$j+$nseqs_per_chunk], "\n";
+    seek( SEQ, $poslist[$j], 0 );
+    read( SEQ, $chunk, $poslist[$j+$nseqs_per_chunk] - $poslist[$j] );
+    open( CHUNK, ">$chunkname" ) || die "Can't write to $chunkname: $!\n";
+    print CHUNK $chunk;
+    close( CHUNK );
+   }
+
+# read and write last remaining chunk
+
+my $chunkname = make_chunk_name( $i );
+open( CHUNK, ">$chunkname" ) || die "Can't write to $chunkname: $!\n";
+print CHUNK <SEQ>;  # this should spew the rest of the file into the last chunk
+close( CHUNK );
+
+close( SEQ );
+
+print "done.\n";
+
+sub  make_chunk_name
+   {
+    return( ($opt_p ? $opt_p : "chunk_") . (shift) . 
+                ($opt_e ? $opt_e : ".fasta" ) );
+   }
+
+

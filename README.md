@@ -10,6 +10,7 @@ Most of these read and write sequence data in fasta format.
 * **codon_freqs** - reports codon frequences of DNA & RNA sequences
 * **connected_subgraphs** Reads pairwise edges (node node) and outputs connected subgraphs
 * **extract_sequences_list** Read list of ids, extract those fasta sequences with those ids in header
+* **fasta_chunker** - split file of many fasta sequences into n files (for parallel processing)
 * **fasta2md5** - read fasta sequences and write the md5 hex hashcode along with the sequence header (DNA, RNA, protein)
 * **kmers_by_frame** - print out kmer counts in each reading frame (DNA, RNA - can work on proteins too).
 * **new_overlapper** - reads two (sorted) tables of chromosome coordinates and reports overlaps between them
