@@ -47,44 +47,51 @@ while ( $_ = <SEQ> )
        }
     $last_pos = tell( SEQ );
    }
+push( @poslist, $last_pos );
 
-my $nseqs = @poslist;
+print "last position: ", $poslist[$#poslist], "\n";
+my $nseqs = @poslist - 1;
+my $min_nseqs_per_chunk = int( $nseqs / $nchunks );
+my $remainder = $nseqs - $nchunks * $min_nseqs_per_chunk;
+
 print "$nseqs sequences\n";
-
-my $nseqs_per_chunk = int( $nseqs / $nchunks ) + 1;
-
 print "$nchunks chunks\n";
-print "$nseqs_per_chunk seqs per chunk\n";
-my $nfull = ($nchunks-1) * $nseqs_per_chunk;
-print "$nfull seqs in full chunks\n";
-print "remainder: ", $nseqs - $nfull, "\n";
+print "$min_nseqs_per_chunk min nseqs per chunk\n";
+print "$remainder remainder\n";
 
 #  Now go back to beginning of file and use positions to copy 
 #  $nseqs_per_chunk into successive chunk files..
 
 seek( SEQ, 0, 0 );   # reposition to beginning of file
 
-my $chunk;
-my $i;
-my $j;
-for ( $i = 0, $j = 0; $j < $nfull; $i++, $j += $nseqs_per_chunk )
+my $chunk;  # string of all sequences in a chunk
+my $i;      # counts chunks
+my $j;      # next element of @poslist (for start position)
+
+for ( $i = 0, $j = 0;  $i < $nchunks; $i++ )   # for each chunk
    {
     my $chunkname = make_chunk_name( $i );
+
+    my $nseqs_this_chunk = $min_nseqs_per_chunk;
+    $nseqs_this_chunk++ if ( $remainder-- > 0 );
     print "$j $chunkname  position ", $poslist[$j], " - ", 
-           $poslist[$j+$nseqs_per_chunk], "\n";
+           $poslist[$j+$nseqs_this_chunk], "\n";
     seek( SEQ, $poslist[$j], 0 );
-    read( SEQ, $chunk, $poslist[$j+$nseqs_per_chunk] - $poslist[$j] );
+    read( SEQ, $chunk, $poslist[$j+$nseqs_this_chunk] - $poslist[$j] );
+
     open( CHUNK, ">$chunkname" ) || die "Can't write to $chunkname: $!\n";
     print CHUNK $chunk;
     close( CHUNK );
+
+    $j += $nseqs_this_chunk;
    }
 
 # read and write last remaining chunk
 
-my $chunkname = make_chunk_name( $i );
-open( CHUNK, ">$chunkname" ) || die "Can't write to $chunkname: $!\n";
-print CHUNK <SEQ>;  # this should spew the rest of the file into the last chunk
-close( CHUNK );
+#my $chunkname = make_chunk_name( $i );
+#open( CHUNK, ">$chunkname" ) || die "Can't write to $chunkname: $!\n";
+#print CHUNK <SEQ>;  # this should spew the rest of the file into the last chunk
+#close( CHUNK );
 
 close( SEQ );
 
