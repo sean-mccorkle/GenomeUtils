@@ -47,11 +47,13 @@ static char intervals_rcs_id[] =
 #define MAX_NUM_STR          10   /* max length of an integer string    */
 #define MAX_FILENAME_LEN    255   /* max length of unix filename        */
 #define MAX_LINE_LEN       1024   /* max length of input lines          */
+#define MAX_DESC_LEN       1024   /* max length of optional desc.       */
 #define NIL                ((void *) 0)
 
 
-typedef struct pair_n {  int a;   
-                         int b;
+typedef struct pair_n {  int   a;   
+                         int   b;
+                         char *desc;
                       } PAIR;
 
 PAIR intervals[MAX_NUM_INTS+1];   /* user-specified intervals go into this */
@@ -150,7 +152,7 @@ int  get_num( char *s, char *e )
    }
 
 
-void  enter_interval( int x, int y )     /* enter interval into global table */
+void  enter_interval( int x, int y, char *desc )  /* enter interval into global table */
    {
     if ( num_ints < MAX_NUM_INTS )
        {
@@ -164,6 +166,7 @@ void  enter_interval( int x, int y )     /* enter interval into global table */
             intervals[num_ints].a = y;   /* force low, high order */
             intervals[num_ints].b = x;
            }
+        intervals[num_ints].desc = strndup( desc, MAX_DESC_LEN );
         num_ints++; 
        }
     else
@@ -232,7 +235,7 @@ void  get_intervals_from_string( char *s )
                                   break;
                 case  ST_NUM2:    if ( *s == ',' )
                                      {
-                                      enter_interval( a, get_num( np, s ) );
+                                      enter_interval( a, get_num( np, s ), "" );
                                       state = ST_NEW;
                                      }
                                   else if ( ! isdigit( *s ) )
@@ -243,7 +246,7 @@ void  get_intervals_from_string( char *s )
         s++;
        }
     if ( state == ST_NUM2 )
-        enter_interval( a, get_num( np, s ) );
+        enter_interval( a, get_num( np, s ), "" );
     else if ( ! isdigit( *s ) )
         usage();
    }
@@ -258,15 +261,22 @@ void  read_intervals_from_file ( char *filename )
     char   *s;
     int    nvals;
     int    a, b;
+    static char desc[MAX_DESC_LEN+1];
 
     f = open_file( filename );
     while ( fgets( line, MAX_LINE_LEN, f ) )
        {
-        for ( s = line; *s != '\0' && *s != '\n'; s++ ) /* replace all occur-*/
-            if ( *s == '-' ) *s = ' ';                  /* ances of '-'      */
-        nvals = sscanf( line, "%d %d", &a, &b );
-        if ( nvals == 2 )
-            enter_interval( a, b );
+        for ( s = line; *s != '\0' && *s != '\n'; s++ ) /* replace first occur*/
+            if ( *s == '-' )                            /* ance of '-'      */
+               {
+                *s = ' ';
+                break;
+               }
+        nvals = sscanf( line, "%d %d %[^\n]s", &a, &b, desc );
+        if ( nvals == 3 )
+            enter_interval( a, b, desc );
+        else if ( nvals == 2 )
+            enter_interval( a, b, "" );
         else if ( nvals != 0 )
            {
             fprintf( stderr, "bad line in intervals file %s: %s\n",
@@ -327,11 +337,12 @@ int  is_sequence_char( int c )   /* returns 1 unlesss c is whitespace */
    }
 
 
-void  output_fasta( char *s, int a, int b ) /* print sequence s in fasta form*/
+/* print sequence s in fasta form*/
+void  output_fasta( char *s, int a, int b, char *desc )
    {                                        /* (and add ":a-b" to end of hdr)*/
     int         i, n;
 
-    printf( "%s:%d-%d\n", header, a, b );
+    printf( ">%s %d-%d %s\n", desc, a, b, header+1 );
     n = strlen( s );
     for ( i =  50; i <= n; i += 50, s += 50 )
         printf( "%50.50s\n", s );
@@ -353,6 +364,7 @@ typedef struct q_p {
                      char        *seq; /* points to a sequence buffer */
                      int          a;   /* from corresponding intervals entry */
                      int          b;
+                     char        *desc;
                      struct q_p  *next; /* next node in linked list */
                    } QUEUE;
 
@@ -364,7 +376,7 @@ void  dump_queues( void )  /* for debuging */
     QUEUE *p;
     printf( "queues now:\n" );
     for ( p = queue_top;  p != NIL;  p = p->next )
-        printf( "  %d-%d\n", p->a, p->b ); 
+        printf( "  %d-%d %s\n", p->a, p->b, p->desc ); 
    }
 
 void  open_output_queue( int i )
@@ -374,6 +386,7 @@ void  open_output_queue( int i )
     q = malloc_safely( sizeof( QUEUE ) );
     q->a = intervals[i].a;                        /* since we already know  */
     q->b = intervals[i].b;                        /* the string size, we can*/
+    q->desc = intervals[i].desc;
     q->seq = malloc_safely( q->b - q->a + 1 );    /* allocate string storage*/
     q->next = queue_top;                          /* finally, add to the top*/
     queue_top = q;                                /* of the list            */
@@ -389,6 +402,7 @@ int  past_interval( int pos, QUEUE *q )           /* returns 1 if we've have*/
     return( pos >= q->b );
    }
 
+                                             
 void  enter_queue( QUEUE *q, int pos, int c )     /* add c to sequence buffer*/
    {                                              /* for interval q          */
     q->seq[pos - q->a] = c;
@@ -408,7 +422,7 @@ QUEUE *flush_and_close( QUEUE *q, int pos )
         exit( 1 );
        }
     enter_queue( q, pos, '\0' );                 /* need to terminate string */
-    output_fasta( q->seq, q->a, q->b );          /* and then print it out and*/
+    output_fasta( q->seq, q->a, q->b, q->desc ); /* and then print it out and*/
     free( q->seq );                              /* then free up its memory  */
     if ( q == queue_top )                        /* if q is at the top, then */
         p = queue_top = q->next;                 /* this is what we do,      */
