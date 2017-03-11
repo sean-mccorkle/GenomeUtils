@@ -10,7 +10,7 @@
 /*              intervals -f file  [sequence-file]                           */
 /*                                                                           */
 /*              There can be only one input sequence, and it must be in      */
-/*              fasto format.  If no file is specified, or is "-", stdin is  */
+/*              fasta format.  If no file is specified, or is "-", stdin is  */
 /*              read.                                                        */
 /*                                                                           */
 /*              One of the two mutualy exclusive options -i or -q must be    */
@@ -30,7 +30,6 @@
 /* Compiling:   cc -O -o intervals intervals.c should do the job.            */
 /*                                                                           */
 /*****************************************************************************/
-
 
 #include <ctype.h>
 #include <stdio.h>
@@ -262,17 +261,26 @@ void  read_intervals_from_file ( char *filename )
     int    nvals;
     int    a, b;
     static char desc[MAX_DESC_LEN+1];
+    int    seen_digit;                /* boolean */
 
     f = open_file( filename );
     while ( fgets( line, MAX_LINE_LEN, f ) )
        {
-        for ( s = line; *s != '\0' && *s != '\n'; s++ ) /* replace first occur*/
-            if ( *s == '-' )                            /* ance of '-'      */
+        seen_digit = 0;
+        for ( s = line; *s != '\0' && *s != '\n'; s++ ) 
+            if ( isdigit( *s ) )
+               seen_digit = 1;
+            else if ( *s == '-' )                            
                {
-                *s = ' ';
-                break;
+                if ( seen_digit )    /* replace occurrence of - with ' ' only if between digits */
+                   {
+                    *s = ' ';
+                    break;
+                   }
                }
         nvals = sscanf( line, "%d %d %[^\n]s", &a, &b, desc );
+        if ( a < 0 ) a = 0;
+        if ( b < 0 ) b = 0;
         if ( nvals == 3 )
             enter_interval( a, b, desc );
         else if ( nvals == 2 )
@@ -331,7 +339,7 @@ int  pair_cmp( const void *x, const void *y ) /*used for qsort() on intervals*/
    }
 
 
-int  is_sequence_char( int c )   /* returns 1 unlesss c is whitespace */
+int  is_sequence_char( int c )   /* returns 1 unless c is whitespace */
    {
     return( !( c == ' ' || c == '\n' || c == '\t' || iscntrl( c ) ) );
    }
@@ -414,7 +422,9 @@ void  enter_queue( QUEUE *q, int pos, int c )     /* add c to sequence buffer*/
 
 QUEUE *flush_and_close( QUEUE *q, int pos )
    {
-    QUEUE *p;                                    
+    QUEUE *p;
+    int    stop;
+
 
     if ( q == NIL )
        { 
@@ -422,7 +432,10 @@ QUEUE *flush_and_close( QUEUE *q, int pos )
         exit( 1 );
        }
     enter_queue( q, pos, '\0' );                 /* need to terminate string */
-    output_fasta( q->seq, q->a, q->b, q->desc ); /* and then print it out and*/
+    stop = q->b;
+    if ( pos + 1 < stop ) 
+       stop = pos + 1;                           /* may have terminated early*/
+    output_fasta( q->seq, q->a, stop, q->desc ); /* and then print it out and*/
     free( q->seq );                              /* then free up its memory  */
     if ( q == queue_top )                        /* if q is at the top, then */
         p = queue_top = q->next;                 /* this is what we do,      */
@@ -466,7 +479,7 @@ int  main( int argc, char **argv )
 
     pos = -1;                                       /* keep going while there*/
     while ( (queues_still_open() || next_int < num_ints) /* are open queues, */
-             && (c = fgetc( f )) )                       /* more intevls, and*/
+             && (c = fgetc( f )) != EOF )                       /* more intevls, and*/
                                                          /* and more input   */
         if ( is_sequence_char( c ) )                     /* ignore whitespace*/
            {
@@ -487,6 +500,12 @@ int  main( int argc, char **argv )
                     q = q->next;                    /* proceed to the next  */
                    }                                /* queue                */
            }
+    /* close off and flush any remaining open queues (whose intervals */
+    /* may have gone past the end of the sequence                     */
+
+    if ( queues_still_open() )
+        for ( q = queue_top; q != NIL; )
+            q = flush_and_close( q, pos );
    
     close_file( f );
    }

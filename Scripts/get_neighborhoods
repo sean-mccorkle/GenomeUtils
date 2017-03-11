@@ -1,0 +1,67 @@
+#!/usr/bin/perl
+# 
+# Feed this clusters.out or file of chrom,a,b positions (sorted)
+#
+#   can specify one of these only:
+#   option -D  "genome_directory"
+#          -g  "genome_file"
+#
+#   if -D options, chrom dir must contain files that have files of name
+#      <chromosome>.fa or <seqid>.fa where <chromsome> or <seqid> matches
+#      column one in gff file
+#   otherwise, -g option implies all the sequences are in the one file
+#
+
+use Getopt::Std;
+use Cwd;
+
+getopts( "D:g:" ) || die "bad option\n";
+
+die "Can only specify one of -D or -g\n" if ( $opt_D && $opt_g );
+
+$chromdir = $opt_D ? $opt_D : "/DB/Genomes/Arabidopsis_thaliana/TAIR10/Chrom/";
+
+if ( $opt_g )
+   {
+    die "$opt_g is not a plain file\n" unless( -f $opt_g );
+    $chromdir = "/tmp/gnorgchroms$$";
+    mkdir( $chromdir );
+    $cwd = getcwd();
+    chdir( $chromdir );
+    system( "splt -q -e fa -n 1 -f ' ' $opt_g" );
+    chdir( $cwd );    
+   }
+
+$ifile = "/tmp/gnifile$$";
+
+$last_chrom="";
+@pos = ();
+
+while ( <> ) 
+   {
+    chomp;
+    ($chrom,$a,$b, @rest) = split( /\s+/ );
+    if ( $last_chrom && ($chrom ne $last_chrom) )
+       {
+        process( $last_chrom, @pos );
+        @pos = ();
+       }
+    ($b,$a) = ($a,$b) if ( $a > $b );    
+    push( @pos, [ $a, $b, join( " ", @rest )] );
+    $last_chrom = $chrom;
+   }
+process( $last_chrom, @pos );
+
+
+sub  process
+   {
+    my ( $chrom, @pos ) = @_;
+    open( INTS, ">$ifile" ) || die "Can't write $ifile: $!\n";
+    foreach my $int ( @pos )
+       { printf INTS "%d-%d %s\n", $$int[0], $$int[1], $$int[2]; }
+    close( INTS );
+    my $cmd = "intervals -f $ifile <$chromdir/$chrom.fa";
+    #print "$cmd\n";
+    system( $cmd );
+   }
+
