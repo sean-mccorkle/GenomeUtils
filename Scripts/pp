@@ -10,20 +10,21 @@
 #
 # Options:
 #
+#           -I <n>   set left number indent to <n> (default 10)
 #           -l <n>   print <n> characters per line (default 50)
 #           -n       don't print position numbers on left
-#           -s <n>   insert a space every <n> characters (default 10)y
+#           -s <n>   insert a space every <n> characters (default 10)
 #
 
 use strict;
-our( $opt_l, $opt_n, $opt_s );
+our( $opt_I, $opt_l, $opt_n, $opt_s );
 use Getopt::Std;
 
-getopts( "l:ns:" );
+getopts( "I:l:ns:" );
 
 my $line_len = $opt_l ? $opt_l : 50;    # characters per line in output
 my $spacer_len = $opt_s ? $opt_s : 10;  # put a space every one of these lengths
-
+my $lineno_format = $opt_I ? sprintf( "%%%dd ", $opt_I )  : "%10d ";
 my $seq;
 my $hdr;
 
@@ -53,16 +54,16 @@ sub  output
     my ($hdr, $seq) = @_;
     print ">$hdr\n";
 
-    my $n = length( $seq );                       # calculate length once
+    my $n = length( $seq );                        # calculate length once
     my $i;
     outputlinenum( $i+1 );
-    for ( $i = 0; $i < $n; $i++ )                 # for each character
+    for ( $i = 0; $i < $n; $i++ )                  # for each character
        {
-        print substr( $seq, $i, 1 );              # print it out
-        if ( ( ($i + 1) % $line_len ) == 0 )      # every 50 characters
+        print substr( $seq, $i, 1 );               # print it out
+        if ( ( ($i + 1) % $line_len ) == 0 )       # every 50 characters
            { 
-            print "\n";                           #   put a newline
-            outputlinenum( $i+2 ) if ( $i < $n);  #   and next line num
+            print "\n";                            #   put a newline
+            outputlinenum( $i+2 ) if ( ($i+2) <= $n);  #   and next line num
            }
         elsif ( ( ($i + 1) % $spacer_len ) == 0 )
            {
@@ -76,5 +77,5 @@ sub  output
 
 sub  outputlinenum
    {
-    printf "%10d ", (shift) unless( $opt_n );
+    printf $lineno_format, (shift) unless( $opt_n );
    }
