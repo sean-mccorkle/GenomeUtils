@@ -40,7 +40,8 @@ COPT = $(MAXCOPT)
 
 install: all
 	- chgrp developer $(BINS) 
-	- chmod a+rx,ug+w $(BINS) 
+	- chmod a+rx,ug+w $(BINS)
+	- mkdir -p $(PUBBINDIR)
 	cp $(BINS) $(PUBBINDIR)
 
 install-local: all
