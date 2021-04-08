@@ -5,7 +5,7 @@
 # 
 # Description:  Reads pairwise edges (node node) and outputs connected subgraphs
 #
-# Usage:        connected_subgraphs [-d] [-m<n>]  edge-data
+# Usage:        connected_subgraphs [-d] [-e] [-m<n>]  edge-data
 #
 #               where edge-data (files or stdin) are lines of the form
 #
@@ -21,6 +21,7 @@
 #               members on one line
 #
 # Options:     -d    produce dotty or neato output (Bell Labs graphviz package)
+#              -e    print edges on separate lines
 #              -m<n> report no subgraphs with number of members < n
 #
 #
@@ -28,18 +29,27 @@
 #
 use Getopt::Std;
 
-die "bad option\n" unless ( getopts( 'dm:' ) );
+
+                                ################
+                                # Main Program #
+                                ################
+
+
+die "bad option\n" unless ( getopts( 'dem:' ) );
 
 $min_membs = $opt_m ? $opt_m : 1;
 
 load_connections();
-@subg = ();
 
-dotty_header() if $opt_d;
+@subg = ();        # builds list of vertices in subgraph.  reset after output
+
 
 dfs_traverse();
 
-dotty_footer() if $opt_d;
+
+                                 ###############
+                                 # Subroutines #
+                                 ###############
 
 sub  dfs_traverse
    {
@@ -60,13 +70,32 @@ sub  dfs_traverse
 
 sub  output_subgraph
    {
-    my $inter = " ";
+    my $vert_sep = $opt_d ? " ; " : " ";
+    my $edge_sep = $opt_d ? " - " : " ";
+    my $line_end = $opt_d ? ";" : "";
     if ( $#subg+1 >= $min_membs )
        {
-        $inter = ' -- ' if ( $opt_d );
-        print " ", join( $inter, @subg );
-        print ";" if ( $opt_d );
-        print "\n";
+        dotty_header() if $opt_d;
+
+        # print all vertices on one line
+        print "", join( $vert_sep, @subg ), $line_end, "\n";
+        # dotty or edges option: print 
+        if ( $opt_d || $opt_e )
+           {
+            foreach my $a ( @subg )
+               {
+                foreach my $b ( get_conns( $a ) )
+                   {
+                    if ( ! is_conn_printed( $a, $b ) )
+                      {
+                       print "   ", $a, "$edge_sep", $b, $line_end, "\n";
+                       set_conn_printed( $a, $b );
+                      }
+                   }
+               }
+           }
+
+        dotty_footer() if $opt_d;
        }
    }
 
@@ -88,21 +117,55 @@ sub  load_connections
    {
     while ( <> )
        {
+        next if ( /^\s*$/ );    # skip blank lines
         s/^\s*//;
         my ($a,$b) = split( /\s+/ );
         $vert{$a}++;
         $vert{$b}++;
         conn( $a, $b );
         conn( $b, $a );  #note: for directed graph, remove this 
+                         #note:  probably ought to move this into conn()
        }
    }
 
+# make a connection from a to b
+
 sub  conn
-  {
-   my ($a, $b) = @_;
-   $edges{$a} = {} unless( defined( $edges{$a} ) );
-   ${$edges{$a}}{$b}++;
-  }
+   {
+    my ($a, $b) = @_;
+    $edges{$a} = {} unless( defined( $edges{$a} ) );
+    ${$edges{$a}}{$b}++;
+   }
+
+# get_conns( $v ) - return all vertices with a connection from $v as a list
+
+sub  get_conns
+   {
+    my $v = shift;
+    return( sort keys( %{$edges{$v}} ) )
+   }
+
+sub  set_conn_printed
+   {
+    my ($a, $b) = @_;
+    my ($a, $b) = @_;
+    $printed_conns{$a} = {} unless( defined( $edges{$a} ) );
+    ${$printed_conns{$a}}{$b}++;
+    # for now, we handle undirected graphs this way
+    $printed_conns{$b} = {} unless( defined( $edges{$b} ) );
+    ${$printed_conns{$b}}{$a}++;
+   }
+
+sub  is_conn_printed
+   {
+    my ($a, $b) = @_;
+
+    if ( defined( $printed_conns{$a} ) && defined( ${$printed_conns{$a}}{$b} ) )
+      { return( 1 ); }
+    if ( defined( $printed_conns{$b} ) && defined( ${$printed_conns{$b}}{$a} ) )
+      { return( 1 ); }
+    return( 0 );
+   }
 
 sub  dotty_header
    {
