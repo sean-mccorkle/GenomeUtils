@@ -71,7 +71,7 @@ sub  dfs_traverse
 sub  output_subgraph
    {
     my $vert_sep = $opt_d ? " ; " : " ";
-    my $edge_sep = $opt_d ? " - " : " ";
+    my $edge_sep = $opt_d ? " -- " : " ";
     my $line_end = $opt_d ? ";" : "";
     if ( $#subg+1 >= $min_membs )
        {
@@ -169,7 +169,7 @@ sub  is_conn_printed
 
 sub  dotty_header
    {
-    print "graph G {\n";
+    print "graph {\n";
    }
 
 sub  dotty_footer
