@@ -78,7 +78,7 @@ sub  output_subgraph
         dotty_header() if $opt_d;
 
         # print all vertices on one line
-        print "", join( $vert_sep, @subg ), $line_end, "\n";
+        print "", join( $vert_sep, map( dquote($_), @subg ) ), $line_end, "\n";
         # dotty or edges option: print 
         if ( $opt_d || $opt_e )
            {
@@ -88,7 +88,7 @@ sub  output_subgraph
                    {
                     if ( ! is_conn_printed( $a, $b ) )
                       {
-                       print "   ", $a, "$edge_sep", $b, $line_end, "\n";
+                       print "   ", dquote( $a ), "$edge_sep", dquote( $b ), $line_end, "\n";
                        set_conn_printed( $a, $b );
                       }
                    }
@@ -175,4 +175,12 @@ sub  dotty_header
 sub  dotty_footer
    {
     print "}\n";
+   }
+
+sub  dquote
+   {
+    if ( $opt_d )
+       { return( '"' . (shift) . '"' ); }
+    else
+       { return( (shift) ); }
    }
