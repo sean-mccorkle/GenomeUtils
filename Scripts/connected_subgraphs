@@ -22,10 +22,10 @@
 #
 # Options:     -d    produce dotty or neato output (Bell Labs graphviz package)
 #              -e    print edges on separate lines
+#              -c    carry along edge comments in the case of -e
 #              -m<n> report no subgraphs with number of members < n
 #
 #
-# $Id: connected_subgraphs,v 1.0 2009/01/02 17:36:42 mccorkle Exp mccorkle $
 #
 use Getopt::Std;
 
@@ -35,7 +35,7 @@ use Getopt::Std;
                                 ################
 
 
-die "bad option\n" unless ( getopts( 'dem:' ) );
+die "bad option\n" unless ( getopts( 'cdem:' ) );
 
 $min_membs = $opt_m ? $opt_m : 1;
 
@@ -71,8 +71,8 @@ sub  dfs_traverse
 sub  output_subgraph
    {
     my $vert_sep = $opt_d ? " ; " : " ";
-    my $edge_sep = $opt_d ? " -- " : " ";
     my $line_end = $opt_d ? ";" : "";
+
     if ( $#subg+1 >= $min_membs )
        {
         dotty_header() if $opt_d;
@@ -88,8 +88,7 @@ sub  output_subgraph
                    {
                     if ( ! is_conn_printed( $a, $b ) )
                       {
-                       print "   ", dquote( $a ), "$edge_sep", dquote( $b ), $line_end, "\n";
-                       set_conn_printed( $a, $b );
+                       print_conn_edge( $a, $b );
                       }
                    }
                }
@@ -119,12 +118,24 @@ sub  load_connections
        {
         next if ( /^\s*$/ );    # skip blank lines
         s/^\s*//;
-        my ($a,$b) = split( /\s+/ );
+        my ($a,$b, @rest) = split( /\s+/ );
         $vert{$a}++;
         $vert{$b}++;
-        conn( $a, $b );
-        conn( $b, $a );  #note: for directed graph, remove this 
-                         #note:  probably ought to move this into conn()
+
+        # add in any remaing items on input line as description for the edge (for
+        # possible inclusion in dot output
+
+        $desc = "";
+        if ( @rest )
+           {
+            shift( @rest ) if ( $rest[0] =~ /^#/ );   # pop off leading # if there
+            $desc = join( " ", @rest );
+           }
+
+        conn( $a, $b, $desc );  # only keep desc for direction as given in input
+        conn( $b, $a, "" );     #note: for directed graph, remove this 
+                                #note:  probably ought to move this into conn()
+
        }
    }
 
@@ -132,9 +143,15 @@ sub  load_connections
 
 sub  conn
    {
-    my ($a, $b) = @_;
+    my ($a, $b, $desc) = @_;
+
     $edges{$a} = {} unless( defined( $edges{$a} ) );
     ${$edges{$a}}{$b}++;
+    if ( $desc )
+       {
+        $edge_desc{$a} = {} unless( defined( $edge_desc{$a} ) );        
+        ${$edge_desc{$a}}{$b} = $desc;
+       }
    }
 
 # get_conns( $v ) - return all vertices with a connection from $v as a list
@@ -145,9 +162,26 @@ sub  get_conns
     return( sort keys( %{$edges{$v}} ) )
    }
 
+sub  print_conn_edge
+   {
+    my ($a,$b) = @_;
+
+    my $edge_sep = $opt_d ? " -- " : " ";
+    my $line_end = $opt_d ? ";" : "";
+
+    # choose ordering based one edge_desc
+
+    ($b,$a) = ($a,$b) if ( $opt_d && (! ${edge_desc{$a}}{$b} ) && ${edge_desc{$b}}{$a} );
+
+    print "   ", dquote( $a ), "$edge_sep", dquote( $b ), $line_end;
+    if ( ($opt_c || $opt_d) && ${$edge_desc{$a}}{$b} )
+       { print "  # ", ${$edge_desc{$a}}{$b}; }
+    print "\n";
+    set_conn_printed( $a, $b );
+   }
+
 sub  set_conn_printed
    {
-    my ($a, $b) = @_;
     my ($a, $b) = @_;
     $printed_conns{$a} = {} unless( defined( $edges{$a} ) );
     ${$printed_conns{$a}}{$b}++;
