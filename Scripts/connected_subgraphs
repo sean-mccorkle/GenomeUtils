@@ -174,8 +174,18 @@ sub  print_conn_edge
     ($b,$a) = ($a,$b) if ( $opt_d && (! ${edge_desc{$a}}{$b} ) && ${edge_desc{$b}}{$a} );
 
     print "   ", dquote( $a ), "$edge_sep", dquote( $b ), $line_end;
-    if ( ($opt_c || $opt_d) && ${$edge_desc{$a}}{$b} )
-       { print "  # ", ${$edge_desc{$a}}{$b}; }
+    #if ( ($opt_c || $opt_d) && ${$edge_desc{$a}}{$b} )
+    #   { print "  # ", ${$edge_desc{$a}}{$b}; }
+    if ( $opt_c || $opt_d )  # look for desc
+      {
+       my $des;
+       if ( ${$edge_desc{$a}}{$b} )
+          { $des = ${$edge_desc{$a}}{$b}; }
+       elsif ( ${$edge_desc{$b}}{$a} )         # if no desc, check other direction
+          { $des = ${$edge_desc{$b}}{$a}; }
+       if ( $des )
+           { print "  # ", $des; }
+      }
     print "\n";
     set_conn_printed( $a, $b );
    }
