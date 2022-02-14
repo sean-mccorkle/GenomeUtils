@@ -1,0 +1,89 @@
+#!/usr/bin/perl
+# Program:      truncseq
+# Programmer:   Sean R. McCorkle
+#               Computer Science Initiative, Brookhaven National Laboratory
+# Language:     perl
+# Description:  Reads FASTA format sequences, outputs truncated sequences.
+#
+# Usage:        truncseq [-B <n>] [-L <n>] [-H<hdr>] [ <fasta file> ... ]
+#
+#               a single hyphen (-) can be used as a file name to specify
+#               stdin.  If no files are specified, stdin is scanned.
+#
+# Options:
+#               -B <n>   output sequencing beginning at <n> (defaults to 0)
+#               -L <n>   output a sequence of length <n> (defaults to entirety)
+#               -C       append Trunc:B:L to hdr line
+#
+#                B and L follow rules for perl substr()
+#                     https://perldoc.perl.org/functions/substr)
+#                A negative value of B starts from the 3' end
+#
+# This is a rewrite of an earlier version.  This version reads each sequence
+# entirely into memory first before truncating, to simplify things.  
+#
+
+use  Getopt::Std;
+
+select( ( select(STDOUT), $| = 1 )[0] );
+select( ( select(STDERR), $| = 1 )[0] );
+
+die "bad option\n" unless ( getopts( 'B:L:C' ) );
+
+$line_len = 50;
+
+
+$start = $opt_B ? $opt_B : 0;
+$len = $opt_L ? $opt_L : 1000000000;
+#$stop = $start + $len;
+
+
+while ( <> )                                         # keep reading lines
+   {
+    if ( /^>(.*)/ )                                  # is it a FASTA >header?
+       {                                             # handle current sequence
+        $new_header = $1;        
+        if ( defined( $header ) )
+           {
+            print_fasta( $header, trunc( $seq, $start, $len ) ) 
+           }
+        $header = $new_header;                       # reset sequence header
+        $header .= " Trunc:$start:$len" if ( $opt_C );
+        $seq = "";                                   # and buffer
+       }
+    else                                     # not a header? must be sequence
+       {
+        chomp;                               # off with the newline
+        s/\s//g;                             # hose out all whitespace (if any)
+        $seq .= $_;                          # uppercase it & append to buffer
+       }
+   }
+                                             # handle last sequence
+
+print_fasta( $header, trunc( $seq, $start, $len ) ) if ( defined( $header ) ); 
+
+sub  trunc
+   {
+    my ( $seq, $start, $len ) = @_;
+
+    return( substr( $seq, $start, $len ) );
+   }
+
+sub  print_fasta
+   {
+    my ( $hdr, $seq ) = @_;
+    my $i;
+
+    print ">$hdr$opt_a\n";
+    my $n = length( $seq );                       # calculate length once
+    for ( $i = 0; $i < $n; $i++ )                 # for each character
+       {
+        print substr( $seq, $i, 1 );              # print it out
+        if ( ( ($i + 1) % $line_len ) == 0 )      # every 50 characters
+            { print "\n"; }                       #   put a newline
+       }
+    print "\n" if ( ( $i % $line_len ) != 0 );    # last newline ensures tidy 
+                                                  #output
+   }
+
+
