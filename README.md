@@ -27,7 +27,7 @@ Most of these read and write sequence data in fasta format.
 * **seq_range** - (range of sequences filter) reads fasta sequences, prints out only those in specified numeric range  
 * **splt** - breaks files of multiple fasta sequences into separate files (DNA, RNA, protein)
 * **trans.pl** - (translate) translates DNA or RNA sequences into protein sequences (fasta format)
-* **Truncseq** - (truncate sequence) - read DNA, RNA or protein sequences and print subsequence (fasta format)
+* **truncseq** - (truncate sequence) - read DNA, RNA or protein sequences and print subsequence (fasta format)
 
 ### compiled C programs
 
